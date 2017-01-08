@@ -1,0 +1,17 @@
+[package]
+
+name = "piston_shooty"
+version = "0.1.0"
+authors = [
+    "Andre Duvoisin <anduv13@gmail.com>",
+    "Dru Erridge <druerridge@gmail.com>"
+]
+
+[[bin]]
+name = "piston_shooty"
+
+[dependencies]
+piston = "0.27.0"
+piston2d-graphics = "0.19.0"
+pistoncore-glutin_window = "0.33.0"
+piston2d-opengl_graphics = "0.36.0"
