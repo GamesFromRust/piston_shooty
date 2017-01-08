@@ -19,7 +19,7 @@ pub struct Point {
 
 impl Point {
     fn normalize(&mut self) {
-        let mut mag = ((self.x * self.x) + (self.y * self.y) as f64).sqrt();
+        let mag = ((self.x * self.x) + (self.y * self.y) as f64).sqrt();
         self.x /= mag;
         self.y /= mag;
     }
@@ -57,7 +57,7 @@ impl App {
         let mut vel = *cursor - self.position;
         vel.normalize();
 
-        let mut projectile = Projectile {
+        let projectile = Projectile {
             position: self.position,
             velocity: vel
         };
