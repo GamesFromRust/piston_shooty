@@ -45,14 +45,14 @@ pub struct Projectile {
     velocity: Point,
 }
 
-pub struct App {
-    gl: GlGraphics, // OpenGL drawing backend.
-    rotation: f64,  // Rotation for the square.
+pub struct Player {
+    team: i32,
     position: Point,
+    rotation: f64,
     projectiles: Vec<Projectile>
 }
 
-impl App {
+impl Player {
     fn shoot(&mut self, cursor:&Point) {
         let mut vel = *cursor - self.position;
         vel.normalize();
@@ -65,6 +65,22 @@ impl App {
         self.projectiles.push(projectile);
     }
 
+    fn update(&mut self, args: &UpdateArgs) {
+        // Rotate 2 radians per second.
+        self.rotation += 2.0 * args.dt;
+        // Move our projectiles.
+        for projectile in &mut self.projectiles {
+            projectile.position += projectile.velocity;
+        }
+    }
+}
+
+pub struct App {
+    gl: GlGraphics, // OpenGL drawing backend.
+    players: Vec<Player>
+}
+
+impl App {
     fn render(&mut self, args: &RenderArgs) {
         use graphics::*;
 
@@ -73,37 +89,35 @@ impl App {
         const BLUE:     [f32; 4] = [0.0, 0.0, 1.0, 1.0];
 
         let square = rectangle::square(0.0, 0.0, 50.0);
-        let rotation = self.rotation;
-        let position = self.position;
-        let projectiles = &self.projectiles;
+        let players = &self.players;
 
         self.gl.draw(args.viewport(), |c, gl| {
             // Clear the screen.
             clear(GREEN, gl);
 
-            let transform = c.transform.trans(position.x, position.y)
-                                        .rot_rad(rotation)
-                                        .trans(-square[2] * 0.5, -square[3] * 0.5);
-            
-            // Draw a box rotating around the middle of the screen.
-            rectangle(RED, square, transform, gl);
+            for player in players {
+                let transform = c.transform.trans(player.position.x, player.position.y)
+                                            .rot_rad(player.rotation)
+                                            .trans(-square[2] * 0.5, -square[3] * 0.5);
+                
+                // Draw a box rotating around the middle of the screen.
+                rectangle(RED, square, transform, gl);
 
-            // Draw our projectiles.
-            for projectile in projectiles {
-                let square = rectangle::square(0.0, 0.0, 5.0);
-                let transform = c.transform.trans(projectile.position.x, projectile.position.y)
-                    .trans(-square[2] * 0.5, -square[3] * 0.5);
-                rectangle(BLUE, square, transform, gl);
+                // Draw our projectiles.
+                for projectile in player.projectiles {
+                    let square = rectangle::square(0.0, 0.0, 5.0);
+                    let transform = c.transform.trans(projectile.position.x, projectile.position.y)
+                        .trans(-square[2] * 0.5, -square[3] * 0.5);
+                    rectangle(BLUE, square, transform, gl);
+                }
             }
         });
     }
 
     fn update(&mut self, args: &UpdateArgs) {
-        // Rotate 2 radians per second.
-        self.rotation += 2.0 * args.dt;
-        // Move our projectiles.
-        for projectile in &mut self.projectiles {
-            projectile.position += projectile.velocity;
+        // Update our players.
+        for player in &mut self.players {
+            player.update(args);
         }
     }
 }
@@ -125,16 +139,14 @@ fn main() {
     // Create a new game and run it.
     let mut app = App {
         gl: GlGraphics::new(opengl),
-        rotation: 0.0,
-        position: Point {x: 0.0, y: 0.0},
-        projectiles: Vec::new()
+        players: {
+            Player::new(),
+            Player::new()
+        }
     };
 
     let mut key_state = HashMap::new();
-    let mut cursor = Point { 
-                                x: 0.0, 
-                                y: 0.0 
-                            };
+    let mut cursor = Point { x: 0.0, y: 0.0 };
 
     let mut events = window.events();
     while let Some(e) = events.next(&mut window) {
