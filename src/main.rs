@@ -5,6 +5,8 @@ extern crate opengl_graphics;
 
 use piston::window::WindowSettings;
 use piston::event_loop::*;
+// use piston::event_loop::*;
+// use piston::event_loop::WindowEvents;
 use piston::input::*;
 use glutin_window::GlutinWindow as Window;
 use opengl_graphics::{ GlGraphics, OpenGL };
@@ -159,33 +161,34 @@ impl App {
     }
 }
 
+
+#[derive(Clone, Copy)]
 pub struct KeyState {
     held: bool,
     pressed: bool,
     released: bool,
 }
 
-fn gather_input(e: piston::event_loop::WindowEvents, key_states:&mut HashMap<Key, KeyState>) -> HashMap<Key, KeyState> {    
+// fn gather_input(e: piston::event_loop::Event, key_states:&mut HashMap<Key, KeyState>) -> &mut HashMap<Key, KeyState> {    
+fn gather_input(e: &Event, key_states:&mut HashMap<Key, KeyState>) {    
     if let Some(Button::Keyboard(key)) = e.press_args() {
-        let key_state = match key_states.get(key) {
-            Some(state) => {
-                if state.pressed {
-                    state.held = true;
-                }
-                state
-            },
-            None => KeyState { held: false, pressed: true, released: false }
-        };
-
+        let key_state = KeyState { held: false, pressed: true, released: false };
+        if let Some(key_state) = key_states.get_mut(&key) {
+            if key_state.pressed {
+                key_state.held = true;
+                key_state.released = false;
+            }
+        }
         key_states.insert(key, key_state);
     }
     if let Some(Button::Keyboard(key)) = e.release_args() {
-        let key_state = key_states.get(key);
-        key_state.pressed = false;
-        key_state.held = false;
-        key_states.insert(key, false);
+        let key_state = KeyState { held: false, pressed: false, released: true };
+        if let Some(key_state) = key_states.get_mut(&key) {
+            key_state.pressed = false;
+            key_state.held = false;
+        }
+        key_states.insert(key, key_state);
     }
-    key_states
 }
 
 fn main() {
@@ -211,9 +214,11 @@ fn main() {
         ]
     };
 
-    let mut events = window.events();
-    let mut key_states = HashMap::new();
+    let mut events: piston::event_loop::WindowEvents = window.events();
+    let mut key_states: HashMap<Key, KeyState> = HashMap::new();
     
+    // piston::event_loop::Event
+    // Option<Event<W::Event>>
     while let Some(e) = events.next(&mut window) {
         // Render.
         if let Some(r) = e.render_args() {
@@ -225,66 +230,65 @@ fn main() {
             app.update(&u);
         }
 
-        let () = e;
-
+        // let () = e;
         // Keyboard.
-        key_states = gather_input(e, &mut key_states);
+        gather_input(&e, &mut key_states);
 
         // Move our shit.
         for (key, value) in &key_states {
             match *key {
                 // Player 1
                 Key::W => {
-                    if *value.pressed {
+                    if value.pressed {
                         app.players[0].position.y -= 1.0;
                     }
                 },
                 Key::A => {
-                    if *value.pressed {
+                    if value.pressed {
                         app.players[0].position.x -= 1.0;
                     }
                 },
                 Key::S => {
-                    if *value.pressed {
+                    if value.pressed {
                         app.players[0].position.y += 1.0;
                     }
                 },
                 Key::D => {
-                    if *value.pressed {
+                    if value.pressed {
                         app.players[0].position.x += 1.0;
                     }
                 },
 
                 // Player 2
                 Key::Up => {
-                    if *value.pressed {
+                    if value.pressed {
                         app.players[1].position.y -= 1.0;
                     }
                 },
                 Key::Left => {
-                    if *value.pressed {
+                    if value.pressed {
                         app.players[1].position.x -= 1.0;
                     }
                 },
                 Key::Down => {
-                    if *value.pressed {
+                    if value.pressed {
                         app.players[1].position.y += 1.0;
                     }
                 },
                 Key::Right => {
-                    if *value.pressed {
+                    if value.pressed {
                         app.players[1].position.x += 1.0;
                     }
                 },
                 // Player1
                 Key::Space => {
-                    if *value.pressed {
+                    if value.pressed {
                         app.players[0].shoot();
                     }
                 },
                 // Player 2
                 Key::Return => {
-                    if *value.pressed {                    
+                    if value.pressed {                    
                         app.players[1].shoot();
                     }
                 },
