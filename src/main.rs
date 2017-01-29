@@ -135,24 +135,49 @@ pub struct App {
     //gl: GlGraphics, // OpenGL drawing backend.
     window: piston_window::PistonWindow,
     players: Vec<Player>,
-    last_frame_time: u64,
+    // last_frame_time: u64,
+    last_batch_start_time: u64,
+    num_frames_in_batch: u64,
+    // total_batch_time: u64,
+    average_frame_time: u64
 }
 
 impl App {
     fn render(&mut self, event: &Event) {
-        let curr_frame_time = time::precise_time_ns();
-        let frame_time = curr_frame_time - self.last_frame_time;
-        let fps = frame_time / NSEC_PER_SEC;
-        self.last_frame_time = curr_frame_time;
+        // TODO: Read a book on how to do a fps counter.
+        let curr_frame_time:u64 = time::precise_time_ns();
 
-        let fps_text = "FPS: ".to_string() + &fps.to_string();
+        self.num_frames_in_batch += 1;
+
+        if curr_frame_time >= self.last_batch_start_time + NSEC_PER_SEC {
+            self.average_frame_time = (curr_frame_time - self.last_batch_start_time) / self.num_frames_in_batch;
+            self.last_batch_start_time = curr_frame_time;
+            self.num_frames_in_batch = 0;
+        }
+
+        let fps = NSEC_PER_SEC / self.average_frame_time;
+        let fps_text = "FPS: ".to_string() + &fps.to_string()
+        + &"\naverage_frame_time: ".to_string() + &self.average_frame_time.to_string()
+        + &"\nnum_frames_in_batch: ".to_string() + &self.num_frames_in_batch.to_string()
+        + &"\nlast_batch_start_time: ".to_string() + &self.last_batch_start_time.to_string()
+        + &"\ncurr_frame_time: ".to_string() + &curr_frame_time.to_string();
 
         let square = rectangle::square(0.0, 0.0, 50.0);
         let players = &self.players;
+        let factory = self.window.factory.clone();
+
 
         self.window.draw_2d(event, |c, gl| {
             // Clear the screen.
             clear(GREEN, gl);
+
+            // Draw our fps.
+            let transform = c.transform.trans(10.0, 10.0);
+                let mut cache = piston_window::Glyphs::new(
+                    "D:\\Development\\Rust\\piston_shooty\\assets\\Roboto-Regular.ttf", // TODO: Change at some point.
+                    factory).unwrap();
+                text(WHITE, 14, &fps_text, &mut cache, transform, gl);
+
             
             for player in players {
                 let transform = c.transform.trans(player.position.x, player.position.y)
@@ -169,13 +194,6 @@ impl App {
                         .trans(-square[2] * 0.5, -square[3] * 0.5);
                     rectangle(player.team.team_color, square, transform, gl);
                 }
-
-                // Draw our fps.
-                // let factory = self.window.factory.clone();
-                // let mut cache = piston_window::Glyphs::new(
-                //     "D:\\Development\\Rust\\piston_shooty\\assets\\Roboto-Regular.ttf",
-                //     factory).unwrap();
-                // text(WHITE, 14, &fps_text, &mut cache, transform, gl);
 
                 // let text = Text::new(14);
                 // let mut cache = character::CharacterCache::new();
@@ -231,19 +249,21 @@ fn main() {
             Player {team: TEAM1, ..Default::default()},
             Player {team: TEAM2, ..Default::default()},
         ],
-        last_frame_time: time::precise_time_ns()
+        last_batch_start_time: time::precise_time_ns(),
+        num_frames_in_batch: 0,
+        average_frame_time: 1
     };
 
     // let mut events: piston::event_loop::WindowEvents = app.window.events();
     let mut key_states: HashMap<Key, input::KeyState> = HashMap::new();
     
     while let Some(e) = app.window.next() {
-        app.render(&e);
+        //app.render(&e);
         //app.update(&e);
         // // Render.
-        // if let Some(r) = e.render_args() {
-        //     app.render(&r);
-        // }
+        if let Some(r) = e.render_args() {
+            app.render(&e);
+        }
 
         // Update.
         if let Some(u) = e.update_args() {
@@ -252,6 +272,7 @@ fn main() {
         
         input::gather_input(&e, &mut key_states);
 
+        // TODO: Change to not trigger literally every generic event.
         for (key, value) in &key_states {
             match *key {
                 // Player 1
