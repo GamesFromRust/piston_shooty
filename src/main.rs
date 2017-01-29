@@ -1,17 +1,27 @@
+mod input;
+
 extern crate piston;
-extern crate graphics;
 extern crate glutin_window;
 extern crate opengl_graphics;
+extern crate time;
+// extern crate find_folder;
+extern crate piston_window;
+// extern crate opengl_graphics;
+extern crate gfx_device_gl;
 
-use piston::window::WindowSettings;
-use piston::event_loop::*;
+use opengl_graphics::glyph_cache::GlyphCache;
+//use piston::window;
+//use piston::window::WindowSettings;
+//use piston::event_loop::*;
 // use piston::event_loop::*;
 // use piston::event_loop::WindowEvents;
-use piston::input::*;
-use glutin_window::GlutinWindow as Window;
-use opengl_graphics::{ GlGraphics, OpenGL };
+//use piston::input::*;
+//use glutin_window::GlutinWindow as Window;
+use opengl_graphics::{ GlGraphics/*, OpenGL*/ };
 use std::collections::HashMap;
 use std::ops::*;
+use std::rc::Rc;
+use piston_window::*;
 
 #[derive(Clone, Copy)]
 pub struct Vector2 {
@@ -24,6 +34,9 @@ const PLAYER_ROTATIONAL_VELOCITY: f64 = 3.0;
 const GREEN:    [f32; 4] = [0.0, 1.0, 0.0, 1.0];
 const RED:      [f32; 4] = [1.0, 0.0, 0.0, 1.0];
 const BLUE:     [f32; 4] = [0.0, 0.0, 1.0, 1.0];
+const WHITE:    [f32; 4] = [1.0, 1.0, 1.0, 1.0];
+
+const NSEC_PER_SEC: u64 = 1_000_000_000;
 
 pub struct Team {
     team_color: [f32; 4]
@@ -119,18 +132,25 @@ impl Player {
 }
 
 pub struct App {
-    gl: GlGraphics, // OpenGL drawing backend.
-    players: Vec<Player>
+    //gl: GlGraphics, // OpenGL drawing backend.
+    window: piston_window::PistonWindow,
+    players: Vec<Player>,
+    last_frame_time: u64,
 }
 
 impl App {
-    fn render(&mut self, args: &RenderArgs) {
-        use graphics::*;
+    fn render(&mut self, event: &Event) {
+        let curr_frame_time = time::precise_time_ns();
+        let frame_time = curr_frame_time - self.last_frame_time;
+        let fps = frame_time / NSEC_PER_SEC;
+        self.last_frame_time = curr_frame_time;
+
+        let fps_text = "FPS: ".to_string() + &fps.to_string();
 
         let square = rectangle::square(0.0, 0.0, 50.0);
         let players = &self.players;
 
-        self.gl.draw(args.viewport(), |c, gl| {
+        self.window.draw_2d(event, |c, gl| {
             // Clear the screen.
             clear(GREEN, gl);
             
@@ -149,6 +169,30 @@ impl App {
                         .trans(-square[2] * 0.5, -square[3] * 0.5);
                     rectangle(player.team.team_color, square, transform, gl);
                 }
+
+                // Draw our fps.
+                // let factory = self.window.factory.clone();
+                // let mut cache = piston_window::Glyphs::new(
+                //     "D:\\Development\\Rust\\piston_shooty\\assets\\Roboto-Regular.ttf",
+                //     factory).unwrap();
+                // text(WHITE, 14, &fps_text, &mut cache, transform, gl);
+
+                // let text = Text::new(14);
+                // let mut cache = character::CharacterCache::new();
+                // text.draw(fps_text, &mut cache, &c.draw_state, transform, gl)
+
+                // text.draw(&e, |c, g| {
+                //     let transform = c.transform.trans(10.0, 100.0);
+                //     let mut glyphs = Glyphs::new();
+                //     // Set a white background
+                //     clear([1.0, 1.0, 1.0, 1.0], g);
+                //     text::Text::new_color([0.0, 0.0, 0.0, 1.0], 32).draw(
+                //         &fps_text,
+                //         &mut glyphs,
+                //         &c.draw_state,
+                //         transform, g
+                //     );
+                // });
             }
         });
     }
@@ -161,80 +205,53 @@ impl App {
     }
 }
 
-
-#[derive(Clone, Copy)]
-pub struct KeyState {
-    held: bool,
-    pressed: bool,
-    released: bool,
-}
-
-// fn gather_input(e: piston::event_loop::Event, key_states:&mut HashMap<Key, KeyState>) -> &mut HashMap<Key, KeyState> {    
-fn gather_input(e: &Event, key_states:&mut HashMap<Key, KeyState>) {    
-    if let Some(Button::Keyboard(key)) = e.press_args() {
-        let key_state = KeyState { held: false, pressed: true, released: false };
-        if let Some(key_state) = key_states.get_mut(&key) {
-            if key_state.pressed {
-                key_state.held = true;
-                key_state.released = false;
-            }
-        }
-        key_states.insert(key, key_state);
-    }
-    if let Some(Button::Keyboard(key)) = e.release_args() {
-        let key_state = KeyState { held: false, pressed: false, released: true };
-        if let Some(key_state) = key_states.get_mut(&key) {
-            key_state.pressed = false;
-            key_state.held = false;
-        }
-        key_states.insert(key, key_state);
-    }
-}
-
 fn main() {
     // Change this to OpenGL::V2_1 if not working.
-    let opengl = OpenGL::V3_2;
-
-    // Create a Glutin window.
-    let mut window: Window = WindowSettings::new(
-            "piston_shooty",
-            [800, 800]
-        )
-        .opengl(opengl)
-        .exit_on_esc(true)
-        .build()
-        .unwrap();
+    //let opengl = OpenGL::V3_2;
 
     // Create a new game and run it.
     let mut app = App {
-        gl: GlGraphics::new(opengl),
+        //gl: GlGraphics::new(opengl),
+        window: WindowSettings::new(
+                "piston_shooty",
+                [800, 800]
+            )
+            //.opengl(opengl)
+            .exit_on_esc(true)
+            .build()
+            .unwrap(),
+        // piston_window::PistonWindow::build_from_window_settings(WindowSettings::new(
+        //         "piston_shooty",
+        //         [800, 800]
+        //     )
+        //     .opengl(opengl)
+        //     .exit_on_esc(true))
+        //     .unwrap(),
         players: vec![
             Player {team: TEAM1, ..Default::default()},
             Player {team: TEAM2, ..Default::default()},
-        ]
+        ],
+        last_frame_time: time::precise_time_ns()
     };
 
-    let mut events: piston::event_loop::WindowEvents = window.events();
-    let mut key_states: HashMap<Key, KeyState> = HashMap::new();
+    // let mut events: piston::event_loop::WindowEvents = app.window.events();
+    let mut key_states: HashMap<Key, input::KeyState> = HashMap::new();
     
-    // piston::event_loop::Event
-    // Option<Event<W::Event>>
-    while let Some(e) = events.next(&mut window) {
-        // Render.
-        if let Some(r) = e.render_args() {
-            app.render(&r);
-        }
+    while let Some(e) = app.window.next() {
+        app.render(&e);
+        //app.update(&e);
+        // // Render.
+        // if let Some(r) = e.render_args() {
+        //     app.render(&r);
+        // }
 
         // Update.
         if let Some(u) = e.update_args() {
             app.update(&u);
         }
+        
+        input::gather_input(&e, &mut key_states);
 
-        // let () = e;
-        // Keyboard.
-        gather_input(&e, &mut key_states);
-
-        // Move our shit.
         for (key, value) in &key_states {
             match *key {
                 // Player 1
