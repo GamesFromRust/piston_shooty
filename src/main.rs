@@ -198,7 +198,6 @@ fn main() {
                 "piston_shooty",
                 [800, 800]
             )
-            //.opengl(opengl)
             .exit_on_esc(true)
             .build()
             .unwrap(),
@@ -211,12 +210,9 @@ fn main() {
         average_frame_time: 1
     };
 
-    // let mut events: piston::event_loop::WindowEvents = app.window.events();
     let mut key_states: HashMap<Key, input::KeyState> = HashMap::new();
     
     while let Some(e) = app.window.next() {
-        //app.render(&e);
-        //app.update(&e);
         // // Render.
         if e.render_args().is_some() {
             app.render(&e);
