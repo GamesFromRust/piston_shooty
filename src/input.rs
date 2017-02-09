@@ -1,12 +1,5 @@
-// use piston::window::WindowSettings;
-// use piston::event_loop::*;
-// use piston::event_loop::*;
-// use piston::event_loop::WindowEvents;
 use piston_window::*;
-// use glutin_window::GlutinWindow as Window;
-// use opengl_graphics::{ GlGraphics, OpenGL };
 use std::collections::HashMap;
-// use std::ops::*;
 
 #[derive(Clone, Copy)]
 pub struct KeyState {
