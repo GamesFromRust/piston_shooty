@@ -4,23 +4,11 @@ extern crate piston;
 extern crate glutin_window;
 extern crate opengl_graphics;
 extern crate time;
-// extern crate find_folder;
 extern crate piston_window;
-// extern crate opengl_graphics;
 extern crate gfx_device_gl;
 
-use opengl_graphics::glyph_cache::GlyphCache;
-//use piston::window;
-//use piston::window::WindowSettings;
-//use piston::event_loop::*;
-// use piston::event_loop::*;
-// use piston::event_loop::WindowEvents;
-//use piston::input::*;
-//use glutin_window::GlutinWindow as Window;
-use opengl_graphics::{ GlGraphics/*, OpenGL*/ };
 use std::collections::HashMap;
 use std::ops::*;
-use std::rc::Rc;
 use piston_window::*;
 
 #[derive(Clone, Copy)]
@@ -47,11 +35,11 @@ const TEAM1: Team = Team {team_color: BLUE};
 const TEAM2: Team = Team {team_color: RED};
 
 impl Vector2 {
-    fn normalize(&mut self) {
-        let mag = ((self.x * self.x) + (self.y * self.y) as f64).sqrt();
-        self.x /= mag;
-        self.y /= mag;
-    }
+    // fn normalize(&mut self) {
+    //     let mag = ((self.x * self.x) + (self.y * self.y) as f64).sqrt();
+    //     self.x /= mag;
+    //     self.y /= mag;
+    // }
 }
 
 impl AddAssign for Vector2 {
@@ -132,13 +120,10 @@ impl Player {
 }
 
 pub struct App {
-    //gl: GlGraphics, // OpenGL drawing backend.
     window: piston_window::PistonWindow,
     players: Vec<Player>,
-    // last_frame_time: u64,
     last_batch_start_time: u64,
     num_frames_in_batch: u64,
-    // total_batch_time: u64,
     average_frame_time: u64
 }
 
@@ -194,23 +179,6 @@ impl App {
                         .trans(-square[2] * 0.5, -square[3] * 0.5);
                     rectangle(player.team.team_color, square, transform, gl);
                 }
-
-                // let text = Text::new(14);
-                // let mut cache = character::CharacterCache::new();
-                // text.draw(fps_text, &mut cache, &c.draw_state, transform, gl)
-
-                // text.draw(&e, |c, g| {
-                //     let transform = c.transform.trans(10.0, 100.0);
-                //     let mut glyphs = Glyphs::new();
-                //     // Set a white background
-                //     clear([1.0, 1.0, 1.0, 1.0], g);
-                //     text::Text::new_color([0.0, 0.0, 0.0, 1.0], 32).draw(
-                //         &fps_text,
-                //         &mut glyphs,
-                //         &c.draw_state,
-                //         transform, g
-                //     );
-                // });
             }
         });
     }
@@ -224,12 +192,8 @@ impl App {
 }
 
 fn main() {
-    // Change this to OpenGL::V2_1 if not working.
-    //let opengl = OpenGL::V3_2;
-
     // Create a new game and run it.
     let mut app = App {
-        //gl: GlGraphics::new(opengl),
         window: WindowSettings::new(
                 "piston_shooty",
                 [800, 800]
@@ -238,13 +202,6 @@ fn main() {
             .exit_on_esc(true)
             .build()
             .unwrap(),
-        // piston_window::PistonWindow::build_from_window_settings(WindowSettings::new(
-        //         "piston_shooty",
-        //         [800, 800]
-        //     )
-        //     .opengl(opengl)
-        //     .exit_on_esc(true))
-        //     .unwrap(),
         players: vec![
             Player {team: TEAM1, ..Default::default()},
             Player {team: TEAM2, ..Default::default()},
@@ -261,7 +218,7 @@ fn main() {
         //app.render(&e);
         //app.update(&e);
         // // Render.
-        if let Some(r) = e.render_args() {
+        if e.render_args().is_some() {
             app.render(&e);
         }
 
