@@ -11,7 +11,7 @@ use std::collections::HashMap;
 use std::ops::*;
 use piston_window::*;
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq)]
 pub struct Vector2 {
     x: f64,
     y: f64,
@@ -23,7 +23,7 @@ const GREEN:    [f32; 4] = [0.0, 1.0, 0.0, 1.0];
 const RED:      [f32; 4] = [1.0, 0.0, 0.0, 1.0];
 const BLUE:     [f32; 4] = [0.0, 0.0, 1.0, 1.0];
 const WHITE:    [f32; 4] = [1.0, 1.0, 1.0, 1.0];
-const MOVE_SPEED_MAX: f64 = 1000.0;
+const MOVE_SPEED_MAX: f64 = 100.0;
 
 const NSEC_PER_SEC: u64 = 1_000_000_000;
 
@@ -36,11 +36,20 @@ const TEAM1: Team = Team {team_color: BLUE};
 const TEAM2: Team = Team {team_color: RED};
 
 impl Vector2 {
-    // fn normalize(&mut self) {
-    //     let mag = ((self.x * self.x) + (self.y * self.y) as f64).sqrt();
-    //     self.x /= mag;
-    //     self.y /= mag;
-    // }
+    fn normalize(&mut self) {
+        let mag = 1.0 / ((self.x * self.x) + (self.y * self.y) as f64).sqrt();
+        self.x *= mag;
+        self.y *= mag;
+    }
+}
+
+impl Default for Vector2 {
+  fn default () -> Vector2 {
+    Vector2 {
+        x: 0.0,
+        y: 0.0,
+    }
+  }
 }
 
 impl AddAssign for Vector2 {
@@ -193,49 +202,54 @@ impl App {
 }
 
 fn apply_input(players:&mut Vec<Player>, key_states: &HashMap<Key, input::KeyState>, dt: f64) {
+    let mut player_velocities: Vec<Vector2> = vec![
+        Vector2::default(),
+        Vector2::default()
+    ];
+
     for (key, value) in key_states {
         match *key {
             // Player 1
             Key::W => {
                 if value.pressed {
-                    players[0].position.y -= MOVE_SPEED_MAX * dt;
+                    player_velocities[0].y -= 1.0;
                 }
             },
             Key::A => {
                 if value.pressed {
-                    players[0].position.x -= MOVE_SPEED_MAX * dt;
+                    player_velocities[0].x -= 1.0;
                 }
             },
             Key::S => {
                 if value.pressed {
-                    players[0].position.y += MOVE_SPEED_MAX * dt;
+                    player_velocities[0].y += 1.0;
                 }
             },
             Key::D => {
                 if value.pressed {
-                    players[0].position.x += MOVE_SPEED_MAX * dt;
+                    player_velocities[0].x += 1.0;
                 }
             },
 
             // Player 2
             Key::Up => {
                 if value.pressed {
-                    players[1].position.y -= MOVE_SPEED_MAX * dt;
+                    player_velocities[1].y -= 1.0;
                 }
             },
             Key::Left => {
                 if value.pressed {
-                    players[1].position.x -= MOVE_SPEED_MAX * dt;
+                    player_velocities[1].x -= 1.0;
                 }
             },
             Key::Down => {
                 if value.pressed {
-                    players[1].position.y += MOVE_SPEED_MAX * dt;
+                    player_velocities[1].y += 1.0;
                 }
             },
             Key::Right => {
                 if value.pressed {
-                    players[1].position.x += MOVE_SPEED_MAX * dt;
+                    player_velocities[1].x += 1.0;
                 }
             },
             // Player1
@@ -253,6 +267,14 @@ fn apply_input(players:&mut Vec<Player>, key_states: &HashMap<Key, input::KeySta
             // Default
             _ => {}
         }
+    }
+
+    for i in 0..players.len() {
+        if player_velocities[i] == Vector2::default() {
+            continue
+        }
+        player_velocities[i].normalize();
+        players[i].position += player_velocities[i] * MOVE_SPEED_MAX * dt;
     }
 }
 
@@ -274,6 +296,7 @@ fn main() {
         num_frames_in_batch: 0,
         average_frame_time: 1
     };
+    app.window.set_max_fps(u64::max_value());
 
     let mut key_states: HashMap<Key, input::KeyState> = HashMap::new();
     
