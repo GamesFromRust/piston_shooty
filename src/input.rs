@@ -8,7 +8,7 @@ pub struct KeyState {
     pub released: bool,
 }
 
-pub fn gather_input(e: &Event, key_states:&mut HashMap<Key, KeyState>) {    
+pub fn gather_input(e: &Input, key_states:&mut HashMap<Key, KeyState>) {    
     if let Some(Button::Keyboard(key)) = e.press_args() {
         let key_state = KeyState { held: false, pressed: true, released: false };
         if let Some(key_state) = key_states.get_mut(&key) {
