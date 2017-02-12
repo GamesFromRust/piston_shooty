@@ -7,10 +7,15 @@ extern crate opengl_graphics;
 extern crate time;
 extern crate piston_window;
 extern crate gfx_device_gl;
+extern crate sprite;
+extern crate graphics;
 
+use sprite::*;
 use std::collections::HashMap;
 use piston_window::*;
 use vector2::*;
+use std::rc::Rc;
+use graphics::ImageSize;
 
 const PROJECTILE_VELOCITY_MAGNITUDE: f64 = 300.0;
 const PLAYER_ROTATIONAL_VELOCITY: f64 = 3.0;
@@ -39,7 +44,7 @@ pub struct Player {
     team: Team,
     position: Vector2,
     rotation: f64,
-    projectiles: Vec<Projectile>
+    projectiles: Vec<Projectile>,
 }
 
 impl Default for Player {
@@ -87,7 +92,7 @@ pub struct App {
 }
 
 impl App {
-    fn render(&mut self, event: &Event) {
+    fn render(&mut self, event: &Event, scene: &Scene<ImageSize>) {
         // TODO: Read a book on how to do a fps counter.
         let curr_frame_time:u64 = time::precise_time_ns();
 
@@ -109,7 +114,6 @@ impl App {
         let square = rectangle::square(0.0, 0.0, 50.0);
         let players = &self.players;
         let factory = self.window.factory.clone();
-
 
         self.window.draw_2d(event, |c, gl| {
             // Clear the screen.
@@ -139,6 +143,8 @@ impl App {
                     rectangle(player.team.team_color, square, transform, gl);
                 }
             }
+
+            scene.draw(c.transform, gl);
         });
     }
 
@@ -228,18 +234,37 @@ fn apply_input(players:&mut Vec<Player>, key_states: &HashMap<Key, input::KeySta
 }
 
 fn main() {
-    // Create a new game and run it.
-    let mut app = App {
-        window: WindowSettings::new(
+    let width = 800;
+    let height = 800;
+    let window = WindowSettings::new(
                 "piston_shooty",
-                [800, 800]
+                [width, height]
             )
             .exit_on_esc(true)
             .build()
-            .unwrap(),
+            .unwrap();
+
+    let scene: Scene = Scene::new();
+
+    let tex = Rc::new(
+        Texture::from_path(
+            &mut window.factory,
+            "assets/hand-gun.png"
+            ),
+        Flip::None,
+        &TextureSettings::new()
+    ).unwrap();
+
+    let mut sprite = Sprite::from_texture(tex.clone());
+    sprite.set_position(width as f64/ 2.0, height as f64 / 2.0);
+
+    scene.add_child(sprite);
+
+    let mut app = App {
+        window: window,
         players: vec![
-            Player {team: TEAM1, ..Default::default()},
-            Player {team: TEAM2, ..Default::default()},
+            Player {team: TEAM1, sprite: sprite.clone(), ..Default::default()},
+            Player {team: TEAM2, sprite: sprite.clone(), ..Default::default()},
         ],
         last_batch_start_time: time::precise_time_ns(),
         num_frames_in_batch: 0,
@@ -252,7 +277,7 @@ fn main() {
     while let Some(e) = app.window.next() {
         // // Render.
         if e.render_args().is_some() {
-            app.render(&e);
+            app.render(&e, &scene);
         }
 
         // Update.
