@@ -1,4 +1,5 @@
 mod input;
+mod vector2;
 
 extern crate piston;
 extern crate glutin_window;
@@ -8,14 +9,8 @@ extern crate piston_window;
 extern crate gfx_device_gl;
 
 use std::collections::HashMap;
-use std::ops::*;
 use piston_window::*;
-
-#[derive(Clone, Copy, PartialEq)]
-pub struct Vector2 {
-    x: f64,
-    y: f64,
-}
+use vector2::*;
 
 const PROJECTILE_VELOCITY_MAGNITUDE: f64 = 300.0;
 const PLAYER_ROTATIONAL_VELOCITY: f64 = 3.0;
@@ -34,52 +29,6 @@ pub struct Team {
 const NO_TEAM: Team = Team {team_color: GREEN};
 const TEAM1: Team = Team {team_color: BLUE};
 const TEAM2: Team = Team {team_color: RED};
-
-impl Vector2 {
-    fn normalize(&mut self) {
-        let mag = 1.0 / ((self.x * self.x) + (self.y * self.y) as f64).sqrt();
-        self.x *= mag;
-        self.y *= mag;
-    }
-}
-
-impl Default for Vector2 {
-  fn default () -> Vector2 {
-    Vector2 {
-        x: 0.0,
-        y: 0.0,
-    }
-  }
-}
-
-impl AddAssign for Vector2 {
-    fn add_assign(&mut self, rhs: Vector2) {
-        self.x += rhs.x;
-        self.y += rhs.y;
-    }
-}
-
-// TODO: How the fuck does the memory work out here? What's copied?
-impl Sub for Vector2 {
-    type Output = Vector2;
-    fn sub(self, rhs: Vector2) -> Vector2 {
-        Vector2 { x: self.x - rhs.x, y: self.y - rhs.y }
-    }
-}
-
-impl Mul<f64> for Vector2 {
-    type Output = Vector2;
-    fn mul(self, rhs: f64) -> Vector2 {
-        Vector2 { x: self.x * rhs, y: self.y * rhs }
-    }
-}
-
-impl MulAssign<f64> for Vector2 {
-    fn mul_assign(&mut self, rhs: f64) {
-        self.x *= rhs;
-        self.y *= rhs;
-    }
-}
 
 pub struct Projectile {
     position: Vector2,
