@@ -23,6 +23,7 @@ const GREEN:    [f32; 4] = [0.0, 1.0, 0.0, 1.0];
 const RED:      [f32; 4] = [1.0, 0.0, 0.0, 1.0];
 const BLUE:     [f32; 4] = [0.0, 0.0, 1.0, 1.0];
 const WHITE:    [f32; 4] = [1.0, 1.0, 1.0, 1.0];
+const MOVE_SPEED_MAX: f64 = 1000.0;
 
 const NSEC_PER_SEC: u64 = 1_000_000_000;
 
@@ -191,6 +192,70 @@ impl App {
     }
 }
 
+fn apply_input(players:&mut Vec<Player>, key_states: &HashMap<Key, input::KeyState>, dt: f64) {
+    for (key, value) in key_states {
+        match *key {
+            // Player 1
+            Key::W => {
+                if value.pressed {
+                    players[0].position.y -= MOVE_SPEED_MAX * dt;
+                }
+            },
+            Key::A => {
+                if value.pressed {
+                    players[0].position.x -= MOVE_SPEED_MAX * dt;
+                }
+            },
+            Key::S => {
+                if value.pressed {
+                    players[0].position.y += MOVE_SPEED_MAX * dt;
+                }
+            },
+            Key::D => {
+                if value.pressed {
+                    players[0].position.x += MOVE_SPEED_MAX * dt;
+                }
+            },
+
+            // Player 2
+            Key::Up => {
+                if value.pressed {
+                    players[1].position.y -= MOVE_SPEED_MAX * dt;
+                }
+            },
+            Key::Left => {
+                if value.pressed {
+                    players[1].position.x -= MOVE_SPEED_MAX * dt;
+                }
+            },
+            Key::Down => {
+                if value.pressed {
+                    players[1].position.y += MOVE_SPEED_MAX * dt;
+                }
+            },
+            Key::Right => {
+                if value.pressed {
+                    players[1].position.x += MOVE_SPEED_MAX * dt;
+                }
+            },
+            // Player1
+            Key::Space => {
+                if value.pressed {
+                    players[0].shoot();
+                }
+            },
+            // Player 2
+            Key::Return => {
+                if value.pressed {                    
+                    players[1].shoot();
+                }
+            },
+            // Default
+            _ => {}
+        }
+    }
+}
+
 fn main() {
     // Create a new game and run it.
     let mut app = App {
@@ -225,68 +290,8 @@ fn main() {
         
         input::gather_input(&e, &mut key_states);
 
-        // TODO: Change to not trigger literally every generic event.
-        for (key, value) in &key_states {
-            match *key {
-                // Player 1
-                Key::W => {
-                    if value.pressed {
-                        app.players[0].position.y -= 1.0;
-                    }
-                },
-                Key::A => {
-                    if value.pressed {
-                        app.players[0].position.x -= 1.0;
-                    }
-                },
-                Key::S => {
-                    if value.pressed {
-                        app.players[0].position.y += 1.0;
-                    }
-                },
-                Key::D => {
-                    if value.pressed {
-                        app.players[0].position.x += 1.0;
-                    }
-                },
-
-                // Player 2
-                Key::Up => {
-                    if value.pressed {
-                        app.players[1].position.y -= 1.0;
-                    }
-                },
-                Key::Left => {
-                    if value.pressed {
-                        app.players[1].position.x -= 1.0;
-                    }
-                },
-                Key::Down => {
-                    if value.pressed {
-                        app.players[1].position.y += 1.0;
-                    }
-                },
-                Key::Right => {
-                    if value.pressed {
-                        app.players[1].position.x += 1.0;
-                    }
-                },
-                // Player1
-                Key::Space => {
-                    if value.pressed {
-                        app.players[0].shoot();
-                    }
-                },
-                // Player 2
-                Key::Return => {
-                    if value.pressed {                    
-                        app.players[1].shoot();
-                    }
-                },
-
-                // Default
-                _ => {}
-            }
+        if let Some(u) = e.update_args() {
+            apply_input(&mut app.players, &key_states, u.dt);
         }
     }
 }
