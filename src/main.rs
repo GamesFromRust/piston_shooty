@@ -15,33 +15,34 @@ use piston_window::*;
 use vector2::*;
 use asset_loader::AssetLoader;
 use std::rc::Rc;
-use std::ops::Deref;
+use std::ops::Deref; 
 
 const PROJECTILE_VELOCITY_MAGNITUDE: f64 = 300.0;
 const PLAYER_ROTATIONAL_VELOCITY: f64 = 5.0;
 const GREEN:    [f32; 4] = [0.0, 1.0, 0.0, 1.0];
-const RED:      [f32; 4] = [1.0, 0.0, 0.0, 1.0];
-const BLUE:     [f32; 4] = [0.0, 0.0, 1.0, 1.0];
+// const RED:      [f32; 4] = [1.0, 0.0, 0.0, 1.0];
+// const BLUE:     [f32; 4] = [0.0, 0.0, 1.0, 1.0];
 const WHITE:    [f32; 4] = [1.0, 1.0, 1.0, 1.0];
 const MOVE_SPEED_MAX: f64 = 500.0;
 
 const NSEC_PER_SEC: u64 = 1_000_000_000;
 
-pub struct Team {
-    team_color: [f32; 4]
-}
+// pub struct Team {
+//     team_color: [f32; 4]
+// }
 
 //const NO_TEAM: Team = Team {team_color: GREEN};
-const TEAM1: Team = Team {team_color: BLUE};
-const TEAM2: Team = Team {team_color: RED};
+// const TEAM1: Team = Team {team_color: BLUE};
+// const TEAM2: Team = Team {team_color: RED};
 
 pub struct Projectile {
     position: Vector2,
     velocity: Vector2,
+    rotation: f64,
 }
 
 pub struct Player {
-    team: Team,
+    // team: Team,
     position: Vector2,
     rotation: f64,
     projectiles: Vec<Projectile>,
@@ -58,7 +59,8 @@ impl Player {
 
         let projectile = Projectile {
             position: self.position,
-            velocity: vel
+            velocity: vel,
+            rotation: 0.0,
         };
 
         self.projectiles.push(projectile);
@@ -70,6 +72,7 @@ impl Player {
         // Move our projectiles.
         for projectile in &mut self.projectiles {
             projectile.position += projectile.velocity * args.dt;
+            projectile.rotation += PLAYER_ROTATIONAL_VELOCITY * args.dt;
         }
     }
 }
@@ -84,7 +87,7 @@ pub struct App {
 }
 
 impl App {
-    fn render(&mut self, event: &Input/*, scene: &Scene<piston_window::G2dTexture>*/) {
+    fn render(&mut self, event: &Input) {
         // TODO: Read a book on how to do a fps counter.
         let curr_frame_time:u64 = time::precise_time_ns();
 
@@ -132,6 +135,7 @@ impl App {
                 for projectile in &player.projectiles {
                     let square = rectangle::square(0.0, 0.0, 5.0);
                     let transform = c.transform.trans(projectile.position.x, projectile.position.y)
+                        .rot_rad(projectile.rotation)
                         .trans(-square[2] * 0.5, -square[3] * 0.5);
                     image(player.projectile_texture.deref(), transform, gl);
                 }
@@ -158,49 +162,50 @@ fn apply_input(players:&mut Vec<Player>, key_states: &HashMap<Key, input::KeySta
             // Player 1
             Key::W => {
                 if value.pressed {
-                    player_velocities[0].y -= 1.0;
+                    player_velocities[0].y -= 1.0 * dt;
                 }
             },
             Key::A => {
                 if value.pressed {
-                    player_velocities[0].x -= 1.0;
+                    player_velocities[0].x -= 1.0 * dt;
                 }
             },
             Key::S => {
                 if value.pressed {
-                    player_velocities[0].y += 1.0;
+                    player_velocities[0].y += 1.0 * dt;
                 }
             },
             Key::D => {
                 if value.pressed {
-                    player_velocities[0].x += 1.0;
+                    player_velocities[0].x += 1.0 * dt;
                 }
             },
 
             // Player 2
             Key::Up => {
                 if value.pressed {
-                    player_velocities[1].y -= 1.0;
+                    player_velocities[1].y -= 1.0 * dt;
                 }
             },
             Key::Left => {
                 if value.pressed {
-                    player_velocities[1].x -= 1.0;
+                    player_velocities[1].x -= 1.0 * dt;
                 }
             },
             Key::Down => {
                 if value.pressed {
-                    player_velocities[1].y += 1.0;
+                    player_velocities[1].y += 1.0 * dt;
                 }
             },
             Key::Right => {
                 if value.pressed {
-                    player_velocities[1].x += 1.0;
+                    player_velocities[1].x += 1.0 * dt;
                 }
             },
             // Player1
             Key::Space => {
                 if value.pressed {
+                    println!("shooting");
                     players[0].shoot();
                 }
             },
@@ -249,7 +254,7 @@ fn main() {
         window: window,
         players: vec![
             Player {
-                team: TEAM1,
+                // team: TEAM1,
                 position: Vector2 { x: 0.0, y: 0.0 },
                 rotation: 0.0,
                 projectiles: Vec::new(),
@@ -257,7 +262,7 @@ fn main() {
                 projectile_texture: gun_gun.clone(),
             },
             Player {
-                team: TEAM2,
+                // team: TEAM2,
                 position: Vector2 { x: 0.0, y: 0.0 },
                 rotation: 0.0,
                 projectiles: Vec::new(),
