@@ -1,5 +1,6 @@
 mod input;
 mod vector2;
+mod asset_loader;
 
 extern crate piston;
 extern crate glutin_window;
@@ -12,6 +13,9 @@ extern crate find_folder;
 use std::collections::HashMap;
 use piston_window::*;
 use vector2::*;
+use asset_loader::AssetLoader;
+use std::rc::Rc;
+use std::ops::Deref;
 
 const PROJECTILE_VELOCITY_MAGNITUDE: f64 = 300.0;
 const PLAYER_ROTATIONAL_VELOCITY: f64 = 5.0;
@@ -41,21 +45,9 @@ pub struct Player {
     position: Vector2,
     rotation: f64,
     projectiles: Vec<Projectile>,
-    tex : G2dTexture
+    tex : G2dTexture,
+    projectile_texture: Rc<G2dTexture>,
 }
-
-// TODO: idk how to make this work with sprite so fuck it
-// impl Default for Player {
-//   fn default () -> Player {
-//     Player {
-//         team: NO_TEAM,
-//         position: Vector2 { x: 0.0, y: 0.0 },
-//         rotation: 0.0,
-//         projectiles: Vec::new(),
-//         sprite: Sprite::from_texture()
-//     }
-//   }
-// }
 
 impl Player {
     fn shoot(&mut self) {
@@ -87,7 +79,8 @@ pub struct App {
     players: Vec<Player>,
     last_batch_start_time: u64,
     num_frames_in_batch: u64,
-    average_frame_time: u64
+    average_frame_time: u64,
+    assets: std::path::PathBuf
 }
 
 impl App {
@@ -111,24 +104,21 @@ impl App {
         + &"\ncurr_frame_time: ".to_string() + &curr_frame_time.to_string();
 
         let square = rectangle::square(0.0, 0.0, 50.0);
-        let players = &mut self.players;
+        let players = &self.players;
         let factory = self.window.factory.clone();
+        let font_path = self.assets.join("Roboto-Regular.ttf");
 
-        self.window.draw_2d(event, |c, gl| {
+        self.window.draw_2d(event, |c: Context, gl: &mut G2d| {
             // Clear the screen.
             clear(GREEN, gl);
 
             // Draw our fps.
             let transform = c.transform.trans(10.0, 10.0);
-            let assets = find_folder::Search::ParentsThenKids(3, 3)
-                .for_folder("assets").unwrap();
-            let font_path = assets.join("Roboto-Regular.ttf");
             let mut cache = piston_window::Glyphs::new(
                 font_path,
                 factory).unwrap();
             text(WHITE, 14, &fps_text, &mut cache, transform, gl);
 
-            
             for player in players {
                 let transform = c.transform.trans(player.position.x, player.position.y)
                                             .rot_rad(player.rotation)
@@ -137,16 +127,13 @@ impl App {
 
                 // Set our player sprite position.
                 image(&player.tex, transform, gl);
-                
-                // Draw a box rotating around the middle of the screen.
-                //rectangle(player.team.team_color, square, transform, gl);
 
                 // Draw our projectiles.
                 for projectile in &player.projectiles {
                     let square = rectangle::square(0.0, 0.0, 5.0);
                     let transform = c.transform.trans(projectile.position.x, projectile.position.y)
                         .trans(-square[2] * 0.5, -square[3] * 0.5);
-                    rectangle(player.team.team_color, square, transform, gl);
+                    image(player.projectile_texture.deref(), transform, gl);
                 }
             }
         });
@@ -245,27 +232,18 @@ fn main() {
         "piston_shooty",
         [width, height]);
 
+    let mut assets: std::path::PathBuf = find_folder::Search::ParentsThenKids(3, 3)
+        .for_folder("assets").unwrap();
+
     let mut window : piston_window::PistonWindow = window_settings
         .exit_on_esc(true)
         .build()
         .unwrap();
 
-    let assets = find_folder::Search::ParentsThenKids(3, 3)
-        .for_folder("assets").unwrap();
-
-    let hand_gun_red = Texture::from_path(
-        &mut window.factory,
-        assets.join("hand-gun-red.png"),
-        Flip::None,
-        &TextureSettings::new()
-    ).unwrap();
-    
-    let hand_gun_blue = Texture::from_path(
-        &mut window.factory,
-        assets.join("hand-gun-blue.png"),
-        Flip::None,
-        &TextureSettings::new()
-    ).unwrap();
+    let asset_loader = AssetLoader { };
+    let hand_gun_red = asset_loader.load_texture("hand-gun-red.png", &mut window.factory, &mut assets);
+    let hand_gun_blue = asset_loader.load_texture("hand-gun-blue.png", &mut window.factory, &mut assets);
+    let gun_gun = Rc::new(asset_loader.load_texture("GunGunV1.png", &mut window.factory, &mut assets));
 
     let mut app = App {
         window: window,
@@ -275,19 +253,22 @@ fn main() {
                 position: Vector2 { x: 0.0, y: 0.0 },
                 rotation: 0.0,
                 projectiles: Vec::new(),
-                tex: hand_gun_blue
+                tex: hand_gun_blue,
+                projectile_texture: gun_gun.clone(),
             },
             Player {
                 team: TEAM2,
                 position: Vector2 { x: 0.0, y: 0.0 },
                 rotation: 0.0,
                 projectiles: Vec::new(),
-                tex: hand_gun_red
+                tex: hand_gun_red,
+                projectile_texture: gun_gun.clone(),
             },
         ],
         last_batch_start_time: time::precise_time_ns(),
         num_frames_in_batch: 0,
-        average_frame_time: 1
+        average_frame_time: 1,
+        assets: assets
     };
     app.window.set_max_fps(u64::max_value());
 
