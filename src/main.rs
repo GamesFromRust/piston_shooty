@@ -161,51 +161,50 @@ fn apply_input(players:&mut Vec<Player>, key_states: &HashMap<Key, input::KeySta
         match *key {
             // Player 1
             Key::W => {
-                if value.pressed {
+                if value.pressed || value.held {
                     player_velocities[0].y -= 1.0 * dt;
                 }
             },
             Key::A => {
-                if value.pressed {
+                if value.pressed || value.held {
                     player_velocities[0].x -= 1.0 * dt;
                 }
             },
             Key::S => {
-                if value.pressed {
+                if value.pressed || value.held {
                     player_velocities[0].y += 1.0 * dt;
                 }
             },
             Key::D => {
-                if value.pressed {
+                if value.pressed || value.held {
                     player_velocities[0].x += 1.0 * dt;
                 }
             },
 
             // Player 2
             Key::Up => {
-                if value.pressed {
+                if value.pressed || value.held {
                     player_velocities[1].y -= 1.0 * dt;
                 }
             },
             Key::Left => {
-                if value.pressed {
+                if value.pressed || value.held {
                     player_velocities[1].x -= 1.0 * dt;
                 }
             },
             Key::Down => {
-                if value.pressed {
+                if value.pressed || value.held {
                     player_velocities[1].y += 1.0 * dt;
                 }
             },
             Key::Right => {
-                if value.pressed {
+                if value.pressed || value.held {
                     player_velocities[1].x += 1.0 * dt;
                 }
             },
             // Player1
             Key::Space => {
                 if value.pressed {
-                    println!("shooting");
                     players[0].shoot();
                 }
             },
@@ -280,11 +279,6 @@ fn main() {
     let mut key_states: HashMap<Key, input::KeyState> = HashMap::new();
     
     while let Some(e) = app.window.next() {
-        // Render.
-        if e.render_args().is_some() {
-            app.render(&e);
-        }
-
         // Update.
         if let Some(u) = e.update_args() {
             app.update(&u);
@@ -294,6 +288,12 @@ fn main() {
 
         if let Some(u) = e.update_args() {
             apply_input(&mut app.players, &key_states, u.dt);
+            input::update_input(&mut key_states)
+        }
+
+        // Render.
+        if e.render_args().is_some() {
+            app.render(&e);
         }
     }
 }
