@@ -27,14 +27,6 @@ const MOVE_SPEED_MAX: f64 = 500.0;
 
 const NSEC_PER_SEC: u64 = 1_000_000_000;
 
-// pub struct Team {
-//     team_color: [f32; 4]
-// }
-
-// const NO_TEAM: Team = Team {team_color: GREEN};
-// const TEAM1: Team = Team {team_color: BLUE};
-// const TEAM2: Team = Team {team_color: RED};
-
 pub struct Projectile {
     position: Vector2,
     velocity: Vector2,
@@ -42,7 +34,6 @@ pub struct Projectile {
 }
 
 pub struct Player {
-    // team: Team,
     position: Vector2,
     rotation: f64,
     projectiles: Vec<Projectile>,
@@ -85,7 +76,7 @@ impl Player {
 
 pub struct App {
     window: piston_window::PistonWindow,
-    players: Vec<Player>,
+    player: Player,
     last_batch_start_time: u64,
     num_frames_in_batch: u64,
     average_frame_time: u64,
@@ -117,7 +108,7 @@ impl App {
             &"\ncurr_frame_time: ".to_string() + &curr_frame_time.to_string();
 
         let square = rectangle::square(0.0, 0.0, 50.0);
-        let players = &self.players;
+        let player = &self.player;
         let factory = self.window.factory.clone();
         let font_path = self.assets.join("Roboto-Regular.ttf");
 
@@ -130,99 +121,61 @@ impl App {
             let mut cache = piston_window::Glyphs::new(font_path, factory).unwrap();
             text(WHITE, 14, &fps_text, &mut cache, transform, gl);
 
-            for player in players {
+            let transform = c.transform
+                .trans(player.position.x, player.position.y)
+                .rot_rad(player.rotation)
+                .trans(-square[2] * 0.5, -square[3] * 0.5)
+                .scale(0.5, 0.5);
+
+            // Set our player sprite position.
+            image(&player.tex, transform, gl);
+
+            // Draw our projectiles.
+            for projectile in &player.projectiles {
+                let square = rectangle::square(0.0, 0.0, 5.0);
                 let transform = c.transform
-                    .trans(player.position.x, player.position.y)
-                    .rot_rad(player.rotation)
-                    .trans(-square[2] * 0.5, -square[3] * 0.5)
-                    .scale(0.5, 0.5);
-
-                // Set our player sprite position.
-                image(&player.tex, transform, gl);
-
-                // Draw our projectiles.
-                for projectile in &player.projectiles {
-                    let square = rectangle::square(0.0, 0.0, 5.0);
-                    let transform = c.transform
-                        .trans(projectile.position.x, projectile.position.y)
-                        .rot_rad(projectile.rotation)
-                        .trans(-square[2] * 0.5, -square[3] * 0.5);
-                    image(player.projectile_texture.deref(), transform, gl);
-                }
+                    .trans(projectile.position.x, projectile.position.y)
+                    .rot_rad(projectile.rotation)
+                    .trans(-square[2] * 0.5, -square[3] * 0.5);
+                image(player.projectile_texture.deref(), transform, gl);
             }
         });
     }
 
     fn update(&mut self, mouse_pos: &Vector2, args: &UpdateArgs) {
-        // Update our players.
-        for player in &mut self.players {
-            player.update(mouse_pos, args);
-        }
+        // Update our player.
+        self.player.update(mouse_pos, args);
     }
 }
 
-fn apply_input(players: &mut Vec<Player>,
+fn apply_input(player: &mut Player,
                key_states: &HashMap<Key, input::ButtonState>,
                mouse_states: &HashMap<MouseButton, input::ButtonState>,
                mouse_pos: &Vector2,
                dt: f64) {
-    let mut player_velocities: Vec<Vector2> = vec![Vector2::default(), Vector2::default()];
+    let mut player_velocity: Vector2 = Vector2::default();
 
     for (key, value) in key_states {
         match *key {
-            // Player 1
+            // Player
             Key::W => {
                 if value.pressed || value.held {
-                    player_velocities[0].y -= 1.0 * dt;
+                    player_velocity.y -= 1.0 * dt;
                 }
             }
             Key::A => {
                 if value.pressed || value.held {
-                    player_velocities[0].x -= 1.0 * dt;
+                    player_velocity.x -= 1.0 * dt;
                 }
             }
             Key::S => {
                 if value.pressed || value.held {
-                    player_velocities[0].y += 1.0 * dt;
+                    player_velocity.y += 1.0 * dt;
                 }
             }
             Key::D => {
                 if value.pressed || value.held {
-                    player_velocities[0].x += 1.0 * dt;
-                }
-            }
-
-            // Player 2
-            Key::Up => {
-                if value.pressed || value.held {
-                    player_velocities[1].y -= 1.0 * dt;
-                }
-            }
-            Key::Left => {
-                if value.pressed || value.held {
-                    player_velocities[1].x -= 1.0 * dt;
-                }
-            }
-            Key::Down => {
-                if value.pressed || value.held {
-                    player_velocities[1].y += 1.0 * dt;
-                }
-            }
-            Key::Right => {
-                if value.pressed || value.held {
-                    player_velocities[1].x += 1.0 * dt;
-                }
-            }
-            // Player1
-            Key::Space => {
-                if value.pressed {
-                    // players[0].shoot();
-                }
-            }
-            // Player 2
-            Key::Return => {
-                if value.pressed {
-                    // players[1].shoot();
+                    player_velocity.x += 1.0 * dt;
                 }
             }
             // Default
@@ -234,7 +187,7 @@ fn apply_input(players: &mut Vec<Player>,
         match *button {
             MouseButton::Left => {
                 if value.pressed {
-                    players[0].shoot(mouse_pos);
+                    player.shoot(mouse_pos);
                 }
             }
             // Default
@@ -242,13 +195,11 @@ fn apply_input(players: &mut Vec<Player>,
         }
     }
 
-    for i in 0..players.len() {
-        if player_velocities[i] == Vector2::default() {
-            continue;
-        }
-        player_velocities[i].normalize();
-        players[i].position += player_velocities[i] * MOVE_SPEED_MAX * dt;
+    if player_velocity == Vector2::default() {
+        return;
     }
+    player_velocity.normalize();
+    player.position += player_velocity * MOVE_SPEED_MAX * dt;
 }
 
 fn main() {
@@ -266,31 +217,19 @@ fn main() {
         .unwrap();
 
     let asset_loader = AssetLoader {};
-    let hand_gun_red =
-        asset_loader.load_texture("hand-gun-red.png", &mut window.factory, &mut assets);
-    let hand_gun_blue =
-        asset_loader.load_texture("hand-gun-blue.png", &mut window.factory, &mut assets);
+    let hand_gun = asset_loader.load_texture("hand-gun.png", &mut window.factory, &mut assets);
     let gun_gun =
         Rc::new(asset_loader.load_texture("GunGunV1.png", &mut window.factory, &mut assets));
 
     let mut app = App {
         window: window,
-        players: vec![Player {
-                          // team: TEAM1,
-                          position: Vector2 { x: 1.0, y: 1.0 },
-                          rotation: 0.0,
-                          projectiles: Vec::new(),
-                          tex: hand_gun_blue,
-                          projectile_texture: gun_gun.clone(),
-                      },
-                      Player {
-                          // team: TEAM2,
-                          position: Vector2 { x: 1.0, y: 1.0 },
-                          rotation: 0.0,
-                          projectiles: Vec::new(),
-                          tex: hand_gun_red,
-                          projectile_texture: gun_gun.clone(),
-                      }],
+        player: Player {
+            position: Vector2 { x: 1.0, y: 1.0 },
+            rotation: 0.0,
+            projectiles: Vec::new(),
+            tex: hand_gun,
+            projectile_texture: gun_gun.clone(),
+        },
         last_batch_start_time: time::precise_time_ns(),
         num_frames_in_batch: 0,
         average_frame_time: 1,
@@ -306,7 +245,7 @@ fn main() {
         // Input.
         input::gather_input(&e, &mut key_states, &mut mouse_states, &mut mouse_pos);
         if let Some(u) = e.update_args() {
-            apply_input(&mut app.players,
+            apply_input(&mut app.player,
                         &key_states,
                         &mouse_states,
                         &mouse_pos,

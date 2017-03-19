@@ -17,9 +17,9 @@ impl Vector2 {
         self.y *= inv_mag;
     }
 
-    pub fn dot(&self, rhs: &Vector2) -> f64 {
-        return (self.x * rhs.x) + (self.y * rhs.y);
-    }
+    // pub fn dot(&self, rhs: &Vector2) -> f64 {
+    //     return (self.x * rhs.x) + (self.y * rhs.y);
+    // }
 }
 
 impl Default for Vector2 {
