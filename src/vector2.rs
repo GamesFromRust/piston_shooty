@@ -15,12 +15,9 @@ impl Vector2 {
 }
 
 impl Default for Vector2 {
-  fn default () -> Vector2 {
-    Vector2 {
-        x: 0.0,
-        y: 0.0,
+    fn default() -> Vector2 {
+        Vector2 { x: 0.0, y: 0.0 }
     }
-  }
 }
 
 impl AddAssign for Vector2 {
@@ -34,14 +31,20 @@ impl AddAssign for Vector2 {
 impl Sub for Vector2 {
     type Output = Vector2;
     fn sub(self, rhs: Vector2) -> Vector2 {
-        Vector2 { x: self.x - rhs.x, y: self.y - rhs.y }
+        Vector2 {
+            x: self.x - rhs.x,
+            y: self.y - rhs.y,
+        }
     }
 }
 
 impl Mul<f64> for Vector2 {
     type Output = Vector2;
     fn mul(self, rhs: f64) -> Vector2 {
-        Vector2 { x: self.x * rhs, y: self.y * rhs }
+        Vector2 {
+            x: self.x * rhs,
+            y: self.y * rhs,
+        }
     }
 }
 
