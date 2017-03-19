@@ -107,7 +107,6 @@ impl App {
             &self.last_batch_start_time.to_string() +
             &"\ncurr_frame_time: ".to_string() + &curr_frame_time.to_string();
 
-        let square = rectangle::square(0.0, 0.0, 50.0);
         let player = &self.player;
         let factory = self.window.factory.clone();
         let font_path = self.assets.join("Roboto-Regular.ttf");
@@ -121,22 +120,24 @@ impl App {
             let mut cache = piston_window::Glyphs::new(font_path, factory).unwrap();
             text(WHITE, 14, &fps_text, &mut cache, transform, gl);
 
+            let scale = 0.5;
             let transform = c.transform
                 .trans(player.position.x, player.position.y)
                 .rot_rad(player.rotation)
-                .trans(-square[2] * 0.5, -square[3] * 0.5)
-                .scale(0.5, 0.5);
+                .trans((player.tex.get_size().0 as f64) * -0.5 * scale,
+                       (player.tex.get_size().1 as f64) * -0.5 * scale)
+                .scale(scale, scale);
 
             // Set our player sprite position.
             image(&player.tex, transform, gl);
 
             // Draw our projectiles.
             for projectile in &player.projectiles {
-                let square = rectangle::square(0.0, 0.0, 5.0);
                 let transform = c.transform
                     .trans(projectile.position.x, projectile.position.y)
                     .rot_rad(projectile.rotation)
-                    .trans(-square[2] * 0.5, -square[3] * 0.5);
+                    .trans((player.projectile_texture.get_size().0 as f64) * -0.5,
+                           (player.projectile_texture.get_size().1 as f64) * -0.5);
                 image(player.projectile_texture.deref(), transform, gl);
             }
         });
