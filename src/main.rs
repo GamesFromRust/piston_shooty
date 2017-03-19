@@ -70,9 +70,11 @@ impl Player {
         self.projectiles.push(projectile);
     }
 
-    fn update(&mut self, args: &UpdateArgs) {
-        // Rotate 2 radians per second.
-        self.rotation += PLAYER_ROTATIONAL_VELOCITY * args.dt;
+    fn update(&mut self, mouse_pos: &Vector2, args: &UpdateArgs) {
+        // Rotate to face our mouse.
+        let player_to_mouse = *mouse_pos - self.position;
+        self.rotation = player_to_mouse.y.atan2(player_to_mouse.x);
+
         // Move our projectiles.
         for projectile in &mut self.projectiles {
             projectile.position += projectile.velocity * args.dt;
@@ -151,10 +153,10 @@ impl App {
         });
     }
 
-    fn update(&mut self, args: &UpdateArgs) {
+    fn update(&mut self, mouse_pos: &Vector2, args: &UpdateArgs) {
         // Update our players.
         for player in &mut self.players {
-            player.update(args);
+            player.update(mouse_pos, args);
         }
     }
 }
@@ -275,7 +277,7 @@ fn main() {
         window: window,
         players: vec![Player {
                           // team: TEAM1,
-                          position: Vector2 { x: 0.0, y: 0.0 },
+                          position: Vector2 { x: 1.0, y: 1.0 },
                           rotation: 0.0,
                           projectiles: Vec::new(),
                           tex: hand_gun_blue,
@@ -283,7 +285,7 @@ fn main() {
                       },
                       Player {
                           // team: TEAM2,
-                          position: Vector2 { x: 0.0, y: 0.0 },
+                          position: Vector2 { x: 1.0, y: 1.0 },
                           rotation: 0.0,
                           projectiles: Vec::new(),
                           tex: hand_gun_red,
@@ -314,7 +316,7 @@ fn main() {
 
         // Update.
         if let Some(u) = e.update_args() {
-            app.update(&u);
+            app.update(&mouse_pos, &u);
         }
 
         // Render.

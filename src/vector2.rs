@@ -7,10 +7,18 @@ pub struct Vector2 {
 }
 
 impl Vector2 {
+    pub fn magnitude(&self) -> f64 {
+        return ((self.x * self.x) + (self.y * self.y) as f64).sqrt();
+    }
+
     pub fn normalize(&mut self) {
-        let mag = 1.0 / ((self.x * self.x) + (self.y * self.y) as f64).sqrt();
-        self.x *= mag;
-        self.y *= mag;
+        let inv_mag = 1.0 / self.magnitude();
+        self.x *= inv_mag;
+        self.y *= inv_mag;
+    }
+
+    pub fn dot(&self, rhs: &Vector2) -> f64 {
+        return (self.x * rhs.x) + (self.y * rhs.y);
     }
 }
 
