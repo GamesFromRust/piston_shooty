@@ -43,20 +43,34 @@ pub struct Player {
 
 impl Player {
     fn shoot(&mut self, mouse_pos: &Vector2) {
-        let mut vel = *mouse_pos - self.position;
-        vel.normalize();
-        vel *= PROJECTILE_VELOCITY_MAGNITUDE;
+        let velocity = match self.projectiles.last() {
+            Some(projectile) => {
+                let new_rotation = projectile.rotation;
+                Vector2 {
+                    x: projectile.velocity.x * new_rotation.cos() - projectile.velocity.y * new_rotation.sin(),
+                    y: projectile.velocity.x * new_rotation.sin() + projectile.velocity.y * new_rotation.cos(),
+                }
+            },
+            None => (*mouse_pos - self.position).normalized() * PROJECTILE_VELOCITY_MAGNITUDE,
+        };
 
-        // let x = self.rotation.cos();
-        // let y = self.rotation.sin();
-        // let mut vel = Vector2 { x: x, y: y };
-        // vel *= PROJECTILE_VELOCITY_MAGNITUDE;
+        let position = match self.projectiles.last() {
+            Some(u) => u.position + ( velocity / PROJECTILE_VELOCITY_MAGNITUDE) * 30.0,
+            None => self.position,
+        };
+
+        let rotation = match self.projectiles.last() {
+            Some(u) => u.rotation,
+            None => 0.0,
+        };
 
         let projectile = Projectile {
-            position: self.position,
-            velocity: vel,
-            rotation: 0.0,
+            position: position,
+            velocity: velocity,
+            rotation: rotation,
         };
+        
+        println!("velocity: {0}, rotation: {1}", velocity.normalized(), rotation);
 
         self.projectiles.push(projectile);
     }
