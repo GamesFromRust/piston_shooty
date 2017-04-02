@@ -20,7 +20,7 @@ use std::ops::Deref;
 const PROJECTILE_VELOCITY_MAGNITUDE: f64 = 300.0;
 const PLAYER_ROTATIONAL_VELOCITY: f64 = 5.0;
 const GREEN: [f32; 4] = [0.0, 1.0, 0.0, 1.0];
-// const RED:      [f32; 4] = [1.0, 0.0, 0.0, 1.0];
+const RED:      [f32; 4] = [1.0, 0.0, 0.0, 1.0];
 // const BLUE:     [f32; 4] = [0.0, 0.0, 1.0, 1.0];
 const WHITE: [f32; 4] = [1.0, 1.0, 1.0, 1.0];
 const MOVE_SPEED_MAX: f64 = 500.0;
@@ -43,13 +43,18 @@ pub struct Player {
 
 impl Player {
     fn shoot(&mut self, mouse_pos: &Vector2) {
+        let rotation = match self.projectiles.last() {
+            Some(u) => u.rotation,
+            None => self.rotation,
+        };
+
         let velocity = match self.projectiles.last() {
-            Some(projectile) => {
-                let new_rotation = projectile.rotation;
-                Vector2 {
-                    x: projectile.velocity.x * new_rotation.cos() - projectile.velocity.y * new_rotation.sin(),
-                    y: projectile.velocity.x * new_rotation.sin() + projectile.velocity.y * new_rotation.cos(),
-                }
+            Some(_) => {
+                let vel = Vector2 {
+                    x: rotation.cos(),
+                    y: rotation.sin(),
+                };
+                vel * PROJECTILE_VELOCITY_MAGNITUDE
             },
             None => (*mouse_pos - self.position).normalized() * PROJECTILE_VELOCITY_MAGNITUDE,
         };
@@ -57,11 +62,6 @@ impl Player {
         let position = match self.projectiles.last() {
             Some(u) => u.position + ( velocity / PROJECTILE_VELOCITY_MAGNITUDE) * 30.0,
             None => self.position,
-        };
-
-        let rotation = match self.projectiles.last() {
-            Some(u) => u.rotation,
-            None => 0.0,
         };
 
         let projectile = Projectile {
@@ -144,7 +144,7 @@ impl App {
 
             // Set our player sprite position.
             image(&player.tex, transform, gl);
-
+            
             // Draw our projectiles.
             for projectile in &player.projectiles {
                 let transform = c.transform
@@ -153,6 +153,18 @@ impl App {
                     .trans((player.projectile_texture.get_size().0 as f64) * -0.5,
                            (player.projectile_texture.get_size().1 as f64) * -0.5);
                 image(player.projectile_texture.deref(), transform, gl);
+            }
+
+            // Debug rectangle.
+            match player.projectiles.last() {
+                Some(projectile) => {
+                    let transform = c.transform
+                        .trans(projectile.position.x, projectile.position.y)
+                        .rot_rad(projectile.rotation);
+                    let rect: graphics::types::Rectangle = [0.0, 0.0, 10000.0, 1.0];
+                    rectangle(RED, rect, transform, gl);
+                },
+                None => (),
             }
         });
     }
