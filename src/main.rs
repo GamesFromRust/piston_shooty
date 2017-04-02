@@ -9,6 +9,7 @@ extern crate piston_window;
 extern crate gfx_device_gl;
 extern crate graphics;
 extern crate find_folder;
+extern crate ears;
 
 use std::collections::HashMap;
 use piston_window::*;
@@ -16,6 +17,7 @@ use vector2::*;
 use asset_loader::AssetLoader;
 use std::rc::Rc;
 use std::ops::Deref;
+use ears::*;
 
 const PROJECTILE_VELOCITY_MAGNITUDE: f64 = 300.0;
 const PLAYER_ROTATIONAL_VELOCITY: f64 = 5.0;
@@ -39,6 +41,7 @@ pub struct Player {
     projectiles: Vec<Projectile>,
     tex: G2dTexture,
     projectile_texture: Rc<G2dTexture>,
+    projectile_sound: Sound
 }
 
 impl Player {
@@ -69,8 +72,8 @@ impl Player {
             velocity: velocity,
             rotation: rotation,
         };
-        
-        println!("velocity: {0}, rotation: {1}", velocity.normalized(), rotation);
+
+        self.projectile_sound.play();
 
         self.projectiles.push(projectile);
     }
@@ -256,6 +259,7 @@ fn main() {
             projectiles: Vec::new(),
             tex: hand_gun,
             projectile_texture: gun_gun.clone(),
+            projectile_sound: Sound::new("D:\\Development\\Rust\\piston_shooty\\assets\\sounds\\boom.ogg").unwrap()
         },
         last_batch_start_time: time::precise_time_ns(),
         num_frames_in_batch: 0,
