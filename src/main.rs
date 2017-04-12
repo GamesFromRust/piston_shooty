@@ -1,6 +1,8 @@
 mod input;
 mod vector2;
 mod asset_loader;
+mod texture_manager;
+mod font_manager;
 
 extern crate piston;
 extern crate glutin_window;
@@ -18,9 +20,11 @@ use asset_loader::AssetLoader;
 use std::rc::Rc;
 use std::ops::Deref;
 use ears::*;
+use texture_manager::TextureManager;
+use font_manager::FontManager;
 
-const PROJECTILE_VELOCITY_MAGNITUDE: f64 = 300.0;
-const PLAYER_ROTATIONAL_VELOCITY: f64 = 5.0;
+const PROJECTILE_VELOCITY_MAGNITUDE: f64 = 100.0;
+const GUN_ROTATIONAL_VELOCITY: f64 = 2.5;
 const GREEN: [f32; 4] = [0.0, 1.0, 0.0, 1.0];
 const RED:      [f32; 4] = [1.0, 0.0, 0.0, 1.0];
 // const BLUE:     [f32; 4] = [0.0, 0.0, 1.0, 1.0];
@@ -33,19 +37,38 @@ pub struct Projectile {
     position: Vector2,
     velocity: Vector2,
     rotation: f64,
+    texture: Rc<G2dTexture>,
+}
+
+impl Projectile {
+    fn shoot_bullet(&self) {
+        // let bullet = Projectile {
+        //     position: position,
+        //     velocity: velocity,
+        //     rotation: rotation,
+        //     texture: self.bullet_texture.clone(),
+        // };
+        println!("pew");
+    }
 }
 
 pub struct Player {
     position: Vector2,
     rotation: f64,
     projectiles: Vec<Projectile>,
-    tex: G2dTexture,
+    tex: Rc<G2dTexture>,
     projectile_texture: Rc<G2dTexture>,
-    projectile_sound: Sound
+    projectile_sound: Sound,
 }
 
 impl Player {
-    fn shoot(&mut self, mouse_pos: &Vector2) {
+    fn shoot_bullet(&self) {
+        for projectile in &self.projectiles {
+            projectile.shoot_bullet();
+        }    
+    }
+
+    fn shoot_gun(&mut self, mouse_pos: &Vector2) {
         let rotation = match self.projectiles.last() {
             Some(u) => u.rotation,
             None => self.rotation,
@@ -71,6 +94,7 @@ impl Player {
             position: position,
             velocity: velocity,
             rotation: rotation,
+            texture: self.projectile_texture.clone(),
         };
 
         self.projectile_sound.play();
@@ -86,7 +110,7 @@ impl Player {
         // Move our projectiles.
         for projectile in &mut self.projectiles {
             projectile.position += projectile.velocity * args.dt;
-            projectile.rotation += PLAYER_ROTATIONAL_VELOCITY * args.dt;
+            projectile.rotation += GUN_ROTATIONAL_VELOCITY * args.dt;
         }
     }
 }
@@ -97,7 +121,8 @@ pub struct App {
     last_batch_start_time: u64,
     num_frames_in_batch: u64,
     average_frame_time: u64,
-    assets: std::path::PathBuf,
+    font_manager: FontManager,
+    texture_manager: TextureManager,
 }
 
 impl App {
@@ -126,7 +151,7 @@ impl App {
 
         let player = &self.player;
         let factory = self.window.factory.clone();
-        let font_path = self.assets.join("Roboto-Regular.ttf");
+        let font_manager = &mut self.font_manager;
 
         self.window.draw_2d(event, |c: Context, gl: &mut G2d| {
             // Clear the screen.
@@ -134,28 +159,30 @@ impl App {
 
             // Draw our fps.
             let transform = c.transform.trans(10.0, 10.0);
-            let mut cache = piston_window::Glyphs::new(font_path, factory).unwrap();
-            text(WHITE, 14, &fps_text, &mut cache, transform, gl);
+            let cache = &mut self.font_manager.get("Roboto-Regular.ttf").deref();
+            text(WHITE, 14, &fps_text, cache, transform, gl);
+
+            let player_texture = player.tex.deref();
 
             let scale = 0.5;
             let transform = c.transform
                 .trans(player.position.x, player.position.y)
                 .rot_rad(player.rotation)
-                .trans((player.tex.get_size().0 as f64) * -0.5 * scale,
-                       (player.tex.get_size().1 as f64) * -0.5 * scale)
+                .trans((player_texture.get_size().0 as f64) * -0.5 * scale,
+                       (player_texture.get_size().1 as f64) * -0.5 * scale)
                 .scale(scale, scale);
 
             // Set our player sprite position.
-            image(&player.tex, transform, gl);
+            image(player_texture.deref(), transform, gl);
             
             // Draw our projectiles.
             for projectile in &player.projectiles {
                 let transform = c.transform
                     .trans(projectile.position.x, projectile.position.y)
                     .rot_rad(projectile.rotation)
-                    .trans((player.projectile_texture.get_size().0 as f64) * -0.5,
-                           (player.projectile_texture.get_size().1 as f64) * -0.5);
-                image(player.projectile_texture.deref(), transform, gl);
+                    .trans((projectile.texture.get_size().0 as f64) * -0.5,
+                           (projectile.texture.get_size().1 as f64) * -0.5);
+                image(projectile.texture.deref(), transform, gl);
             }
 
             // Debug rectangle.
@@ -217,7 +244,13 @@ fn apply_input(player: &mut Player,
         match *button {
             MouseButton::Left => {
                 if value.pressed {
-                    player.shoot(mouse_pos);
+                    player.shoot_gun(mouse_pos);
+                }
+            },
+            MouseButton::Right => {
+                if value.pressed {
+                    println!("Right clickity");
+                    player.shoot_bullet();
                 }
             }
             // Default
@@ -238,7 +271,7 @@ fn main() {
 
     let window_settings = WindowSettings::new("piston_shooty", [width, height]);
 
-    let mut assets: std::path::PathBuf = find_folder::Search::ParentsThenKids(3, 3)
+    let mut assets_path: std::path::PathBuf = find_folder::Search::ParentsThenKids(3, 3)
         .for_folder("assets")
         .unwrap();
 
@@ -246,10 +279,24 @@ fn main() {
         .build()
         .unwrap();
 
-    let asset_loader = AssetLoader {};
-    let hand_gun = asset_loader.load_texture("hand-gun.png", &mut window.factory, &mut assets);
-    let gun_gun =
-        Rc::new(asset_loader.load_texture("GunGunV1.png", &mut window.factory, &mut assets));
+    let mut asset_loader = AssetLoader {
+        assets_path: assets_path,
+        factory: window.factory.clone(),
+    };
+    let asset_loader = Rc::new(asset_loader);
+
+    let mut font_manager = FontManager {
+        asset_loader: asset_loader.clone(),
+        fonts_by_filename: HashMap::new(),
+    };
+    
+    let mut texture_manager = TextureManager {
+        asset_loader: asset_loader.clone(),
+        textures_by_filename: HashMap::new(),
+    };
+
+    let hand_gun = texture_manager.get("hand-gun.png");
+    let gun_gun = texture_manager.get("GunGunV1.png");
 
     let mut app = App {
         window: window,
@@ -257,14 +304,15 @@ fn main() {
             position: Vector2 { x: 1.0, y: 1.0 },
             rotation: 0.0,
             projectiles: Vec::new(),
-            tex: hand_gun,
+            tex: hand_gun.clone(),
             projectile_texture: gun_gun.clone(),
             projectile_sound: Sound::new("D:\\Development\\Rust\\piston_shooty\\assets\\sounds\\boom.ogg").unwrap()
         },
         last_batch_start_time: time::precise_time_ns(),
         num_frames_in_batch: 0,
         average_frame_time: 1,
-        assets: assets,
+        font_manager: font_manager,
+        texture_manager: texture_manager
     };
     app.window.set_max_fps(u64::max_value());
 
