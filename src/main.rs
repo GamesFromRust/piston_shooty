@@ -3,6 +3,7 @@ mod vector2;
 mod asset_loader;
 mod texture_manager;
 mod font_manager;
+mod sound_manager;
 
 extern crate piston;
 extern crate glutin_window;
@@ -18,9 +19,11 @@ use piston_window::*;
 use vector2::*;
 use asset_loader::AssetLoader;
 use std::rc::Rc;
+use std::cell::RefCell;
 use std::ops::Deref;
 use ears::*;
 use texture_manager::TextureManager;
+use sound_manager::SoundManager;
 use font_manager::FontManager;
 use std::ops::DerefMut;
 
@@ -59,7 +62,7 @@ pub struct Player {
     projectiles: Vec<Projectile>,
     tex: Rc<G2dTexture>,
     projectile_texture: Rc<G2dTexture>,
-    projectile_sound: Sound,
+    projectile_sound: Rc<RefCell<Sound>>,
 }
 
 impl Player {
@@ -98,7 +101,7 @@ impl Player {
             texture: self.projectile_texture.clone(),
         };
 
-        self.projectile_sound.play();
+        self.projectile_sound.borrow_mut().play();
 
         self.projectiles.push(projectile);
     }
@@ -285,7 +288,7 @@ fn main() {
     };
     let asset_loader = Rc::new(asset_loader);
 
-    let font_manager = FontManager {
+    let mut font_manager = FontManager {
         asset_loader: asset_loader.clone(),
         fonts_by_filename: HashMap::new(),
     };
@@ -295,8 +298,15 @@ fn main() {
         textures_by_filename: HashMap::new(),
     };
 
+    let mut sound_manager = SoundManager {
+        asset_loader: asset_loader.clone(),
+        sounds_by_filename: HashMap::new(),
+    };
+
     let hand_gun = texture_manager.get("hand-gun.png");
     let gun_gun = texture_manager.get("GunGunV1.png");
+
+    font_manager.get("Roboto-Regular.ttf");
 
     let mut app = App {
         window: window,
@@ -306,7 +316,7 @@ fn main() {
             projectiles: Vec::new(),
             tex: hand_gun.clone(),
             projectile_texture: gun_gun.clone(),
-            projectile_sound: Sound::new("D:\\Development\\Rust\\piston_shooty\\assets\\sounds\\boom.ogg").unwrap()
+            projectile_sound: sound_manager.get("sounds\\boom.ogg")
         },
         last_batch_start_time: time::precise_time_ns(),
         num_frames_in_batch: 0,
