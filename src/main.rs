@@ -28,6 +28,7 @@ use font_manager::FontManager;
 use std::ops::DerefMut;
 
 const PROJECTILE_VELOCITY_MAGNITUDE: f64 = 100.0;
+const BULLET_VELOCITY_MAGNITUDE: f64 = 200.0;
 const GUN_ROTATIONAL_VELOCITY: f64 = 2.5;
 const GREEN: [f32; 4] = [0.0, 1.0, 0.0, 1.0];
 const RED:      [f32; 4] = [1.0, 0.0, 0.0, 1.0];
@@ -45,30 +46,38 @@ pub struct Projectile {
 }
 
 impl Projectile {
-    fn shoot_bullet(&self) {
-        // let bullet = Projectile {
-        //     position: position,
-        //     velocity: velocity,
-        //     rotation: rotation,
-        //     texture: self.bullet_texture.clone(),
-        // };
-        println!("pew");
+    fn shoot_bullet(&self, bullet_texture: &Rc<G2dTexture>) -> Projectile {
+        let velocity = Vector2 {
+            x: self.rotation.cos(),
+            y: self.rotation.sin(),
+        };
+
+        Projectile {
+            position: self.position,
+            velocity: velocity * BULLET_VELOCITY_MAGNITUDE,
+            rotation: self.rotation,
+            texture: bullet_texture.clone(),
+        }
     }
 }
 
 pub struct Player {
     position: Vector2,
     rotation: f64,
-    projectiles: Vec<Projectile>,
+    projectiles: Vec<Projectile>, // guns
     tex: Rc<G2dTexture>,
     projectile_texture: Rc<G2dTexture>,
     projectile_sound: Rc<RefCell<Sound>>,
+    bullet_texture: Rc<G2dTexture>,
+    bullets: Vec<Projectile>,
+    bullet_sound: Rc<RefCell<Sound>>,
 }
 
 impl Player {
-    fn shoot_bullet(&self) {
+    fn shoot_bullets(&mut self) {
         for projectile in &self.projectiles {
-            projectile.shoot_bullet();
+            self.bullets.push(projectile.shoot_bullet(&self.bullet_texture));
+            self.bullet_sound.borrow_mut().play();
         }    
     }
 
@@ -115,6 +124,11 @@ impl Player {
         for projectile in &mut self.projectiles {
             projectile.position += projectile.velocity * args.dt;
             projectile.rotation += GUN_ROTATIONAL_VELOCITY * args.dt;
+        }
+
+        // Move our bullets.
+        for bullet in &mut self.bullets {
+            bullet.position += bullet.velocity * args.dt;
         }
     }
 }
@@ -188,6 +202,18 @@ impl App {
                 image(projectile.texture.deref(), transform, gl);
             }
 
+            // Draw our bullets.
+            let bullet_scale = 0.5;
+            for bullet in &player.bullets {
+                let transform = c.transform
+                    .trans(bullet.position.x, bullet.position.y)
+                    .rot_rad(bullet.rotation)
+                    .trans((bullet.texture.get_size().0 as f64) * -0.5 * bullet_scale,
+                           (bullet.texture.get_size().1 as f64) * -0.5 * bullet_scale)
+                    .scale(bullet_scale, bullet_scale);
+                image(bullet.texture.deref(), transform, gl);
+            }
+
             // Debug rectangle.
             match player.projectiles.last() {
                 Some(projectile) => {
@@ -252,8 +278,7 @@ fn apply_input(player: &mut Player,
             },
             MouseButton::Right => {
                 if value.pressed {
-                    println!("Right clickity");
-                    player.shoot_bullet();
+                    player.shoot_bullets();
                 }
             }
             // Default
@@ -305,6 +330,7 @@ fn main() {
 
     let hand_gun = texture_manager.get("hand-gun.png");
     let gun_gun = texture_manager.get("GunGunV1.png");
+    let bullet = texture_manager.get("bullet.png");
 
     font_manager.get("Roboto-Regular.ttf");
 
@@ -316,7 +342,10 @@ fn main() {
             projectiles: Vec::new(),
             tex: hand_gun.clone(),
             projectile_texture: gun_gun.clone(),
-            projectile_sound: sound_manager.get("sounds\\boom.ogg")
+            projectile_sound: sound_manager.get("sounds\\boom.ogg"),
+            bullet_texture: bullet.clone(),
+            bullets: Vec::new(),
+            bullet_sound: sound_manager.get("sounds\\boop.ogg"),
         },
         last_batch_start_time: time::precise_time_ns(),
         num_frames_in_batch: 0,
