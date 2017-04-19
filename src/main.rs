@@ -22,6 +22,7 @@ use std::ops::Deref;
 use ears::*;
 use texture_manager::TextureManager;
 use font_manager::FontManager;
+use std::ops::DerefMut;
 
 const PROJECTILE_VELOCITY_MAGNITUDE: f64 = 100.0;
 const GUN_ROTATIONAL_VELOCITY: f64 = 2.5;
@@ -150,7 +151,6 @@ impl App {
             &"\ncurr_frame_time: ".to_string() + &curr_frame_time.to_string();
 
         let player = &self.player;
-        let factory = self.window.factory.clone();
         let font_manager = &mut self.font_manager;
 
         self.window.draw_2d(event, |c: Context, gl: &mut G2d| {
@@ -159,8 +159,8 @@ impl App {
 
             // Draw our fps.
             let transform = c.transform.trans(10.0, 10.0);
-            let cache = &mut self.font_manager.get("Roboto-Regular.ttf").deref();
-            text(WHITE, 14, &fps_text, cache, transform, gl);
+            let cache_rc = font_manager.get("Roboto-Regular.ttf");
+            text(WHITE, 14, &fps_text, cache_rc.borrow_mut().deref_mut(), transform, gl);
 
             let player_texture = player.tex.deref();
 
@@ -271,21 +271,21 @@ fn main() {
 
     let window_settings = WindowSettings::new("piston_shooty", [width, height]);
 
-    let mut assets_path: std::path::PathBuf = find_folder::Search::ParentsThenKids(3, 3)
+    let assets_path: std::path::PathBuf = find_folder::Search::ParentsThenKids(3, 3)
         .for_folder("assets")
         .unwrap();
 
-    let mut window: piston_window::PistonWindow = window_settings.exit_on_esc(true)
+    let window: piston_window::PistonWindow = window_settings.exit_on_esc(true)
         .build()
         .unwrap();
 
-    let mut asset_loader = AssetLoader {
+    let asset_loader = AssetLoader {
         assets_path: assets_path,
         factory: window.factory.clone(),
     };
     let asset_loader = Rc::new(asset_loader);
 
-    let mut font_manager = FontManager {
+    let font_manager = FontManager {
         asset_loader: asset_loader.clone(),
         fonts_by_filename: HashMap::new(),
     };
