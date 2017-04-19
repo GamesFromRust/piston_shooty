@@ -140,7 +140,6 @@ pub struct App {
     num_frames_in_batch: u64,
     average_frame_time: u64,
     font_manager: FontManager,
-    texture_manager: TextureManager,
 }
 
 impl App {
@@ -173,11 +172,6 @@ impl App {
         self.window.draw_2d(event, |c: Context, gl: &mut G2d| {
             // Clear the screen.
             clear(GREEN, gl);
-
-            // Draw our fps.
-            let transform = c.transform.trans(10.0, 10.0);
-            let cache_rc = font_manager.get("Roboto-Regular.ttf");
-            text(WHITE, 14, &fps_text, cache_rc.borrow_mut().deref_mut(), transform, gl);
 
             let player_texture = player.tex.deref();
 
@@ -225,6 +219,11 @@ impl App {
                 },
                 None => (),
             }
+
+            // Draw our fps.
+            let transform = c.transform.trans(10.0, 10.0);
+            let cache_rc = font_manager.get("Roboto-Regular.ttf");
+            text(WHITE, 14, &fps_text, cache_rc.borrow_mut().deref_mut(), transform, gl);
         });
     }
 
@@ -351,7 +350,6 @@ fn main() {
         num_frames_in_batch: 0,
         average_frame_time: 1,
         font_manager: font_manager,
-        texture_manager: texture_manager
     };
     app.window.set_max_fps(u64::max_value());
 
