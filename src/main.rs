@@ -13,6 +13,10 @@ extern crate gfx_device_gl;
 extern crate graphics;
 extern crate find_folder;
 extern crate ears;
+extern crate ncollide;
+extern crate ncollide_geometry;
+extern crate ncollide_math;
+extern crate nalgebra;
 
 use std::collections::HashMap;
 use piston_window::*;
@@ -26,6 +30,12 @@ use texture_manager::TextureManager;
 use sound_manager::SoundManager;
 use font_manager::FontManager;
 use std::ops::DerefMut;
+use ncollide_geometry::shape::Cuboid2;
+use ncollide_geometry::bounding_volume;
+use ncollide_geometry::bounding_volume::BoundingVolume;
+
+const WIDTH: u32 = 800;
+const HEIGHT: u32 = 800;
 
 const PROJECTILE_VELOCITY_MAGNITUDE: f64 = 100.0;
 const BULLET_VELOCITY_MAGNITUDE: f64 = 200.0;
@@ -35,8 +45,8 @@ const RED:      [f32; 4] = [1.0, 0.0, 0.0, 1.0];
 // const BLUE:     [f32; 4] = [0.0, 0.0, 1.0, 1.0];
 const WHITE: [f32; 4] = [1.0, 1.0, 1.0, 1.0];
 const MOVE_SPEED_MAX: f64 = 500.0;
-
 const NSEC_PER_SEC: u64 = 1_000_000_000;
+const BULLET_SCALE:f64 = 0.03125;
 
 pub struct Projectile {
     position: Vector2,
@@ -59,6 +69,12 @@ impl Projectile {
             texture: bullet_texture.clone(),
         }
     }
+}
+
+pub struct Enemy {
+    position: Vector2,
+    rotation: f64,
+    texture: Rc<G2dTexture>,
 }
 
 pub struct Player {
@@ -140,6 +156,7 @@ pub struct App {
     num_frames_in_batch: u64,
     average_frame_time: u64,
     font_manager: FontManager,
+    enemies: Vec<Enemy>,
 }
 
 impl App {
@@ -168,6 +185,7 @@ impl App {
 
         let player = &self.player;
         let font_manager = &mut self.font_manager;
+        let enemies = &self.enemies;
 
         self.window.draw_2d(event, |c: Context, gl: &mut G2d| {
             // Clear the screen.
@@ -197,14 +215,15 @@ impl App {
             }
 
             // Draw our bullets.
-            let bullet_scale = 0.5;
             for bullet in &player.bullets {
                 let transform = c.transform
                     .trans(bullet.position.x, bullet.position.y)
                     .rot_rad(bullet.rotation)
-                    .trans((bullet.texture.get_size().0 as f64) * -0.5 * bullet_scale,
-                           (bullet.texture.get_size().1 as f64) * -0.5 * bullet_scale)
-                    .scale(bullet_scale, bullet_scale);
+                    .trans((bullet.texture.get_size().0 as f64) * -0.5 * BULLET_SCALE,
+                           (bullet.texture.get_size().1 as f64) * -0.5 * BULLET_SCALE)
+                    .scale(BULLET_SCALE, BULLET_SCALE);
+                let rect: graphics::types::Rectangle = [0.0, 0.0, bullet.texture.get_size().0 as f64, bullet.texture.get_size().1 as f64];
+                // rectangle(RED, rect, transform, gl);
                 image(bullet.texture.deref(), transform, gl);
             }
 
@@ -220,6 +239,21 @@ impl App {
                 None => (),
             }
 
+            let enemy_scale = 1.0;
+            for enemy in enemies {
+                // draw a debug rect
+                let transform = c.transform
+                    .trans(enemy.position.x, enemy.position.y)
+                    .rot_rad(enemy.rotation)
+                    .trans((enemy.texture.get_size().0 as f64) * -0.5 * enemy_scale,
+                           (enemy.texture.get_size().1 as f64) * -0.5 * enemy_scale)
+                    .scale(enemy_scale, enemy_scale);
+                let rect: graphics::types::Rectangle = [0.0, 0.0, enemy.texture.get_size().0 as f64, enemy.texture.get_size().1 as f64];
+                // rectangle(RED, rect, transform, gl);
+                image(enemy.texture.deref(), transform, gl);
+            }
+
+
             // Draw our fps.
             let transform = c.transform.trans(10.0, 10.0);
             let cache_rc = font_manager.get("Roboto-Regular.ttf");
@@ -228,8 +262,28 @@ impl App {
     }
 
     fn update(&mut self, mouse_pos: &Vector2, args: &UpdateArgs) {
-        // Update our player.
         self.player.update(mouse_pos, args);
+
+        let bullets = &mut self.player.bullets;
+        let enemies = &mut self.enemies;
+        bullets.retain(|ref bullet| {
+            let bullet_half_extents: nalgebra::core::Vector2<f64> = nalgebra::core::Vector2::new(bullet.texture.get_size().0 as f64 * 0.5 * BULLET_SCALE, bullet.texture.get_size().1 as f64 * 0.5 * BULLET_SCALE);
+            let bullet_cuboid2 = Cuboid2::new(bullet_half_extents);
+            let bullet_cuboid2_pos = nalgebra::geometry::Isometry2::new(nalgebra::core::Vector2::new(bullet.position.x, bullet.position.y), bullet.rotation);
+            let bullet_aabb_cuboid2 = bounding_volume::aabb(&bullet_cuboid2, &bullet_cuboid2_pos);
+
+            let mut intersected = false;
+            enemies.retain(|ref enemy| {
+                let enemy_half_extents: nalgebra::core::Vector2<f64> = nalgebra::core::Vector2::new(enemy.texture.get_size().0 as f64 * 0.5, enemy.texture.get_size().1 as f64 * 0.5);
+                let enemy_cuboid2 = Cuboid2::new(enemy_half_extents);
+                let enemy_cuboid2_pos = nalgebra::geometry::Isometry2::new(nalgebra::core::Vector2::new(enemy.position.x, enemy.position.y), enemy.rotation);
+                let enemy_aabb_cuboid2 = bounding_volume::aabb(&enemy_cuboid2, &enemy_cuboid2_pos);
+
+                intersected = enemy_aabb_cuboid2.intersects(&bullet_aabb_cuboid2);
+                !intersected
+            });
+            !intersected
+        })
     }
 }
 
@@ -293,10 +347,7 @@ fn apply_input(player: &mut Player,
 }
 
 fn main() {
-    let width = 800;
-    let height = 800;
-
-    let window_settings = WindowSettings::new("piston_shooty", [width, height]);
+    let window_settings = WindowSettings::new("piston_shooty", [WIDTH, HEIGHT]);
 
     let assets_path: std::path::PathBuf = find_folder::Search::ParentsThenKids(3, 3)
         .for_folder("assets")
@@ -333,6 +384,14 @@ fn main() {
 
     font_manager.get("Roboto-Regular.ttf");
 
+    let mut enemies:Vec<Enemy> = Vec::new();
+    enemies.push(
+        Enemy {
+            position: Vector2 { x: (WIDTH / 2) as f64, y: (HEIGHT / 2) as f64 },
+            rotation: 0.0,
+            texture: texture_manager.get("enemy.png"),
+        });
+
     let mut app = App {
         window: window,
         player: Player {
@@ -346,6 +405,7 @@ fn main() {
             bullets: Vec::new(),
             bullet_sound: sound_manager.get("sounds\\boop.ogg"),
         },
+        enemies: enemies,
         last_batch_start_time: time::precise_time_ns(),
         num_frames_in_batch: 0,
         average_frame_time: 1,
