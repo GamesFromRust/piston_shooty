@@ -222,7 +222,7 @@ impl App {
                     .trans((bullet.texture.get_size().0 as f64) * -0.5 * BULLET_SCALE,
                            (bullet.texture.get_size().1 as f64) * -0.5 * BULLET_SCALE)
                     .scale(BULLET_SCALE, BULLET_SCALE);
-                let rect: graphics::types::Rectangle = [0.0, 0.0, bullet.texture.get_size().0 as f64, bullet.texture.get_size().1 as f64];
+                // let rect: graphics::types::Rectangle = [0.0, 0.0, bullet.texture.get_size().0 as f64, bullet.texture.get_size().1 as f64];
                 // rectangle(RED, rect, transform, gl);
                 image(bullet.texture.deref(), transform, gl);
             }
@@ -248,7 +248,7 @@ impl App {
                     .trans((enemy.texture.get_size().0 as f64) * -0.5 * enemy_scale,
                            (enemy.texture.get_size().1 as f64) * -0.5 * enemy_scale)
                     .scale(enemy_scale, enemy_scale);
-                let rect: graphics::types::Rectangle = [0.0, 0.0, enemy.texture.get_size().0 as f64, enemy.texture.get_size().1 as f64];
+                // let rect: graphics::types::Rectangle = [0.0, 0.0, enemy.texture.get_size().0 as f64, enemy.texture.get_size().1 as f64];
                 // rectangle(RED, rect, transform, gl);
                 image(enemy.texture.deref(), transform, gl);
             }
