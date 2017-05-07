@@ -17,6 +17,7 @@ extern crate ncollide;
 extern crate ncollide_geometry;
 extern crate ncollide_math;
 extern crate nalgebra;
+extern crate csv;
 
 use std::collections::HashMap;
 use piston_window::*;
@@ -33,9 +34,11 @@ use std::ops::DerefMut;
 use ncollide_geometry::shape::Cuboid2;
 use ncollide_geometry::bounding_volume;
 use ncollide_geometry::bounding_volume::BoundingVolume;
+use std::io::{self, Write};
+use csv::index::{Indexed, create_index};
 
-const WIDTH: u32 = 800;
-const HEIGHT: u32 = 800;
+const WIDTH: u32 = 1280;
+const HEIGHT: u32 = 720;
 
 const PROJECTILE_VELOCITY_MAGNITUDE: f64 = 100.0;
 const BULLET_VELOCITY_MAGNITUDE: f64 = 200.0;
@@ -47,6 +50,10 @@ const WHITE: [f32; 4] = [1.0, 1.0, 1.0, 1.0];
 const MOVE_SPEED_MAX: f64 = 500.0;
 const NSEC_PER_SEC: u64 = 1_000_000_000;
 const BULLET_SCALE:f64 = 0.03125;
+const GRID_WIDTH: u32 = 32;
+const GRID_HEIGHT: u32 = 18;
+const CELL_WIDTH: u32 = WIDTH / GRID_WIDTH;
+const CELL_HEIGHT: u32 = HEIGHT / GRID_HEIGHT;
 
 pub struct Wall {
     position: Vector2,
@@ -390,6 +397,28 @@ fn main() {
         .build()
         .unwrap();
 
+    let new_csv_rdr = || csv::Reader::from_file("assets\\Levels\\Level1.csv").unwrap().has_headers(false);
+    let mut index_data = io::Cursor::new(Vec::new());
+    create_index(new_csv_rdr(), index_data.by_ref()).unwrap();
+    let mut index = Indexed::open(new_csv_rdr(), index_data).unwrap();
+
+    let mut level: Vec<Vec<String>> = Vec::new();
+    for row in index.records() {
+        let row = row.unwrap();
+
+        for item in &row {
+            print!("{},", item);
+        }
+        println!("");
+
+        level.push(row);
+    }
+
+    assert!(level.len() as u32 == GRID_HEIGHT);
+    for row in &level {
+        assert!(row.len() as u32 == GRID_WIDTH);
+    }
+
     let asset_loader = AssetLoader {
         assets_path: assets_path,
         factory: window.factory.clone(),
@@ -411,42 +440,70 @@ fn main() {
         sounds_by_filename: HashMap::new(),
     };
 
-    let hand_gun = texture_manager.get("textures\\hand-gun.png");
+    let hand_gun = texture_manager.get("textures\\hand-gun_square.png");
     let gun_gun = texture_manager.get("textures\\GunGunV1.png");
     let bullet = texture_manager.get("textures\\bullet.png");
-    let wall = texture_manager.get("textures\\brick.png");
+    let wall = texture_manager.get("textures\\brick_square.png");
+    let enemy = texture_manager.get("textures\\enemy.png");
 
     font_manager.get("Roboto-Regular.ttf");
 
     let mut enemies:Vec<Enemy> = Vec::new();
-    enemies.push(
-        Enemy {
-            position: Vector2 { x: (WIDTH / 2) as f64, y: (HEIGHT / 2) as f64 },
-            rotation: 0.0,
-            texture: texture_manager.get("textures\\enemy.png"),
-        });
-
     let mut walls: Vec<Wall> = Vec::new();
-    walls.push(
-        Wall {
-            position: Vector2 { x: 50 as f64, y: 50 as f64 },
-            rotation: 0.0,
-            texture: wall.clone(),
-        });
+    let mut player: Player = Player {
+        position: Vector2 {
+            x: 0 as f64,
+            y: 0 as f64
+        },
+        rotation: 0.0,
+        projectiles: Vec::new(),
+        tex: hand_gun.clone(),
+        projectile_texture: gun_gun.clone(),
+        projectile_sound: sound_manager.get("sounds\\boom.ogg"),
+        bullet_texture: bullet.clone(),
+        bullets: Vec::new(),
+        bullet_sound: sound_manager.get("sounds\\boop.ogg"),
+    };
+
+    // Read in a level.
+    let mut line_num = 0;
+    for line in &level {
+        let mut item_num = 0;
+        for item in line {
+            if item == "W" {
+                walls.push(
+                    Wall {
+                        position: Vector2 {
+                            x: (item_num * CELL_WIDTH + CELL_WIDTH / 2) as f64 ,
+                            y: (line_num * CELL_HEIGHT + CELL_HEIGHT / 2) as f64
+                        },
+                        rotation: 0.0,
+                        texture: wall.clone(),
+                    });
+            } else if item == "P" {
+                player.position = Vector2 {
+                    x: (item_num * CELL_WIDTH + CELL_WIDTH / 2) as f64,
+                    y: (line_num * CELL_HEIGHT + CELL_HEIGHT / 2) as f64
+                };
+            } else if item == "E" {
+                enemies.push(
+                    Enemy {
+                        position: Vector2 {
+                            x: (item_num * CELL_WIDTH + CELL_WIDTH / 2) as f64,
+                            y: (line_num * CELL_HEIGHT + CELL_HEIGHT / 2) as f64
+                        },
+                        rotation: 0.0,
+                        texture: enemy.clone(),
+                    });
+            }
+            item_num += 1;
+        }
+        line_num += 1;
+    }
 
     let mut app = App {
         window: window,
-        player: Player {
-            position: Vector2 { x: 1.0, y: 1.0 },
-            rotation: 0.0,
-            projectiles: Vec::new(),
-            tex: hand_gun.clone(),
-            projectile_texture: gun_gun.clone(),
-            projectile_sound: sound_manager.get("sounds\\boom.ogg"),
-            bullet_texture: bullet.clone(),
-            bullets: Vec::new(),
-            bullet_sound: sound_manager.get("sounds\\boop.ogg"),
-        },
+        player: player,
         enemies: enemies,
         last_batch_start_time: time::precise_time_ns(),
         num_frames_in_batch: 0,
@@ -460,6 +517,7 @@ fn main() {
     let mut mouse_states: HashMap<MouseButton, input::ButtonState> = HashMap::new();
     let mut mouse_pos = Vector2::default();
 
+    // TODO: Why is args.dt locked to 120fps for UpdateArgs?
     while let Some(e) = app.window.next() {
         // Input.
         input::gather_input(&e, &mut key_states, &mut mouse_states, &mut mouse_pos);
