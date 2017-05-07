@@ -48,6 +48,12 @@ const MOVE_SPEED_MAX: f64 = 500.0;
 const NSEC_PER_SEC: u64 = 1_000_000_000;
 const BULLET_SCALE:f64 = 0.03125;
 
+pub struct Wall {
+    position: Vector2,
+    rotation: f64,
+    texture: Rc<G2dTexture>,
+}
+
 pub struct Projectile {
     position: Vector2,
     velocity: Vector2,
@@ -157,6 +163,7 @@ pub struct App {
     average_frame_time: u64,
     font_manager: FontManager,
     enemies: Vec<Enemy>,
+    walls: Vec<Wall>,
 }
 
 impl App {
@@ -186,6 +193,7 @@ impl App {
         let player = &self.player;
         let font_manager = &mut self.font_manager;
         let enemies = &self.enemies;
+        let walls = &self.walls;
 
         self.window.draw_2d(event, |c: Context, gl: &mut G2d| {
             // Clear the screen.
@@ -227,6 +235,16 @@ impl App {
                 image(bullet.texture.deref(), transform, gl);
             }
 
+            // Draw our wall.
+            for wall in walls {
+                let transform = c.transform
+                    .trans(wall.position.x, wall.position.y)
+                    .rot_rad(wall.rotation)
+                    .trans((wall.texture.get_size().0 as f64) * -0.5,
+                           (wall.texture.get_size().1 as f64) * -0.5);
+                image(wall.texture.deref(), transform, gl);
+            }
+
             // Debug rectangle.
             match player.projectiles.last() {
                 Some(projectile) => {
@@ -266,6 +284,8 @@ impl App {
 
         let bullets = &mut self.player.bullets;
         let enemies = &mut self.enemies;
+        let walls = &self.walls;
+
         bullets.retain(|ref bullet| {
             let bullet_half_extents: nalgebra::core::Vector2<f64> = nalgebra::core::Vector2::new(bullet.texture.get_size().0 as f64 * 0.5 * BULLET_SCALE, bullet.texture.get_size().1 as f64 * 0.5 * BULLET_SCALE);
             let bullet_cuboid2 = Cuboid2::new(bullet_half_extents);
@@ -273,15 +293,28 @@ impl App {
             let bullet_aabb_cuboid2 = bounding_volume::aabb(&bullet_cuboid2, &bullet_cuboid2_pos);
 
             let mut intersected = false;
+
             enemies.retain(|ref enemy| {
                 let enemy_half_extents: nalgebra::core::Vector2<f64> = nalgebra::core::Vector2::new(enemy.texture.get_size().0 as f64 * 0.5, enemy.texture.get_size().1 as f64 * 0.5);
                 let enemy_cuboid2 = Cuboid2::new(enemy_half_extents);
                 let enemy_cuboid2_pos = nalgebra::geometry::Isometry2::new(nalgebra::core::Vector2::new(enemy.position.x, enemy.position.y), enemy.rotation);
                 let enemy_aabb_cuboid2 = bounding_volume::aabb(&enemy_cuboid2, &enemy_cuboid2_pos);
 
-                intersected = enemy_aabb_cuboid2.intersects(&bullet_aabb_cuboid2);
-                !intersected
+                let intersects = enemy_aabb_cuboid2.intersects(&bullet_aabb_cuboid2);
+                intersected = intersects || intersected;
+                !intersects
             });
+
+            for wall in walls {
+                let wall_half_extents: nalgebra::core::Vector2<f64> = nalgebra::core::Vector2::new(wall.texture.get_size().0 as f64 * 0.5, wall.texture.get_size().1 as f64 * 0.5);
+                let wall_cuboid2 = Cuboid2::new(wall_half_extents);
+                let wall_cuboid2_pos = nalgebra::geometry::Isometry2::new(nalgebra::core::Vector2::new(wall.position.x, wall.position.y), wall.rotation);
+                let wall_aabb_cuboid2 = bounding_volume::aabb(&wall_cuboid2, &wall_cuboid2_pos);
+
+                let intersects = wall_aabb_cuboid2.intersects(&bullet_aabb_cuboid2);
+                intersected = intersects || intersected;
+            }
+
             !intersected
         })
     }
@@ -378,9 +411,10 @@ fn main() {
         sounds_by_filename: HashMap::new(),
     };
 
-    let hand_gun = texture_manager.get("hand-gun.png");
-    let gun_gun = texture_manager.get("GunGunV1.png");
-    let bullet = texture_manager.get("bullet.png");
+    let hand_gun = texture_manager.get("textures\\hand-gun.png");
+    let gun_gun = texture_manager.get("textures\\GunGunV1.png");
+    let bullet = texture_manager.get("textures\\bullet.png");
+    let wall = texture_manager.get("textures\\brick.png");
 
     font_manager.get("Roboto-Regular.ttf");
 
@@ -389,7 +423,15 @@ fn main() {
         Enemy {
             position: Vector2 { x: (WIDTH / 2) as f64, y: (HEIGHT / 2) as f64 },
             rotation: 0.0,
-            texture: texture_manager.get("enemy.png"),
+            texture: texture_manager.get("textures\\enemy.png"),
+        });
+
+    let mut walls: Vec<Wall> = Vec::new();
+    walls.push(
+        Wall {
+            position: Vector2 { x: 50 as f64, y: 50 as f64 },
+            rotation: 0.0,
+            texture: wall.clone(),
         });
 
     let mut app = App {
@@ -410,6 +452,7 @@ fn main() {
         num_frames_in_batch: 0,
         average_frame_time: 1,
         font_manager: font_manager,
+        walls: walls,
     };
     app.window.set_max_fps(u64::max_value());
 
