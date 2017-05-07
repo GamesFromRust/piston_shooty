@@ -55,6 +55,13 @@ const GRID_HEIGHT: u32 = 18;
 const CELL_WIDTH: u32 = WIDTH / GRID_WIDTH;
 const CELL_HEIGHT: u32 = HEIGHT / GRID_HEIGHT;
 
+// TODO: Object model.
+pub struct Ground {
+    position: Vector2,
+    rotation: f64,
+    texture: Rc<G2dTexture>,
+}
+
 pub struct Wall {
     position: Vector2,
     rotation: f64,
@@ -171,6 +178,7 @@ pub struct App {
     font_manager: FontManager,
     enemies: Vec<Enemy>,
     walls: Vec<Wall>,
+    grounds: Vec<Ground>,
 }
 
 impl App {
@@ -201,10 +209,31 @@ impl App {
         let font_manager = &mut self.font_manager;
         let enemies = &self.enemies;
         let walls = &self.walls;
+        let grounds = &self.grounds;
 
         self.window.draw_2d(event, |c: Context, gl: &mut G2d| {
             // Clear the screen.
             clear(GREEN, gl);
+
+            // Draw our walls.
+            for wall in walls {
+                let transform = c.transform
+                    .trans(wall.position.x, wall.position.y)
+                    .rot_rad(wall.rotation)
+                    .trans((wall.texture.get_size().0 as f64) * -0.5,
+                           (wall.texture.get_size().1 as f64) * -0.5);
+                image(wall.texture.deref(), transform, gl);
+            }
+
+            // Draw our grounds.
+            for ground in grounds {
+                let transform = c.transform
+                    .trans(ground.position.x, ground.position.y)
+                    .rot_rad(ground.rotation)
+                    .trans((ground.texture.get_size().0 as f64) * -0.5,
+                           (ground.texture.get_size().1 as f64) * -0.5);
+                image(ground.texture.deref(), transform, gl);
+            }
 
             let player_texture = player.tex.deref();
 
@@ -240,16 +269,6 @@ impl App {
                 // let rect: graphics::types::Rectangle = [0.0, 0.0, bullet.texture.get_size().0 as f64, bullet.texture.get_size().1 as f64];
                 // rectangle(RED, rect, transform, gl);
                 image(bullet.texture.deref(), transform, gl);
-            }
-
-            // Draw our wall.
-            for wall in walls {
-                let transform = c.transform
-                    .trans(wall.position.x, wall.position.y)
-                    .rot_rad(wall.rotation)
-                    .trans((wall.texture.get_size().0 as f64) * -0.5,
-                           (wall.texture.get_size().1 as f64) * -0.5);
-                image(wall.texture.deref(), transform, gl);
             }
 
             // Debug rectangle.
@@ -292,6 +311,7 @@ impl App {
         let bullets = &mut self.player.bullets;
         let enemies = &mut self.enemies;
         let walls = &self.walls;
+        let projectiles = &mut self.player.projectiles;
 
         bullets.retain(|ref bullet| {
             let bullet_half_extents: nalgebra::core::Vector2<f64> = nalgebra::core::Vector2::new(bullet.texture.get_size().0 as f64 * 0.5 * BULLET_SCALE, bullet.texture.get_size().1 as f64 * 0.5 * BULLET_SCALE);
@@ -323,7 +343,28 @@ impl App {
             }
 
             !intersected
-        })
+        });
+
+        projectiles.retain(|ref gun| {
+            let gun_half_extents: nalgebra::core::Vector2<f64> = nalgebra::core::Vector2::new(gun.texture.get_size().0 as f64 * 0.5, gun.texture.get_size().1 as f64 * 0.5);
+            let gun_cuboid2 = Cuboid2::new(gun_half_extents);
+            let gun_cuboid2_pos = nalgebra::geometry::Isometry2::new(nalgebra::core::Vector2::new(gun.position.x, gun.position.y), gun.rotation);
+            let gun_aabb_cuboid2 = bounding_volume::aabb(&gun_cuboid2, &gun_cuboid2_pos);
+
+            let mut intersected = false;
+
+            for wall in walls {
+                let wall_half_extents: nalgebra::core::Vector2<f64> = nalgebra::core::Vector2::new(wall.texture.get_size().0 as f64 * 0.5, wall.texture.get_size().1 as f64 * 0.5);
+                let wall_cuboid2 = Cuboid2::new(wall_half_extents);
+                let wall_cuboid2_pos = nalgebra::geometry::Isometry2::new(nalgebra::core::Vector2::new(wall.position.x, wall.position.y), wall.rotation);
+                let wall_aabb_cuboid2 = bounding_volume::aabb(&wall_cuboid2, &wall_cuboid2_pos);
+
+                let intersects = wall_aabb_cuboid2.intersects(&gun_aabb_cuboid2);
+                intersected = intersects || intersected;
+            }
+
+            !intersected
+        });
     }
 }
 
@@ -445,11 +486,13 @@ fn main() {
     let bullet = texture_manager.get("textures\\bullet.png");
     let wall = texture_manager.get("textures\\brick_square.png");
     let enemy = texture_manager.get("textures\\enemy.png");
+    let ground = texture_manager.get("textures\\ground.png");
 
     font_manager.get("Roboto-Regular.ttf");
 
     let mut enemies:Vec<Enemy> = Vec::new();
     let mut walls: Vec<Wall> = Vec::new();
+    let mut grounds: Vec<Ground> = Vec::new();
     let mut player: Player = Player {
         position: Vector2 {
             x: 0 as f64,
@@ -495,6 +538,16 @@ fn main() {
                         rotation: 0.0,
                         texture: enemy.clone(),
                     });
+            } else if item == "_" {
+                grounds.push(
+                    Ground {
+                        position: Vector2 {
+                            x: (item_num * CELL_WIDTH + CELL_WIDTH / 2) as f64 ,
+                            y: (line_num * CELL_HEIGHT + CELL_HEIGHT / 2) as f64
+                        },
+                        rotation: 0.0,
+                        texture: ground.clone(),
+                    });
             }
             item_num += 1;
         }
@@ -510,6 +563,7 @@ fn main() {
         average_frame_time: 1,
         font_manager: font_manager,
         walls: walls,
+        grounds: grounds,
     };
     app.window.set_max_fps(u64::max_value());
 
