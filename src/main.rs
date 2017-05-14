@@ -193,7 +193,7 @@ fn draw_victory_overlay(font_manager: &mut FontManager, c: &Context, gl: &mut G2
     let victory_text = "Success!";
     let transform = c.transform.trans(window_width * 0.5, window_height * 0.5);
     let cache_rc = font_manager.get("Roboto-Regular.ttf");
-    text(WHITE, 14, &victory_text, cache_rc.borrow_mut().deref_mut(), transform, gl);
+    text(WHITE, 36, &victory_text, cache_rc.borrow_mut().deref_mut(), transform, gl);
 }
 
 impl App {
