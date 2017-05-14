@@ -187,6 +187,7 @@ pub struct App {
     game_ended_state: GameEndedState,
     window_height: f64,
     window_width: f64,
+    is_paused: bool
 }
 
 fn draw_victory_overlay(font_manager: &mut FontManager, c: &Context, gl: &mut G2d, window_width: f64, window_height: f64) {
@@ -330,6 +331,7 @@ impl App {
     fn update(&mut self, mouse_pos: &Vector2, args: &UpdateArgs) {
         if self.enemies.is_empty() {
             self.game_ended_state = GameEndedState { game_ended: true, won: true };
+            self.is_paused = true;
             return;
         }
 
@@ -597,6 +599,7 @@ fn main() {
         },
         window_height: HEIGHT as f64,
         window_width: WIDTH as f64,
+        is_paused: false
     };
     app.window.set_max_fps(u64::max_value());
 
@@ -608,18 +611,18 @@ fn main() {
     while let Some(e) = app.window.next() {
         // Input.
         input::gather_input(&e, &mut key_states, &mut mouse_states, &mut mouse_pos);
-        if let Some(u) = e.update_args() {
-            apply_input(&mut app.player,
-                        &key_states,
-                        &mouse_states,
-                        &mouse_pos,
-                        u.dt);
-            input::update_input(&mut key_states, &mut mouse_states);
-        }
 
-        // Update.
         if let Some(u) = e.update_args() {
-            app.update(&mouse_pos, &u);
+            if !app.is_paused {
+                apply_input(&mut app.player,
+                            &key_states,
+                            &mouse_states,
+                            &mouse_pos,
+                            u.dt);
+
+                input::update_input(&mut key_states, &mut mouse_states);
+                app.update(&mouse_pos, &u);
+            }
         }
 
         // Render.
