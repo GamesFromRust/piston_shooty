@@ -40,9 +40,10 @@ use csv::index::{Indexed, create_index};
 const WIDTH: u32 = 1280;
 const HEIGHT: u32 = 720;
 
-const PROJECTILE_VELOCITY_MAGNITUDE: f64 = 100.0;
+const PROJECTILE_VELOCITY_MAGNITUDE: f64 = 75.0;
 const BULLET_VELOCITY_MAGNITUDE: f64 = 200.0;
-const GUN_ROTATIONAL_VELOCITY: f64 = 2.5;
+const GUN_ROTATIONAL_VELOCITY: f64 = 4.0;
+const GUN_SCALE: f64 = 0.5;
 const GREEN: [f32; 4] = [0.0, 1.0, 0.0, 1.0];
 const RED:      [f32; 4] = [1.0, 0.0, 0.0, 1.0];
 // const BLUE:     [f32; 4] = [0.0, 0.0, 1.0, 1.0];
@@ -54,25 +55,30 @@ const GRID_WIDTH: u32 = 32;
 const GRID_HEIGHT: u32 = 18;
 const CELL_WIDTH: u32 = WIDTH / GRID_WIDTH;
 const CELL_HEIGHT: u32 = HEIGHT / GRID_HEIGHT;
+const PLAYER_SCALE: f64 = 0.5;
+const WALL_SCALE: f64 = 1.0;
+const ENEMY_SCALE: f64 = 1.0;
+const GROUND_SCALE: f64 = 1.0;
 
 // TODO: Object model.
-pub struct Ground {
+pub struct RenderableObject {
     position: Vector2,
     rotation: f64,
+    scale: f64,
     texture: Rc<G2dTexture>,
+}
+
+pub struct Ground {
+    renderable_object: RenderableObject,
 }
 
 pub struct Wall {
-    position: Vector2,
-    rotation: f64,
-    texture: Rc<G2dTexture>,
+    renderable_object: RenderableObject,
 }
 
 pub struct Projectile {
-    position: Vector2,
+    renderable_object: RenderableObject,
     velocity: Vector2,
-    rotation: f64,
-    texture: Rc<G2dTexture>,
 }
 
 pub struct GameEndedState {
@@ -83,30 +89,29 @@ pub struct GameEndedState {
 impl Projectile {
     fn shoot_bullet(&self, bullet_texture: &Rc<G2dTexture>) -> Projectile {
         let velocity = Vector2 {
-            x: self.rotation.cos(),
-            y: self.rotation.sin(),
+            x: self.renderable_object.rotation.cos(),
+            y: self.renderable_object.rotation.sin(),
         };
 
         Projectile {
-            position: self.position,
+            renderable_object: RenderableObject {
+                position: self.renderable_object.position,
+                texture: bullet_texture.clone(),
+                rotation: self.renderable_object.rotation,
+                scale: BULLET_SCALE,
+            },
             velocity: velocity * BULLET_VELOCITY_MAGNITUDE,
-            rotation: self.rotation,
-            texture: bullet_texture.clone(),
         }
     }
 }
 
 pub struct Enemy {
-    position: Vector2,
-    rotation: f64,
-    texture: Rc<G2dTexture>,
+    renderable_object: RenderableObject,
 }
 
 pub struct Player {
-    position: Vector2,
-    rotation: f64,
+    renderable_object: RenderableObject,
     projectiles: Vec<Projectile>, // guns
-    tex: Rc<G2dTexture>,
     projectile_texture: Rc<G2dTexture>,
     projectile_sound: Rc<RefCell<Sound>>,
     bullet_texture: Rc<G2dTexture>,
@@ -124,8 +129,8 @@ impl Player {
 
     fn shoot_gun(&mut self, mouse_pos: &Vector2) {
         let rotation = match self.projectiles.last() {
-            Some(u) => u.rotation,
-            None => self.rotation,
+            Some(projectile) => projectile.renderable_object.rotation,
+            None => self.renderable_object.rotation,
         };
 
         let velocity = match self.projectiles.last() {
@@ -136,19 +141,22 @@ impl Player {
                 };
                 vel * PROJECTILE_VELOCITY_MAGNITUDE
             },
-            None => (*mouse_pos - self.position).normalized() * PROJECTILE_VELOCITY_MAGNITUDE,
+            None => (*mouse_pos - self.renderable_object.position).normalized() * PROJECTILE_VELOCITY_MAGNITUDE,
         };
 
         let position = match self.projectiles.last() {
-            Some(u) => u.position + ( velocity / PROJECTILE_VELOCITY_MAGNITUDE) * 30.0,
-            None => self.position,
+            Some(projectile) => projectile.renderable_object.position + ( velocity / PROJECTILE_VELOCITY_MAGNITUDE) * 30.0,
+            None => self.renderable_object.position,
         };
 
         let projectile = Projectile {
-            position: position,
+            renderable_object: RenderableObject {
+                position: position,
+                texture: self.projectile_texture.clone(),
+                rotation: rotation,
+                scale: GUN_SCALE,
+            },
             velocity: velocity,
-            rotation: rotation,
-            texture: self.projectile_texture.clone(),
         };
 
         self.projectile_sound.borrow_mut().play();
@@ -158,18 +166,18 @@ impl Player {
 
     fn update(&mut self, mouse_pos: &Vector2, args: &UpdateArgs) {
         // Rotate to face our mouse.
-        let player_to_mouse = *mouse_pos - self.position;
-        self.rotation = player_to_mouse.y.atan2(player_to_mouse.x);
+        let player_to_mouse = *mouse_pos - self.renderable_object.position;
+        self.renderable_object.rotation = player_to_mouse.y.atan2(player_to_mouse.x);
 
         // Move our projectiles.
         for projectile in &mut self.projectiles {
-            projectile.position += projectile.velocity * args.dt;
-            projectile.rotation += GUN_ROTATIONAL_VELOCITY * args.dt;
+            projectile.renderable_object.position += projectile.velocity * args.dt;
+            projectile.renderable_object.rotation += GUN_ROTATIONAL_VELOCITY * args.dt;
         }
 
         // Move our bullets.
         for bullet in &mut self.bullets {
-            bullet.position += bullet.velocity * args.dt;
+            bullet.renderable_object.position += bullet.velocity * args.dt;
         }
     }
 }
@@ -195,6 +203,16 @@ fn draw_victory_overlay(font_manager: &mut FontManager, c: &Context, gl: &mut G2
     let transform = c.transform.trans(window_width * 0.5, window_height * 0.5);
     let cache_rc = font_manager.get("Roboto-Regular.ttf");
     text(WHITE, 36, &victory_text, cache_rc.borrow_mut().deref_mut(), transform, gl);
+}
+
+fn render_renderable_object(c: &Context, gl: &mut G2d, renderable_object: &RenderableObject) {
+    let transform = c.transform
+        .trans(renderable_object.position.x, renderable_object.position.y)
+        .rot_rad(renderable_object.rotation)
+        .trans((renderable_object.texture.get_size().0 as f64) * -0.5 * renderable_object.scale,
+                (renderable_object.texture.get_size().1 as f64) * -0.5 * renderable_object.scale)
+        .scale(renderable_object.scale, renderable_object.scale);
+    image(renderable_object.texture.deref(), transform, gl);
 }
 
 impl App {
@@ -236,86 +254,45 @@ impl App {
 
             // Draw our walls.
             for wall in walls {
-                let transform = c.transform
-                    .trans(wall.position.x, wall.position.y)
-                    .rot_rad(wall.rotation)
-                    .trans((wall.texture.get_size().0 as f64) * -0.5,
-                           (wall.texture.get_size().1 as f64) * -0.5);
-                image(wall.texture.deref(), transform, gl);
+                render_renderable_object(&c, &mut gl, &wall.renderable_object);
             }
 
             // Draw our grounds.
             for ground in grounds {
-                let transform = c.transform
-                    .trans(ground.position.x, ground.position.y)
-                    .rot_rad(ground.rotation)
-                    .trans((ground.texture.get_size().0 as f64) * -0.5,
-                           (ground.texture.get_size().1 as f64) * -0.5);
-                image(ground.texture.deref(), transform, gl);
+                render_renderable_object(&c, &mut gl, &ground.renderable_object);
             }
-
-            let player_texture = player.tex.deref();
-
-            let scale = 0.5;
-            let transform = c.transform
-                .trans(player.position.x, player.position.y)
-                .rot_rad(player.rotation)
-                .trans((player_texture.get_size().0 as f64) * -0.5 * scale,
-                       (player_texture.get_size().1 as f64) * -0.5 * scale)
-                .scale(scale, scale);
-
-            // Set our player sprite position.
-            image(player_texture.deref(), transform, gl);
             
             // Draw our projectiles.
             for projectile in &player.projectiles {
-                let transform = c.transform
-                    .trans(projectile.position.x, projectile.position.y)
-                    .rot_rad(projectile.rotation)
-                    .trans((projectile.texture.get_size().0 as f64) * -0.5,
-                           (projectile.texture.get_size().1 as f64) * -0.5);
-                image(projectile.texture.deref(), transform, gl);
+                render_renderable_object(&c, &mut gl, &projectile.renderable_object);
             }
 
             // Draw our bullets.
             for bullet in &player.bullets {
-                let transform = c.transform
-                    .trans(bullet.position.x, bullet.position.y)
-                    .rot_rad(bullet.rotation)
-                    .trans((bullet.texture.get_size().0 as f64) * -0.5 * BULLET_SCALE,
-                           (bullet.texture.get_size().1 as f64) * -0.5 * BULLET_SCALE)
-                    .scale(BULLET_SCALE, BULLET_SCALE);
-                // let rect: graphics::types::Rectangle = [0.0, 0.0, bullet.texture.get_size().0 as f64, bullet.texture.get_size().1 as f64];
-                // rectangle(RED, rect, transform, gl);
-                image(bullet.texture.deref(), transform, gl);
+                render_renderable_object(&c, &mut gl, &bullet.renderable_object);
             }
 
             // Debug rectangle.
             match player.projectiles.last() {
                 Some(projectile) => {
                     let transform = c.transform
-                        .trans(projectile.position.x, projectile.position.y)
-                        .rot_rad(projectile.rotation);
+                        .trans(projectile.renderable_object.position.x, projectile.renderable_object.position.y)
+                        .rot_rad(projectile.renderable_object.rotation)
+                        .trans((projectile.renderable_object.texture.get_size().0 as f64) * -0.5 * GUN_SCALE,
+                                (projectile.renderable_object.texture.get_size().1 as f64) * -0.5 * GUN_SCALE)
+                        .scale(GUN_SCALE, GUN_SCALE);
+                    
                     let rect: graphics::types::Rectangle = [0.0, 0.0, 10000.0, 1.0];
                     rectangle(RED, rect, transform, gl);
                 },
                 None => (),
             }
 
-            let enemy_scale = 1.0;
             for enemy in enemies {
-                // draw a debug rect
-                let transform = c.transform
-                    .trans(enemy.position.x, enemy.position.y)
-                    .rot_rad(enemy.rotation)
-                    .trans((enemy.texture.get_size().0 as f64) * -0.5 * enemy_scale,
-                           (enemy.texture.get_size().1 as f64) * -0.5 * enemy_scale)
-                    .scale(enemy_scale, enemy_scale);
-                // let rect: graphics::types::Rectangle = [0.0, 0.0, enemy.texture.get_size().0 as f64, enemy.texture.get_size().1 as f64];
-                // rectangle(RED, rect, transform, gl);
-                image(enemy.texture.deref(), transform, gl);
+                render_renderable_object(&c, &mut gl, &enemy.renderable_object);
             }
 
+            render_renderable_object(&c, &mut gl, &player.renderable_object);
 
             // Draw our fps.
             let transform = c.transform.trans(10.0, 10.0);
@@ -343,17 +320,17 @@ impl App {
         let projectiles = &mut self.player.projectiles;
 
         bullets.retain(|ref bullet| {
-            let bullet_half_extents: nalgebra::core::Vector2<f64> = nalgebra::core::Vector2::new(bullet.texture.get_size().0 as f64 * 0.5 * BULLET_SCALE, bullet.texture.get_size().1 as f64 * 0.5 * BULLET_SCALE);
+            let bullet_half_extents: nalgebra::core::Vector2<f64> = nalgebra::core::Vector2::new(bullet.renderable_object.texture.get_size().0 as f64 * 0.5 * BULLET_SCALE, bullet.renderable_object.texture.get_size().1 as f64 * 0.5 * BULLET_SCALE);
             let bullet_cuboid2 = Cuboid2::new(bullet_half_extents);
-            let bullet_cuboid2_pos = nalgebra::geometry::Isometry2::new(nalgebra::core::Vector2::new(bullet.position.x, bullet.position.y), bullet.rotation);
+            let bullet_cuboid2_pos = nalgebra::geometry::Isometry2::new(nalgebra::core::Vector2::new(bullet.renderable_object.position.x, bullet.renderable_object.position.y), bullet.renderable_object.rotation);
             let bullet_aabb_cuboid2 = bounding_volume::aabb(&bullet_cuboid2, &bullet_cuboid2_pos);
 
             let mut intersected = false;
 
             enemies.retain(|ref enemy| {
-                let enemy_half_extents: nalgebra::core::Vector2<f64> = nalgebra::core::Vector2::new(enemy.texture.get_size().0 as f64 * 0.5, enemy.texture.get_size().1 as f64 * 0.5);
+                let enemy_half_extents: nalgebra::core::Vector2<f64> = nalgebra::core::Vector2::new(enemy.renderable_object.texture.get_size().0 as f64 * 0.5, enemy.renderable_object.texture.get_size().1 as f64 * 0.5);
                 let enemy_cuboid2 = Cuboid2::new(enemy_half_extents);
-                let enemy_cuboid2_pos = nalgebra::geometry::Isometry2::new(nalgebra::core::Vector2::new(enemy.position.x, enemy.position.y), enemy.rotation);
+                let enemy_cuboid2_pos = nalgebra::geometry::Isometry2::new(nalgebra::core::Vector2::new(enemy.renderable_object.position.x, enemy.renderable_object.position.y), enemy.renderable_object.rotation);
                 let enemy_aabb_cuboid2 = bounding_volume::aabb(&enemy_cuboid2, &enemy_cuboid2_pos);
 
                 let intersects = enemy_aabb_cuboid2.intersects(&bullet_aabb_cuboid2);
@@ -362,9 +339,9 @@ impl App {
             });
 
             for wall in walls {
-                let wall_half_extents: nalgebra::core::Vector2<f64> = nalgebra::core::Vector2::new(wall.texture.get_size().0 as f64 * 0.5, wall.texture.get_size().1 as f64 * 0.5);
+                let wall_half_extents: nalgebra::core::Vector2<f64> = nalgebra::core::Vector2::new(wall.renderable_object.texture.get_size().0 as f64 * 0.5, wall.renderable_object.texture.get_size().1 as f64 * 0.5);
                 let wall_cuboid2 = Cuboid2::new(wall_half_extents);
-                let wall_cuboid2_pos = nalgebra::geometry::Isometry2::new(nalgebra::core::Vector2::new(wall.position.x, wall.position.y), wall.rotation);
+                let wall_cuboid2_pos = nalgebra::geometry::Isometry2::new(nalgebra::core::Vector2::new(wall.renderable_object.position.x, wall.renderable_object.position.y), wall.renderable_object.rotation);
                 let wall_aabb_cuboid2 = bounding_volume::aabb(&wall_cuboid2, &wall_cuboid2_pos);
 
                 let intersects = wall_aabb_cuboid2.intersects(&bullet_aabb_cuboid2);
@@ -375,17 +352,17 @@ impl App {
         });
 
         projectiles.retain(|ref gun| {
-            let gun_half_extents: nalgebra::core::Vector2<f64> = nalgebra::core::Vector2::new(gun.texture.get_size().0 as f64 * 0.5, gun.texture.get_size().1 as f64 * 0.5);
+            let gun_half_extents: nalgebra::core::Vector2<f64> = nalgebra::core::Vector2::new(gun.renderable_object.texture.get_size().0 as f64 * 0.5 * GUN_SCALE, gun.renderable_object.texture.get_size().1 as f64 * 0.5 * GUN_SCALE);
             let gun_cuboid2 = Cuboid2::new(gun_half_extents);
-            let gun_cuboid2_pos = nalgebra::geometry::Isometry2::new(nalgebra::core::Vector2::new(gun.position.x, gun.position.y), gun.rotation);
+            let gun_cuboid2_pos = nalgebra::geometry::Isometry2::new(nalgebra::core::Vector2::new(gun.renderable_object.position.x, gun.renderable_object.position.y), gun.renderable_object.rotation);
             let gun_aabb_cuboid2 = bounding_volume::aabb(&gun_cuboid2, &gun_cuboid2_pos);
 
             let mut intersected = false;
 
             for wall in walls {
-                let wall_half_extents: nalgebra::core::Vector2<f64> = nalgebra::core::Vector2::new(wall.texture.get_size().0 as f64 * 0.5, wall.texture.get_size().1 as f64 * 0.5);
+                let wall_half_extents: nalgebra::core::Vector2<f64> = nalgebra::core::Vector2::new(wall.renderable_object.texture.get_size().0 as f64 * 0.5, wall.renderable_object.texture.get_size().1 as f64 * 0.5);
                 let wall_cuboid2 = Cuboid2::new(wall_half_extents);
-                let wall_cuboid2_pos = nalgebra::geometry::Isometry2::new(nalgebra::core::Vector2::new(wall.position.x, wall.position.y), wall.rotation);
+                let wall_cuboid2_pos = nalgebra::geometry::Isometry2::new(nalgebra::core::Vector2::new(wall.renderable_object.position.x, wall.renderable_object.position.y), wall.renderable_object.rotation);
                 let wall_aabb_cuboid2 = bounding_volume::aabb(&wall_cuboid2, &wall_cuboid2_pos);
 
                 let intersects = wall_aabb_cuboid2.intersects(&gun_aabb_cuboid2);
@@ -453,7 +430,7 @@ fn apply_input(player: &mut Player,
         return;
     }
     player_velocity.normalize();
-    player.position += player_velocity * MOVE_SPEED_MAX * dt;
+    player.renderable_object.position += player_velocity * MOVE_SPEED_MAX * dt;
 }
 
 fn main() {
@@ -467,7 +444,7 @@ fn main() {
         .build()
         .unwrap();
 
-    let new_csv_rdr = || csv::Reader::from_file("assets\\Levels\\Level1.csv").unwrap().has_headers(false);
+    let new_csv_rdr = || csv::Reader::from_file("assets\\Levels\\Level2.csv").unwrap().has_headers(false);
     let mut index_data = io::Cursor::new(Vec::new());
     create_index(new_csv_rdr(), index_data.by_ref()).unwrap();
     let mut index = Indexed::open(new_csv_rdr(), index_data).unwrap();
@@ -523,13 +500,16 @@ fn main() {
     let mut walls: Vec<Wall> = Vec::new();
     let mut grounds: Vec<Ground> = Vec::new();
     let mut player: Player = Player {
-        position: Vector2 {
-            x: 0 as f64,
-            y: 0 as f64
+        renderable_object: RenderableObject {
+            texture: hand_gun.clone(),
+            position: Vector2 {
+                x: 0.0,
+                y: 0.0,
+            },
+            rotation: 0.0,
+            scale: PLAYER_SCALE,
         },
-        rotation: 0.0,
         projectiles: Vec::new(),
-        tex: hand_gun.clone(),
         projectile_texture: gun_gun.clone(),
         projectile_sound: sound_manager.get("sounds\\boom.ogg"),
         bullet_texture: bullet.clone(),
@@ -545,37 +525,46 @@ fn main() {
             if item == "W" {
                 walls.push(
                     Wall {
-                        position: Vector2 {
-                            x: (item_num * CELL_WIDTH + CELL_WIDTH / 2) as f64 ,
-                            y: (line_num * CELL_HEIGHT + CELL_HEIGHT / 2) as f64
+                        renderable_object: RenderableObject {
+                            position: Vector2 {
+                                x: (item_num * CELL_WIDTH + CELL_WIDTH / 2) as f64 ,
+                                y: (line_num * CELL_HEIGHT + CELL_HEIGHT / 2) as f64
+                            },
+                            rotation: 0.0,
+                            texture: wall.clone(),
+                            scale: WALL_SCALE,
                         },
-                        rotation: 0.0,
-                        texture: wall.clone(),
                     });
             } else if item == "P" {
-                player.position = Vector2 {
+                player.renderable_object.position = Vector2 {
                     x: (item_num * CELL_WIDTH + CELL_WIDTH / 2) as f64,
                     y: (line_num * CELL_HEIGHT + CELL_HEIGHT / 2) as f64
                 };
             } else if item == "E" {
                 enemies.push(
                     Enemy {
-                        position: Vector2 {
-                            x: (item_num * CELL_WIDTH + CELL_WIDTH / 2) as f64,
-                            y: (line_num * CELL_HEIGHT + CELL_HEIGHT / 2) as f64
+                        renderable_object: RenderableObject {
+                            position: Vector2 {
+                                x: (item_num * CELL_WIDTH + CELL_WIDTH / 2) as f64,
+                                y: (line_num * CELL_HEIGHT + CELL_HEIGHT / 2) as f64
+                            },
+                            rotation: 0.0,
+                            texture: enemy.clone(),
+                            scale: ENEMY_SCALE,
                         },
-                        rotation: 0.0,
-                        texture: enemy.clone(),
                     });
             } else if item == "_" {
                 grounds.push(
                     Ground {
-                        position: Vector2 {
-                            x: (item_num * CELL_WIDTH + CELL_WIDTH / 2) as f64 ,
-                            y: (line_num * CELL_HEIGHT + CELL_HEIGHT / 2) as f64
+                        renderable_object: RenderableObject {
+                            position: Vector2 {
+                                x: (item_num * CELL_WIDTH + CELL_WIDTH / 2) as f64 ,
+                                y: (line_num * CELL_HEIGHT + CELL_HEIGHT / 2) as f64
+                            },
+                            rotation: 0.0,
+                            texture: ground.clone(),
+                            scale: GROUND_SCALE,
                         },
-                        rotation: 0.0,
-                        texture: ground.clone(),
                     });
             }
             item_num += 1;
