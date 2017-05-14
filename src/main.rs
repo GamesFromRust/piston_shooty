@@ -215,6 +215,16 @@ fn render_renderable_object(c: &Context, gl: &mut G2d, renderable_object: &Rende
     image(renderable_object.texture.deref(), transform, gl);
 }
 
+fn create_aabb_cuboid2(renderable_object: &RenderableObject) -> ncollide_geometry::bounding_volume::AABB<nalgebra::PointBase<f64, nalgebra::U2, nalgebra::MatrixArray<f64, nalgebra::U2, nalgebra::U1>>> {
+    let half_extents: nalgebra::core::Vector2<f64> = nalgebra::core::Vector2::new(
+        renderable_object.texture.get_size().0 as f64 * 0.5 * renderable_object.scale,
+        renderable_object.texture.get_size().1 as f64 * 0.5 * renderable_object.scale);
+    let cuboid2 = Cuboid2::new(half_extents);
+    let cuboid2_pos = nalgebra::geometry::Isometry2::new(nalgebra::core::Vector2::new(renderable_object.position.x, renderable_object.position.y), renderable_object.rotation);
+    let aabb_cuboid2 = bounding_volume::aabb(&cuboid2, &cuboid2_pos);
+    aabb_cuboid2
+}
+
 impl App {
     fn render(&mut self, event: &Input) {
         // TODO: Read a book on how to do a fps counter.
@@ -320,18 +330,12 @@ impl App {
         let projectiles = &mut self.player.projectiles;
 
         bullets.retain(|ref bullet| {
-            let bullet_half_extents: nalgebra::core::Vector2<f64> = nalgebra::core::Vector2::new(bullet.renderable_object.texture.get_size().0 as f64 * 0.5 * BULLET_SCALE, bullet.renderable_object.texture.get_size().1 as f64 * 0.5 * BULLET_SCALE);
-            let bullet_cuboid2 = Cuboid2::new(bullet_half_extents);
-            let bullet_cuboid2_pos = nalgebra::geometry::Isometry2::new(nalgebra::core::Vector2::new(bullet.renderable_object.position.x, bullet.renderable_object.position.y), bullet.renderable_object.rotation);
-            let bullet_aabb_cuboid2 = bounding_volume::aabb(&bullet_cuboid2, &bullet_cuboid2_pos);
+            let bullet_aabb_cuboid2 = create_aabb_cuboid2(&bullet.renderable_object);
 
             let mut intersected = false;
 
             enemies.retain(|ref enemy| {
-                let enemy_half_extents: nalgebra::core::Vector2<f64> = nalgebra::core::Vector2::new(enemy.renderable_object.texture.get_size().0 as f64 * 0.5, enemy.renderable_object.texture.get_size().1 as f64 * 0.5);
-                let enemy_cuboid2 = Cuboid2::new(enemy_half_extents);
-                let enemy_cuboid2_pos = nalgebra::geometry::Isometry2::new(nalgebra::core::Vector2::new(enemy.renderable_object.position.x, enemy.renderable_object.position.y), enemy.renderable_object.rotation);
-                let enemy_aabb_cuboid2 = bounding_volume::aabb(&enemy_cuboid2, &enemy_cuboid2_pos);
+                let enemy_aabb_cuboid2 = create_aabb_cuboid2(&enemy.renderable_object);
 
                 let intersects = enemy_aabb_cuboid2.intersects(&bullet_aabb_cuboid2);
                 intersected = intersects || intersected;
@@ -339,10 +343,7 @@ impl App {
             });
 
             for wall in walls {
-                let wall_half_extents: nalgebra::core::Vector2<f64> = nalgebra::core::Vector2::new(wall.renderable_object.texture.get_size().0 as f64 * 0.5, wall.renderable_object.texture.get_size().1 as f64 * 0.5);
-                let wall_cuboid2 = Cuboid2::new(wall_half_extents);
-                let wall_cuboid2_pos = nalgebra::geometry::Isometry2::new(nalgebra::core::Vector2::new(wall.renderable_object.position.x, wall.renderable_object.position.y), wall.renderable_object.rotation);
-                let wall_aabb_cuboid2 = bounding_volume::aabb(&wall_cuboid2, &wall_cuboid2_pos);
+                let wall_aabb_cuboid2 = create_aabb_cuboid2(&wall.renderable_object);
 
                 let intersects = wall_aabb_cuboid2.intersects(&bullet_aabb_cuboid2);
                 intersected = intersects || intersected;
@@ -352,18 +353,12 @@ impl App {
         });
 
         projectiles.retain(|ref gun| {
-            let gun_half_extents: nalgebra::core::Vector2<f64> = nalgebra::core::Vector2::new(gun.renderable_object.texture.get_size().0 as f64 * 0.5 * GUN_SCALE, gun.renderable_object.texture.get_size().1 as f64 * 0.5 * GUN_SCALE);
-            let gun_cuboid2 = Cuboid2::new(gun_half_extents);
-            let gun_cuboid2_pos = nalgebra::geometry::Isometry2::new(nalgebra::core::Vector2::new(gun.renderable_object.position.x, gun.renderable_object.position.y), gun.renderable_object.rotation);
-            let gun_aabb_cuboid2 = bounding_volume::aabb(&gun_cuboid2, &gun_cuboid2_pos);
+            let gun_aabb_cuboid2 = create_aabb_cuboid2(&gun.renderable_object);
 
             let mut intersected = false;
 
             for wall in walls {
-                let wall_half_extents: nalgebra::core::Vector2<f64> = nalgebra::core::Vector2::new(wall.renderable_object.texture.get_size().0 as f64 * 0.5, wall.renderable_object.texture.get_size().1 as f64 * 0.5);
-                let wall_cuboid2 = Cuboid2::new(wall_half_extents);
-                let wall_cuboid2_pos = nalgebra::geometry::Isometry2::new(nalgebra::core::Vector2::new(wall.renderable_object.position.x, wall.renderable_object.position.y), wall.renderable_object.rotation);
-                let wall_aabb_cuboid2 = bounding_volume::aabb(&wall_cuboid2, &wall_cuboid2_pos);
+                let wall_aabb_cuboid2 = create_aabb_cuboid2(&wall.renderable_object);
 
                 let intersects = wall_aabb_cuboid2.intersects(&gun_aabb_cuboid2);
                 intersected = intersects || intersected;
