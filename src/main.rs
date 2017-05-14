@@ -75,6 +75,11 @@ pub struct Projectile {
     texture: Rc<G2dTexture>,
 }
 
+pub struct GameEndedState {
+    game_ended: bool,
+    won: bool,
+}
+
 impl Projectile {
     fn shoot_bullet(&self, bullet_texture: &Rc<G2dTexture>) -> Projectile {
         let velocity = Vector2 {
@@ -179,6 +184,16 @@ pub struct App {
     enemies: Vec<Enemy>,
     walls: Vec<Wall>,
     grounds: Vec<Ground>,
+    game_ended_state: GameEndedState,
+    window_height: f64,
+    window_width: f64,
+}
+
+fn draw_victory_overlay(font_manager: &mut FontManager, c: &Context, gl: &mut G2d, window_width: f64, window_height: f64) {
+    let victory_text = "Success!";
+    let transform = c.transform.trans(window_width * 0.5, window_height * 0.5);
+    let cache_rc = font_manager.get("Roboto-Regular.ttf");
+    text(WHITE, 14, &victory_text, cache_rc.borrow_mut().deref_mut(), transform, gl);
 }
 
 impl App {
@@ -206,12 +221,15 @@ impl App {
             &"\ncurr_frame_time: ".to_string() + &curr_frame_time.to_string();
 
         let player = &self.player;
-        let font_manager = &mut self.font_manager;
+        let mut font_manager = &mut self.font_manager;
         let enemies = &self.enemies;
         let walls = &self.walls;
         let grounds = &self.grounds;
+        let window_width = self.window_width;
+        let window_height = self.window_height;
+        let game_ended_state = &self.game_ended_state;
 
-        self.window.draw_2d(event, |c: Context, gl: &mut G2d| {
+        self.window.draw_2d(event, |c: Context, mut gl: &mut G2d| {
             // Clear the screen.
             clear(GREEN, gl);
 
@@ -302,10 +320,19 @@ impl App {
             let transform = c.transform.trans(10.0, 10.0);
             let cache_rc = font_manager.get("Roboto-Regular.ttf");
             text(WHITE, 14, &fps_text, cache_rc.borrow_mut().deref_mut(), transform, gl);
+
+            if game_ended_state.game_ended && game_ended_state.won {
+                draw_victory_overlay(&mut font_manager, &c, &mut gl, window_width, window_height);
+            }
         });
     }
 
     fn update(&mut self, mouse_pos: &Vector2, args: &UpdateArgs) {
+        if self.enemies.is_empty() {
+            self.game_ended_state = GameEndedState { game_ended: true, won: true };
+            return;
+        }
+
         self.player.update(mouse_pos, args);
 
         let bullets = &mut self.player.bullets;
@@ -564,6 +591,12 @@ fn main() {
         font_manager: font_manager,
         walls: walls,
         grounds: grounds,
+        game_ended_state: GameEndedState {
+            game_ended: false,
+            won: false
+        },
+        window_height: HEIGHT as f64,
+        window_width: WIDTH as f64,
     };
     app.window.set_max_fps(u64::max_value());
 
