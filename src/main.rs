@@ -67,6 +67,7 @@ const ENEMY_LAYER: usize = 2;
 const PLAYER_LAYER: usize = 2;
 const PROJECTILE_LAYER: usize = 3;
 
+// TODO: Add player/guns/bullets to here.
 pub struct World {
     static_renderables: Vec<Vec<Rc<Renderable>>>,
     dynamic_renderables: Vec<Vec<Rc<RefCell<Renderable>>>>,
