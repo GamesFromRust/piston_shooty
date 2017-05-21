@@ -36,6 +36,7 @@ use ncollide_geometry::bounding_volume;
 use ncollide_geometry::bounding_volume::BoundingVolume;
 use std::io::{self, Write};
 use csv::index::{Indexed, create_index};
+use std::cmp;
 
 const WIDTH: u32 = 1280;
 const HEIGHT: u32 = 720;
@@ -67,15 +68,23 @@ const PLAYER_LAYER: usize = 2;
 const PROJECTILE_LAYER: usize = 3;
 
 pub struct World {
-    renderables: Vec<Vec<Rc<Renderable>>>
+    static_renderables: Vec<Vec<Rc<Renderable>>>,
+    dynamic_renderables: Vec<Vec<Rc<RefCell<Renderable>>>>,
 }
 
 impl World {
-    fn add_renderable_at_layer(&mut self, renderable: Rc<Renderable>, layer: usize) {
-        while self.renderables.len() < layer {
-            self.renderables.push(Vec::new())
+    fn add_static_renderable_at_layer(&mut self, renderable: Rc<Renderable>, layer: usize) {
+        while self.static_renderables.len() < layer {
+            self.static_renderables.push(Vec::new());
         }
-        self.renderables[layer - 1].push(renderable)
+        self.static_renderables[layer - 1].push(renderable);
+    }
+
+    fn add_dynamic_renderable_at_layer(&mut self, renderable: Rc<RefCell<Renderable>>, layer: usize) {
+        while self.dynamic_renderables.len() < layer {
+            self.dynamic_renderables.push(Vec::new());
+        }
+        self.dynamic_renderables[layer - 1].push(renderable);
     }
 }
 
@@ -89,6 +98,7 @@ pub struct RenderableObject {
 
 pub trait Renderable {
     fn get_renderable_object(&self) -> &RenderableObject;
+    fn should_delete(&self) -> bool;
 }
 
 pub struct Ground {
@@ -98,6 +108,10 @@ pub struct Ground {
 impl Renderable for Ground {
     fn get_renderable_object(&self) -> &RenderableObject {
         &self.renderable_object
+    }
+    
+    fn should_delete(&self) -> bool {
+        false
     }
 }
 
@@ -109,16 +123,25 @@ impl Renderable for Wall {
     fn get_renderable_object(&self) -> &RenderableObject {
         &self.renderable_object
     }
+    
+    fn should_delete(&self) -> bool {
+        false
+    }
 }
 
 pub struct Projectile {
     renderable_object: RenderableObject,
     velocity: Vector2,
+    should_delete: bool,
 }
 
 impl Renderable for Projectile {
     fn get_renderable_object(&self) -> &RenderableObject {
         &self.renderable_object
+    }
+    
+    fn should_delete(&self) -> bool {
+        self.should_delete
     }
 }
 
@@ -142,17 +165,23 @@ impl Projectile {
                 scale: BULLET_SCALE,
             },
             velocity: velocity * BULLET_VELOCITY_MAGNITUDE,
+            should_delete: false,
         }
     }
 }
 
 pub struct Enemy {
     renderable_object: RenderableObject,
+    should_delete: bool,
 }
 
 impl Renderable for Enemy {
     fn get_renderable_object(&self) -> &RenderableObject {
         &self.renderable_object
+    }
+    
+    fn should_delete(&self) -> bool {
+        self.should_delete
     }
 }
 
@@ -169,6 +198,10 @@ pub struct Player {
 impl Renderable for Player {
     fn get_renderable_object(&self) -> &RenderableObject {
         &self.renderable_object
+    }
+    
+    fn should_delete(&self) -> bool {
+        false
     }
 }
 
@@ -210,6 +243,7 @@ impl Player {
                 scale: GUN_SCALE,
             },
             velocity: velocity,
+            should_delete: false,
         };
 
         self.gun_sound.borrow_mut().play();
@@ -242,7 +276,7 @@ pub struct App {
     num_frames_in_batch: u64,
     average_frame_time: u64,
     font_manager: FontManager,
-    enemies: Vec<Rc<Enemy>>,
+    enemies: Vec<Rc<RefCell<Enemy>>>,
     walls: Vec<Rc<Wall>>,
     game_ended_state: GameEndedState,
     window_height: f64,
@@ -313,10 +347,21 @@ impl App {
             // Clear the screen.
             clear(GREEN, gl);
 
-            for layer in &world.renderables {
-                for renderable in layer {
-                    let renderable_object = renderable.get_renderable_object();
-                    render_renderable_object(&c, &mut gl, &renderable_object);
+            let max_layers = cmp::max(world.static_renderables.len(), world.dynamic_renderables.len());
+            for i in 0..max_layers {
+                if i < world.static_renderables.len() {
+                    for renderable in &world.static_renderables[i] {
+                        let renderable_object = renderable.get_renderable_object();
+                        render_renderable_object(&c, &mut gl, &renderable_object);
+                    }
+                }
+                if i < world.dynamic_renderables.len() {
+                    for renderable in &world.dynamic_renderables[i] {
+                        // TODO: Why can't we do this?
+                        // let renderable_object = renderable.borrow().get_renderable_object();
+                        // render_renderable_object(&c, &mut gl, &renderable_object);
+                        render_renderable_object(&c, &mut gl, &renderable.borrow().get_renderable_object());
+                    }
                 }
             }
             
@@ -367,48 +412,64 @@ impl App {
         }
 
         self.player.update(mouse_pos, args);
+        
+        {
+            let bullets = &mut self.player.bullets;
+            let enemies = &self.enemies;
+            let walls = &self.walls;
 
-        let bullets = &mut self.player.bullets;
-        let enemies = &mut self.enemies;
-        let walls = &self.walls;
-        let guns = &mut self.player.guns;
+            bullets.retain(|ref bullet| {
+                let bullet_aabb_cuboid2 = create_aabb_cuboid2(&bullet.renderable_object);
 
-        bullets.retain(|ref bullet| {
-            let bullet_aabb_cuboid2 = create_aabb_cuboid2(&bullet.renderable_object);
+                let mut intersected = false;
+                
+                for enemy in enemies {
+                    let enemy_aabb_cuboid2 = create_aabb_cuboid2(&enemy.borrow().renderable_object);
 
-            let mut intersected = false;
+                    let intersects = enemy_aabb_cuboid2.intersects(&bullet_aabb_cuboid2);
+                    intersected = intersects || intersected;
+                    enemy.borrow_mut().should_delete = intersects;
+                }
 
-            enemies.retain(|ref enemy| {
-                let enemy_aabb_cuboid2 = create_aabb_cuboid2(&enemy.renderable_object);
+                for wall in walls {
+                    let wall_aabb_cuboid2 = create_aabb_cuboid2(&wall.renderable_object);
 
-                let intersects = enemy_aabb_cuboid2.intersects(&bullet_aabb_cuboid2);
-                intersected = intersects || intersected;
-                !intersects
+                    let intersects = wall_aabb_cuboid2.intersects(&bullet_aabb_cuboid2);
+                    intersected = intersects || intersected;
+                }
+
+                !intersected
             });
+        }
 
-            for wall in walls {
-                let wall_aabb_cuboid2 = create_aabb_cuboid2(&wall.renderable_object);
+        {
+            let guns = &mut self.player.guns;
+            let walls = &self.walls;
 
-                let intersects = wall_aabb_cuboid2.intersects(&bullet_aabb_cuboid2);
-                intersected = intersects || intersected;
-            }
+            guns.retain(|ref gun| {
+                let gun_aabb_cuboid2 = create_aabb_cuboid2(&gun.renderable_object);
 
-            !intersected
-        });
+                let mut intersected = false;
 
-        guns.retain(|ref gun| {
-            let gun_aabb_cuboid2 = create_aabb_cuboid2(&gun.renderable_object);
+                for wall in walls {
+                    let wall_aabb_cuboid2 = create_aabb_cuboid2(&wall.renderable_object);
 
-            let mut intersected = false;
+                    let intersects = wall_aabb_cuboid2.intersects(&gun_aabb_cuboid2);
+                    intersected = intersects || intersected;
+                }
 
-            for wall in walls {
-                let wall_aabb_cuboid2 = create_aabb_cuboid2(&wall.renderable_object);
+                !intersected
+            });
+        }
 
-                let intersects = wall_aabb_cuboid2.intersects(&gun_aabb_cuboid2);
-                intersected = intersects || intersected;
-            }
+        for renderables_in_layer in &mut self.world.dynamic_renderables {
+            renderables_in_layer.retain( |ref renderable| {
+                !renderable.borrow().should_delete()
+            });
+        }
 
-            !intersected
+        self.enemies.retain( |ref enemy| {
+            !enemy.borrow().should_delete()
         });
     }
 }
@@ -536,10 +597,11 @@ fn main() {
     font_manager.get("Roboto-Regular.ttf");
 
     let mut world: World = World {
-        renderables: Vec::new()
+        static_renderables: Vec::new(),
+        dynamic_renderables: Vec::new(),
     };
 
-    let mut enemies:Vec<Rc<Enemy>> = Vec::new();
+    let mut enemies:Vec<Rc<RefCell<Enemy>>> = Vec::new();
     let mut walls: Vec<Rc<Wall>> = Vec::new();
 
     let mut player: Player = Player {
@@ -581,7 +643,7 @@ fn main() {
                 };
                 let rc = Rc::new(wall);
                 walls.push(rc.clone());
-                world.add_renderable_at_layer(rc.clone(), WALL_LAYER);
+                world.add_static_renderable_at_layer(rc.clone(), WALL_LAYER);
             } else if item == "P" {
                 let ground = Ground {
                     renderable_object: RenderableObject {
@@ -595,7 +657,7 @@ fn main() {
                     },
                 };
                 let rc = Rc::new(ground);
-                world.add_renderable_at_layer(rc.clone(), GROUND_LAYER);
+                world.add_static_renderable_at_layer(rc.clone(), GROUND_LAYER);
 
                 player.renderable_object.position = Vector2 {
                     x: (item_num * CELL_WIDTH + CELL_WIDTH / 2) as f64,
@@ -614,7 +676,7 @@ fn main() {
                     },
                 };
                 let rc = Rc::new(ground);
-                world.add_renderable_at_layer(rc.clone(), GROUND_LAYER);
+                world.add_static_renderable_at_layer(rc.clone(), GROUND_LAYER);
 
                 let enemy = Enemy {
                     renderable_object: RenderableObject {
@@ -626,10 +688,11 @@ fn main() {
                         texture: enemy.clone(),
                         scale: ENEMY_SCALE,
                     },
+                    should_delete: false,
                 };
-                let rc = Rc::new(enemy);
-                enemies.push(rc.clone());
-                world.add_renderable_at_layer(rc.clone(), ENEMY_LAYER);
+                let refcell = Rc::new(RefCell::new(enemy));
+                enemies.push(refcell.clone());
+                world.add_dynamic_renderable_at_layer(refcell.clone(), ENEMY_LAYER);
             } else if item == "_" {
                 let ground = Ground {
                     renderable_object: RenderableObject {
@@ -643,7 +706,7 @@ fn main() {
                     },
                 };
                 let rc = Rc::new(ground);
-                world.add_renderable_at_layer(rc.clone(), GROUND_LAYER);
+                world.add_static_renderable_at_layer(rc.clone(), GROUND_LAYER);
             }
             item_num += 1;
         }
