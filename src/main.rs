@@ -111,9 +111,9 @@ pub struct Enemy {
 
 pub struct Player {
     renderable_object: RenderableObject,
-    projectiles: Vec<Projectile>, // guns
-    projectile_texture: Rc<G2dTexture>,
-    projectile_sound: Rc<RefCell<Sound>>,
+    guns: Vec<Projectile>,
+    gun_texture: Rc<G2dTexture>,
+    gun_sound: Rc<RefCell<Sound>>,
     bullet_texture: Rc<G2dTexture>,
     bullets: Vec<Projectile>,
     bullet_sound: Rc<RefCell<Sound>>,
@@ -121,19 +121,19 @@ pub struct Player {
 
 impl Player {
     fn shoot_bullets(&mut self) {
-        for projectile in &self.projectiles {
+        for projectile in &self.guns {
             self.bullets.push(projectile.shoot_bullet(&self.bullet_texture));
             self.bullet_sound.borrow_mut().play();
         }    
     }
 
     fn shoot_gun(&mut self, mouse_pos: &Vector2) {
-        let rotation = match self.projectiles.last() {
+        let rotation = match self.guns.last() {
             Some(projectile) => projectile.renderable_object.rotation,
             None => self.renderable_object.rotation,
         };
 
-        let velocity = match self.projectiles.last() {
+        let velocity = match self.guns.last() {
             Some(_) => {
                 let vel = Vector2 {
                     x: rotation.cos(),
@@ -144,7 +144,7 @@ impl Player {
             None => (*mouse_pos - self.renderable_object.position).normalized() * PROJECTILE_VELOCITY_MAGNITUDE,
         };
 
-        let position = match self.projectiles.last() {
+        let position = match self.guns.last() {
             Some(projectile) => projectile.renderable_object.position + ( velocity / PROJECTILE_VELOCITY_MAGNITUDE) * 30.0,
             None => self.renderable_object.position,
         };
@@ -152,16 +152,16 @@ impl Player {
         let projectile = Projectile {
             renderable_object: RenderableObject {
                 position: position,
-                texture: self.projectile_texture.clone(),
+                texture: self.gun_texture.clone(),
                 rotation: rotation,
                 scale: GUN_SCALE,
             },
             velocity: velocity,
         };
 
-        self.projectile_sound.borrow_mut().play();
+        self.gun_sound.borrow_mut().play();
 
-        self.projectiles.push(projectile);
+        self.guns.push(projectile);
     }
 
     fn update(&mut self, mouse_pos: &Vector2, args: &UpdateArgs) {
@@ -169,8 +169,8 @@ impl Player {
         let player_to_mouse = *mouse_pos - self.renderable_object.position;
         self.renderable_object.rotation = player_to_mouse.y.atan2(player_to_mouse.x);
 
-        // Move our projectiles.
-        for projectile in &mut self.projectiles {
+        // Move our guns.
+        for projectile in &mut self.guns {
             projectile.renderable_object.position += projectile.velocity * args.dt;
             projectile.renderable_object.rotation += GUN_ROTATIONAL_VELOCITY * args.dt;
         }
@@ -272,8 +272,8 @@ impl App {
                 render_renderable_object(&c, &mut gl, &ground.renderable_object);
             }
             
-            // Draw our projectiles.
-            for projectile in &player.projectiles {
+            // Draw our guns.
+            for projectile in &player.guns {
                 render_renderable_object(&c, &mut gl, &projectile.renderable_object);
             }
 
@@ -283,7 +283,7 @@ impl App {
             }
 
             // Debug rectangle.
-            match player.projectiles.last() {
+            match player.guns.last() {
                 Some(projectile) => {
                     let transform = c.transform
                         .trans(projectile.renderable_object.position.x, projectile.renderable_object.position.y)
@@ -327,7 +327,7 @@ impl App {
         let bullets = &mut self.player.bullets;
         let enemies = &mut self.enemies;
         let walls = &self.walls;
-        let projectiles = &mut self.player.projectiles;
+        let guns = &mut self.player.guns;
 
         bullets.retain(|ref bullet| {
             let bullet_aabb_cuboid2 = create_aabb_cuboid2(&bullet.renderable_object);
@@ -352,7 +352,7 @@ impl App {
             !intersected
         });
 
-        projectiles.retain(|ref gun| {
+        guns.retain(|ref gun| {
             let gun_aabb_cuboid2 = create_aabb_cuboid2(&gun.renderable_object);
 
             let mut intersected = false;
@@ -504,9 +504,9 @@ fn main() {
             rotation: 0.0,
             scale: PLAYER_SCALE,
         },
-        projectiles: Vec::new(),
-        projectile_texture: gun_gun.clone(),
-        projectile_sound: sound_manager.get("sounds\\boom.ogg"),
+        guns: Vec::new(),
+        gun_texture: gun_gun.clone(),
+        gun_sound: sound_manager.get("sounds\\boom.ogg"),
         bullet_texture: bullet.clone(),
         bullets: Vec::new(),
         bullet_sound: sound_manager.get("sounds\\boop.ogg"),
