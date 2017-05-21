@@ -60,6 +60,25 @@ const WALL_SCALE: f64 = 1.0;
 const ENEMY_SCALE: f64 = 1.0;
 const GROUND_SCALE: f64 = 1.0;
 
+const GROUND_LAYER: usize = 1;
+const WALL_LAYER: usize = 1;
+const ENEMY_LAYER: usize = 2;
+const PLAYER_LAYER: usize = 2;
+const PROJECTILE_LAYER: usize = 3;
+
+pub struct World {
+    renderables: Vec<Vec<Rc<Renderable>>>
+}
+
+impl World {
+    fn add_renderable_at_layer(&mut self, renderable: Rc<Renderable>, layer: usize) {
+        while self.renderables.len() < layer {
+            self.renderables.push(Vec::new())
+        }
+        self.renderables[layer - 1].push(renderable)
+    }
+}
+
 // TODO: Object model.
 pub struct RenderableObject {
     position: Vector2,
@@ -68,17 +87,39 @@ pub struct RenderableObject {
     texture: Rc<G2dTexture>,
 }
 
+pub trait Renderable {
+    fn get_renderable_object(&self) -> &RenderableObject;
+}
+
 pub struct Ground {
     renderable_object: RenderableObject,
+}
+
+impl Renderable for Ground {
+    fn get_renderable_object(&self) -> &RenderableObject {
+        &self.renderable_object
+    }
 }
 
 pub struct Wall {
     renderable_object: RenderableObject,
 }
 
+impl Renderable for Wall {
+    fn get_renderable_object(&self) -> &RenderableObject {
+        &self.renderable_object
+    }
+}
+
 pub struct Projectile {
     renderable_object: RenderableObject,
     velocity: Vector2,
+}
+
+impl Renderable for Projectile {
+    fn get_renderable_object(&self) -> &RenderableObject {
+        &self.renderable_object
+    }
 }
 
 pub struct GameEndedState {
@@ -109,14 +150,26 @@ pub struct Enemy {
     renderable_object: RenderableObject,
 }
 
+impl Renderable for Enemy {
+    fn get_renderable_object(&self) -> &RenderableObject {
+        &self.renderable_object
+    }
+}
+
 pub struct Player {
     renderable_object: RenderableObject,
     guns: Vec<Projectile>,
     gun_texture: Rc<G2dTexture>,
     gun_sound: Rc<RefCell<Sound>>,
-    bullet_texture: Rc<G2dTexture>,
     bullets: Vec<Projectile>,
+    bullet_texture: Rc<G2dTexture>,
     bullet_sound: Rc<RefCell<Sound>>,
+}
+
+impl Renderable for Player {
+    fn get_renderable_object(&self) -> &RenderableObject {
+        &self.renderable_object
+    }
 }
 
 impl Player {
@@ -189,13 +242,13 @@ pub struct App {
     num_frames_in_batch: u64,
     average_frame_time: u64,
     font_manager: FontManager,
-    enemies: Vec<Enemy>,
-    walls: Vec<Wall>,
-    grounds: Vec<Ground>,
+    enemies: Vec<Rc<Enemy>>,
+    walls: Vec<Rc<Wall>>,
     game_ended_state: GameEndedState,
     window_height: f64,
     window_width: f64,
-    is_paused: bool
+    is_paused: bool,
+    world: World,
 }
 
 fn draw_victory_overlay(font_manager: &mut FontManager, c: &Context, gl: &mut G2d, window_width: f64, window_height: f64) {
@@ -251,25 +304,20 @@ impl App {
 
         let player = &self.player;
         let mut font_manager = &mut self.font_manager;
-        let enemies = &self.enemies;
-        let walls = &self.walls;
-        let grounds = &self.grounds;
         let window_width = self.window_width;
         let window_height = self.window_height;
         let game_ended_state = &self.game_ended_state;
+        let world = &self.world;
 
         self.window.draw_2d(event, |c: Context, mut gl: &mut G2d| {
             // Clear the screen.
             clear(GREEN, gl);
 
-            // Draw our walls.
-            for wall in walls {
-                render_renderable_object(&c, &mut gl, &wall.renderable_object);
-            }
-
-            // Draw our grounds.
-            for ground in grounds {
-                render_renderable_object(&c, &mut gl, &ground.renderable_object);
+            for layer in &world.renderables {
+                for renderable in layer {
+                    let renderable_object = renderable.get_renderable_object();
+                    render_renderable_object(&c, &mut gl, &renderable_object);
+                }
             }
             
             // Draw our guns.
@@ -296,10 +344,6 @@ impl App {
                     rectangle(RED, rect, transform, gl);
                 },
                 None => (),
-            }
-
-            for enemy in enemies {
-                render_renderable_object(&c, &mut gl, &enemy.renderable_object);
             }
 
             render_renderable_object(&c, &mut gl, &player.renderable_object);
@@ -491,9 +535,13 @@ fn main() {
 
     font_manager.get("Roboto-Regular.ttf");
 
-    let mut enemies:Vec<Enemy> = Vec::new();
-    let mut walls: Vec<Wall> = Vec::new();
-    let mut grounds: Vec<Ground> = Vec::new();
+    let mut world: World = World {
+        renderables: Vec::new()
+    };
+
+    let mut enemies:Vec<Rc<Enemy>> = Vec::new();
+    let mut walls: Vec<Rc<Wall>> = Vec::new();
+
     let mut player: Player = Player {
         renderable_object: RenderableObject {
             texture: hand_gun.clone(),
@@ -511,6 +559,8 @@ fn main() {
         bullets: Vec::new(),
         bullet_sound: sound_manager.get("sounds\\boop.ogg"),
     };
+    // TODO: Add player.
+    //world.add_renderable_at_layer();
 
     // Read in a level.
     let mut line_num = 0;
@@ -518,73 +568,82 @@ fn main() {
         let mut item_num = 0;
         for item in line {
             if item == "W" {
-                walls.push(
-                    Wall {
-                        renderable_object: RenderableObject {
-                            position: Vector2 {
-                                x: (item_num * CELL_WIDTH + CELL_WIDTH / 2) as f64 ,
-                                y: (line_num * CELL_HEIGHT + CELL_HEIGHT / 2) as f64
-                            },
-                            rotation: 0.0,
-                            texture: wall.clone(),
-                            scale: WALL_SCALE,
+                let wall = Wall {
+                    renderable_object: RenderableObject {
+                        position: Vector2 {
+                            x: (item_num * CELL_WIDTH + CELL_WIDTH / 2) as f64 ,
+                            y: (line_num * CELL_HEIGHT + CELL_HEIGHT / 2) as f64
                         },
-                    });
+                        rotation: 0.0,
+                        texture: wall.clone(),
+                        scale: WALL_SCALE,
+                    },
+                };
+                let rc = Rc::new(wall);
+                walls.push(rc.clone());
+                world.add_renderable_at_layer(rc.clone(), WALL_LAYER);
             } else if item == "P" {
-                grounds.push(
-                    Ground {
-                        renderable_object: RenderableObject {
-                            position: Vector2 {
-                                x: (item_num * CELL_WIDTH + CELL_WIDTH / 2) as f64 ,
-                                y: (line_num * CELL_HEIGHT + CELL_HEIGHT / 2) as f64
-                            },
-                            rotation: 0.0,
-                            texture: ground.clone(),
-                            scale: GROUND_SCALE,
+                let ground = Ground {
+                    renderable_object: RenderableObject {
+                        position: Vector2 {
+                            x: (item_num * CELL_WIDTH + CELL_WIDTH / 2) as f64 ,
+                            y: (line_num * CELL_HEIGHT + CELL_HEIGHT / 2) as f64
                         },
-                    });
+                        rotation: 0.0,
+                        texture: ground.clone(),
+                        scale: GROUND_SCALE,
+                    },
+                };
+                let rc = Rc::new(ground);
+                world.add_renderable_at_layer(rc.clone(), GROUND_LAYER);
+
                 player.renderable_object.position = Vector2 {
                     x: (item_num * CELL_WIDTH + CELL_WIDTH / 2) as f64,
                     y: (line_num * CELL_HEIGHT + CELL_HEIGHT / 2) as f64
                 };
             } else if item == "E" {
-                grounds.push(
-                    Ground {
-                        renderable_object: RenderableObject {
-                            position: Vector2 {
-                                x: (item_num * CELL_WIDTH + CELL_WIDTH / 2) as f64 ,
-                                y: (line_num * CELL_HEIGHT + CELL_HEIGHT / 2) as f64
-                            },
-                            rotation: 0.0,
-                            texture: ground.clone(),
-                            scale: GROUND_SCALE,
+                let ground = Ground {
+                    renderable_object: RenderableObject {
+                        position: Vector2 {
+                            x: (item_num * CELL_WIDTH + CELL_WIDTH / 2) as f64 ,
+                            y: (line_num * CELL_HEIGHT + CELL_HEIGHT / 2) as f64
                         },
-                    });
-                enemies.push(
-                    Enemy {
-                        renderable_object: RenderableObject {
-                            position: Vector2 {
-                                x: (item_num * CELL_WIDTH + CELL_WIDTH / 2) as f64,
-                                y: (line_num * CELL_HEIGHT + CELL_HEIGHT / 2) as f64
-                            },
-                            rotation: 0.0,
-                            texture: enemy.clone(),
-                            scale: ENEMY_SCALE,
+                        rotation: 0.0,
+                        texture: ground.clone(),
+                        scale: GROUND_SCALE,
+                    },
+                };
+                let rc = Rc::new(ground);
+                world.add_renderable_at_layer(rc.clone(), GROUND_LAYER);
+
+                let enemy = Enemy {
+                    renderable_object: RenderableObject {
+                        position: Vector2 {
+                            x: (item_num * CELL_WIDTH + CELL_WIDTH / 2) as f64,
+                            y: (line_num * CELL_HEIGHT + CELL_HEIGHT / 2) as f64
                         },
-                    });
+                        rotation: 0.0,
+                        texture: enemy.clone(),
+                        scale: ENEMY_SCALE,
+                    },
+                };
+                let rc = Rc::new(enemy);
+                enemies.push(rc.clone());
+                world.add_renderable_at_layer(rc.clone(), ENEMY_LAYER);
             } else if item == "_" {
-                grounds.push(
-                    Ground {
-                        renderable_object: RenderableObject {
-                            position: Vector2 {
-                                x: (item_num * CELL_WIDTH + CELL_WIDTH / 2) as f64 ,
-                                y: (line_num * CELL_HEIGHT + CELL_HEIGHT / 2) as f64
-                            },
-                            rotation: 0.0,
-                            texture: ground.clone(),
-                            scale: GROUND_SCALE,
+                let ground = Ground {
+                    renderable_object: RenderableObject {
+                        position: Vector2 {
+                            x: (item_num * CELL_WIDTH + CELL_WIDTH / 2) as f64 ,
+                            y: (line_num * CELL_HEIGHT + CELL_HEIGHT / 2) as f64
                         },
-                    });
+                        rotation: 0.0,
+                        texture: ground.clone(),
+                        scale: GROUND_SCALE,
+                    },
+                };
+                let rc = Rc::new(ground);
+                world.add_renderable_at_layer(rc.clone(), GROUND_LAYER);
             }
             item_num += 1;
         }
@@ -600,14 +659,14 @@ fn main() {
         average_frame_time: 1,
         font_manager: font_manager,
         walls: walls,
-        grounds: grounds,
         game_ended_state: GameEndedState {
             game_ended: false,
             won: false
         },
         window_height: HEIGHT as f64,
         window_width: WIDTH as f64,
-        is_paused: false
+        is_paused: false,
+        world: world,
     };
     app.window.set_max_fps(u64::max_value());
 
