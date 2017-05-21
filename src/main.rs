@@ -531,11 +531,35 @@ fn main() {
                         },
                     });
             } else if item == "P" {
+                grounds.push(
+                    Ground {
+                        renderable_object: RenderableObject {
+                            position: Vector2 {
+                                x: (item_num * CELL_WIDTH + CELL_WIDTH / 2) as f64 ,
+                                y: (line_num * CELL_HEIGHT + CELL_HEIGHT / 2) as f64
+                            },
+                            rotation: 0.0,
+                            texture: ground.clone(),
+                            scale: GROUND_SCALE,
+                        },
+                    });
                 player.renderable_object.position = Vector2 {
                     x: (item_num * CELL_WIDTH + CELL_WIDTH / 2) as f64,
                     y: (line_num * CELL_HEIGHT + CELL_HEIGHT / 2) as f64
                 };
             } else if item == "E" {
+                grounds.push(
+                    Ground {
+                        renderable_object: RenderableObject {
+                            position: Vector2 {
+                                x: (item_num * CELL_WIDTH + CELL_WIDTH / 2) as f64 ,
+                                y: (line_num * CELL_HEIGHT + CELL_HEIGHT / 2) as f64
+                            },
+                            rotation: 0.0,
+                            texture: ground.clone(),
+                            scale: GROUND_SCALE,
+                        },
+                    });
                 enemies.push(
                     Enemy {
                         renderable_object: RenderableObject {
