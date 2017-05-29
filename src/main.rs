@@ -67,10 +67,40 @@ const ENEMY_LAYER: usize = 2;
 const PLAYER_LAYER: usize = 2;
 const PROJECTILE_LAYER: usize = 3;
 
-// TODO: Add player/guns/bullets to here.
+// TODO: Add self/guns/bullets to here.
 pub struct World {
     static_renderables: Vec<Vec<Rc<Renderable>>>,
     dynamic_renderables: Vec<Vec<Rc<RefCell<Renderable>>>>,
+    updatables: Vec<Rc<RefCell<Updatable>>>,
+}
+
+pub enum WorldRequestType {
+    AddUpdatable,
+    AddStaticRenderable,
+    AddDynamicRenderable,
+}
+
+pub struct WorldReq<T> {
+    params: T,
+    req_type: WorldRequestType,
+}
+
+pub trait WorldRequest<T> {
+    fn get_params(&self) -> &T;
+    fn get_req_type(&self) -> &WorldRequestType;
+}
+
+impl<T> WorldRequest<T> for WorldReq<T> {
+    fn get_params(&self) -> &T {
+        &self.params
+    }
+    fn get_req_type(&self) -> &WorldRequestType {
+        &self.req_type
+    }
+}
+
+pub trait Updatable {
+    fn update(&mut self, key_states: &HashMap<Key, input::ButtonState>, mouse_states: &HashMap<MouseButton, input::ButtonState>, mouse_pos: &Vector2, args: &UpdateArgs);
 }
 
 impl World {
@@ -86,6 +116,16 @@ impl World {
             self.dynamic_renderables.push(Vec::new());
         }
         self.dynamic_renderables[layer - 1].push(renderable);
+    }
+
+    fn add_updatable(&mut self, updatable: Rc<RefCell<Updatable>>) {
+        self.updatables.push(updatable);
+    }
+
+    fn update(&mut self, key_states: &HashMap<Key, input::ButtonState>, mouse_states: &HashMap<MouseButton, input::ButtonState>, mouse_pos: &Vector2, args: &UpdateArgs) {
+        for updatable in &self.updatables {
+            &updatable.borrow_mut().update(&key_states, &mouse_states, &mouse_pos, &args);
+        }
     }
 }
 
@@ -158,6 +198,22 @@ impl Projectile {
             y: self.renderable_object.rotation.sin(),
         };
 
+        let params: Rc<RefCell<Projectile>> = Rc::new(RefCell::new(Projectile {
+            renderable_object: RenderableObject {
+                position: self.renderable_object.position,
+                texture: bullet_texture.clone(),
+                rotation: self.renderable_object.rotation,
+                scale: BULLET_SCALE,
+            },
+            velocity: velocity * BULLET_VELOCITY_MAGNITUDE,
+            should_delete: false,
+        }));
+
+        let req: WorldReq<Rc<RefCell<Projectile>>> = WorldReq {
+            params: params,
+            req_type: WorldRequestType::AddDynamicRenderable
+        };
+
         Projectile {
             renderable_object: RenderableObject {
                 position: self.renderable_object.position,
@@ -203,6 +259,31 @@ impl Renderable for Player {
     
     fn should_delete(&self) -> bool {
         false
+    }
+}
+
+impl Updatable for Player {
+    fn update(&mut self,
+                key_states: &HashMap<Key, input::ButtonState>,
+                mouse_states: &HashMap<MouseButton, input::ButtonState>,
+                mouse_pos: &Vector2,
+                args: &UpdateArgs) {
+        // Rotate to face our mouse.
+        let player_to_mouse = *mouse_pos - self.renderable_object.position;
+        self.renderable_object.rotation = player_to_mouse.y.atan2(player_to_mouse.x);
+
+        // Move our guns.
+        for projectile in &mut self.guns {
+            projectile.renderable_object.position += projectile.velocity * args.dt;
+            projectile.renderable_object.rotation += GUN_ROTATIONAL_VELOCITY * args.dt;
+        }
+
+        // Move our bullets.
+        for bullet in &mut self.bullets {
+            bullet.renderable_object.position += bullet.velocity * args.dt;
+        }
+
+        self.apply_input(&key_states, &mouse_states, &mouse_pos, args.dt);
     }
 }
 
@@ -252,27 +333,64 @@ impl Player {
         self.guns.push(projectile);
     }
 
-    fn update(&mut self, mouse_pos: &Vector2, args: &UpdateArgs) {
-        // Rotate to face our mouse.
-        let player_to_mouse = *mouse_pos - self.renderable_object.position;
-        self.renderable_object.rotation = player_to_mouse.y.atan2(player_to_mouse.x);
+    fn apply_input(&mut self, key_states: &HashMap<Key, input::ButtonState>, mouse_states: &HashMap<MouseButton, input::ButtonState>, mouse_pos: &Vector2, dt: f64) {
+        let mut player_velocity: Vector2 = Vector2::default();
 
-        // Move our guns.
-        for projectile in &mut self.guns {
-            projectile.renderable_object.position += projectile.velocity * args.dt;
-            projectile.renderable_object.rotation += GUN_ROTATIONAL_VELOCITY * args.dt;
+        for (key, value) in key_states {
+            match *key {
+                // self
+                Key::W => {
+                    if value.pressed || value.held {
+                        player_velocity.y -= 1.0 * dt;
+                    }
+                }
+                Key::A => {
+                    if value.pressed || value.held {
+                        player_velocity.x -= 1.0 * dt;
+                    }
+                }
+                Key::S => {
+                    if value.pressed || value.held {
+                        player_velocity.y += 1.0 * dt;
+                    }
+                }
+                Key::D => {
+                    if value.pressed || value.held {
+                        player_velocity.x += 1.0 * dt;
+                    }
+                }
+                // Default
+                _ => {}
+            }
         }
 
-        // Move our bullets.
-        for bullet in &mut self.bullets {
-            bullet.renderable_object.position += bullet.velocity * args.dt;
+        for (button, value) in mouse_states {
+            match *button {
+                MouseButton::Left => {
+                    if value.pressed {
+                        self.shoot_gun(mouse_pos);
+                    }
+                },
+                MouseButton::Right => {
+                    if value.pressed {
+                        self.shoot_bullets();
+                    }
+                }
+                // Default
+                _ => {}
+            }
         }
+
+        if player_velocity == Vector2::default() {
+            return;
+        }
+        player_velocity.normalize();
+        self.renderable_object.position += player_velocity * MOVE_SPEED_MAX * dt;
     }
 }
 
 pub struct App {
     window: piston_window::PistonWindow,
-    player: Player,
     last_batch_start_time: u64,
     num_frames_in_batch: u64,
     average_frame_time: u64,
@@ -337,7 +455,6 @@ impl App {
             &self.last_batch_start_time.to_string() +
             &"\ncurr_frame_time: ".to_string() + &curr_frame_time.to_string();
 
-        let player = &self.player;
         let mut font_manager = &mut self.font_manager;
         let window_width = self.window_width;
         let window_height = self.window_height;
@@ -366,33 +483,31 @@ impl App {
                 }
             }
             
-            // Draw our guns.
-            for projectile in &player.guns {
-                render_renderable_object(&c, &mut gl, &projectile.renderable_object);
-            }
+            // // Draw our guns.
+            // for projectile in &self.guns {
+            //     render_renderable_object(&c, &mut gl, &projectile.renderable_object);
+            // }
 
-            // Draw our bullets.
-            for bullet in &player.bullets {
-                render_renderable_object(&c, &mut gl, &bullet.renderable_object);
-            }
+            // // // Draw our bullets.
+            // for bullet in &self.bullets {
+            //     render_renderable_object(&c, &mut gl, &bullet.renderable_object);
+            // }
 
-            // Debug rectangle.
-            match player.guns.last() {
-                Some(projectile) => {
-                    let transform = c.transform
-                        .trans(projectile.renderable_object.position.x, projectile.renderable_object.position.y)
-                        .rot_rad(projectile.renderable_object.rotation)
-                        .trans((projectile.renderable_object.texture.get_size().0 as f64) * -0.5 * GUN_SCALE,
-                                (projectile.renderable_object.texture.get_size().1 as f64) * -0.5 * GUN_SCALE)
-                        .scale(GUN_SCALE, GUN_SCALE);
+            // // Debug rectangle.
+            // match self.guns.last() {
+            //     Some(projectile) => {
+            //         let transform = c.transform
+            //             .trans(projectile.renderable_object.position.x, projectile.renderable_object.position.y)
+            //             .rot_rad(projectile.renderable_object.rotation)
+            //             .trans((projectile.renderable_object.texture.get_size().0 as f64) * -0.5 * GUN_SCALE,
+            //                     (projectile.renderable_object.texture.get_size().1 as f64) * -0.5 * GUN_SCALE)
+            //             .scale(GUN_SCALE, GUN_SCALE);
                     
-                    let rect: graphics::types::Rectangle = [0.0, 0.0, 10000.0, 1.0];
-                    rectangle(RED, rect, transform, gl);
-                },
-                None => (),
-            }
-
-            render_renderable_object(&c, &mut gl, &player.renderable_object);
+            //         let rect: graphics::types::Rectangle = [0.0, 0.0, 10000.0, 1.0];
+            //         rectangle(RED, rect, transform, gl);
+            //     },
+            //     None => (),
+            // }
 
             // Draw our fps.
             let transform = c.transform.trans(10.0, 10.0);
@@ -405,133 +520,74 @@ impl App {
         });
     }
 
-    fn update(&mut self, mouse_pos: &Vector2, args: &UpdateArgs) {
-        if self.enemies.is_empty() {
-            self.game_ended_state = GameEndedState { game_ended: true, won: true };
-            self.is_paused = true;
-            return;
-        }
+    fn update(&mut self, key_states: &HashMap<Key, input::ButtonState>, mouse_states: &HashMap<MouseButton, input::ButtonState>, mouse_pos: &Vector2, args: &UpdateArgs) {
+        // if self.enemies.is_empty() {
+        //     self.game_ended_state = GameEndedState { game_ended: true, won: true };
+        //     self.is_paused = true;
+        //     return;
+        // }
 
-        self.player.update(mouse_pos, args);
-        
-        {
-            let bullets = &mut self.player.bullets;
-            let enemies = &self.enemies;
-            let walls = &self.walls;
+        self.world.update(&key_states, &mouse_states, &mouse_pos, &args);
 
-            bullets.retain(|ref bullet| {
-                let bullet_aabb_cuboid2 = create_aabb_cuboid2(&bullet.renderable_object);
+        // {
+        //     let bullets = &mut self.self.bullets;
+        //     let enemies = &self.enemies;
+        //     let walls = &self.walls;
 
-                let mut intersected = false;
+        //     bullets.retain(|ref bullet| {
+        //         let bullet_aabb_cuboid2 = create_aabb_cuboid2(&bullet.renderable_object);
+
+        //         let mut intersected = false;
                 
-                for enemy in enemies {
-                    let enemy_aabb_cuboid2 = create_aabb_cuboid2(&enemy.borrow().renderable_object);
+        //         for enemy in enemies {
+        //             let enemy_aabb_cuboid2 = create_aabb_cuboid2(&enemy.borrow().renderable_object);
 
-                    let intersects = enemy_aabb_cuboid2.intersects(&bullet_aabb_cuboid2);
-                    intersected = intersects || intersected;
-                    enemy.borrow_mut().should_delete = intersects;
-                }
+        //             let intersects = enemy_aabb_cuboid2.intersects(&bullet_aabb_cuboid2);
+        //             intersected = intersects || intersected;
+        //             enemy.borrow_mut().should_delete = intersects;
+        //         }
 
-                for wall in walls {
-                    let wall_aabb_cuboid2 = create_aabb_cuboid2(&wall.renderable_object);
+        //         for wall in walls {
+        //             let wall_aabb_cuboid2 = create_aabb_cuboid2(&wall.renderable_object);
 
-                    let intersects = wall_aabb_cuboid2.intersects(&bullet_aabb_cuboid2);
-                    intersected = intersects || intersected;
-                }
+        //             let intersects = wall_aabb_cuboid2.intersects(&bullet_aabb_cuboid2);
+        //             intersected = intersects || intersected;
+        //         }
 
-                !intersected
-            });
-        }
+        //         !intersected
+        //     });
+        // }
 
-        {
-            let guns = &mut self.player.guns;
-            let walls = &self.walls;
+        // {
+        //     let guns = &mut self.self.guns;
+        //     let walls = &self.walls;
 
-            guns.retain(|ref gun| {
-                let gun_aabb_cuboid2 = create_aabb_cuboid2(&gun.renderable_object);
+        //     guns.retain(|ref gun| {
+        //         let gun_aabb_cuboid2 = create_aabb_cuboid2(&gun.renderable_object);
 
-                let mut intersected = false;
+        //         let mut intersected = false;
 
-                for wall in walls {
-                    let wall_aabb_cuboid2 = create_aabb_cuboid2(&wall.renderable_object);
+        //         for wall in walls {
+        //             let wall_aabb_cuboid2 = create_aabb_cuboid2(&wall.renderable_object);
 
-                    let intersects = wall_aabb_cuboid2.intersects(&gun_aabb_cuboid2);
-                    intersected = intersects || intersected;
-                }
+        //             let intersects = wall_aabb_cuboid2.intersects(&gun_aabb_cuboid2);
+        //             intersected = intersects || intersected;
+        //         }
 
-                !intersected
-            });
-        }
+        //         !intersected
+        //     });
+        // }
 
-        for renderables_in_layer in &mut self.world.dynamic_renderables {
-            renderables_in_layer.retain( |ref renderable| {
-                !renderable.borrow().should_delete()
-            });
-        }
+        // for renderables_in_layer in &mut self.world.dynamic_renderables {
+        //     renderables_in_layer.retain( |ref renderable| {
+        //         !renderable.borrow().should_delete()
+        //     });
+        // }
 
-        self.enemies.retain( |ref enemy| {
-            !enemy.borrow().should_delete()
-        });
+        // self.enemies.retain( |ref enemy| {
+        //     !enemy.borrow().should_delete()
+        // });
     }
-}
-
-fn apply_input(player: &mut Player,
-               key_states: &HashMap<Key, input::ButtonState>,
-               mouse_states: &HashMap<MouseButton, input::ButtonState>,
-               mouse_pos: &Vector2,
-               dt: f64) {
-    let mut player_velocity: Vector2 = Vector2::default();
-
-    for (key, value) in key_states {
-        match *key {
-            // Player
-            Key::W => {
-                if value.pressed || value.held {
-                    player_velocity.y -= 1.0 * dt;
-                }
-            }
-            Key::A => {
-                if value.pressed || value.held {
-                    player_velocity.x -= 1.0 * dt;
-                }
-            }
-            Key::S => {
-                if value.pressed || value.held {
-                    player_velocity.y += 1.0 * dt;
-                }
-            }
-            Key::D => {
-                if value.pressed || value.held {
-                    player_velocity.x += 1.0 * dt;
-                }
-            }
-            // Default
-            _ => {}
-        }
-    }
-
-    for (button, value) in mouse_states {
-        match *button {
-            MouseButton::Left => {
-                if value.pressed {
-                    player.shoot_gun(mouse_pos);
-                }
-            },
-            MouseButton::Right => {
-                if value.pressed {
-                    player.shoot_bullets();
-                }
-            }
-            // Default
-            _ => {}
-        }
-    }
-
-    if player_velocity == Vector2::default() {
-        return;
-    }
-    player_velocity.normalize();
-    player.renderable_object.position += player_velocity * MOVE_SPEED_MAX * dt;
 }
 
 fn main() {
@@ -600,30 +656,11 @@ fn main() {
     let mut world: World = World {
         static_renderables: Vec::new(),
         dynamic_renderables: Vec::new(),
+        updatables: Vec::new(),
     };
 
     let mut enemies:Vec<Rc<RefCell<Enemy>>> = Vec::new();
     let mut walls: Vec<Rc<Wall>> = Vec::new();
-
-    let mut player: Player = Player {
-        renderable_object: RenderableObject {
-            texture: hand_gun.clone(),
-            position: Vector2 {
-                x: 0.0,
-                y: 0.0,
-            },
-            rotation: 0.0,
-            scale: PLAYER_SCALE,
-        },
-        guns: Vec::new(),
-        gun_texture: gun_gun.clone(),
-        gun_sound: sound_manager.get("sounds\\boom.ogg"),
-        bullet_texture: bullet.clone(),
-        bullets: Vec::new(),
-        bullet_sound: sound_manager.get("sounds\\boop.ogg"),
-    };
-    // TODO: Add player.
-    //world.add_renderable_at_layer();
 
     // Read in a level.
     let mut line_num = 0;
@@ -660,10 +697,26 @@ fn main() {
                 let rc = Rc::new(ground);
                 world.add_static_renderable_at_layer(rc.clone(), GROUND_LAYER);
 
-                player.renderable_object.position = Vector2 {
-                    x: (item_num * CELL_WIDTH + CELL_WIDTH / 2) as f64,
-                    y: (line_num * CELL_HEIGHT + CELL_HEIGHT / 2) as f64
+                let mut player: Player = Player {
+                    renderable_object: RenderableObject {
+                        texture: hand_gun.clone(),
+                        position: Vector2 {
+                            x: (item_num * CELL_WIDTH + CELL_WIDTH / 2) as f64,
+                            y: (line_num * CELL_HEIGHT + CELL_HEIGHT / 2) as f64,
+                        },
+                        rotation: 0.0,
+                        scale: PLAYER_SCALE,
+                    },
+                    guns: Vec::new(),
+                    gun_texture: gun_gun.clone(),
+                    gun_sound: sound_manager.get("sounds\\boom.ogg"),
+                    bullet_texture: bullet.clone(),
+                    bullets: Vec::new(),
+                    bullet_sound: sound_manager.get("sounds\\boop.ogg"),
                 };
+                let refcell = Rc::new(RefCell::new(player));
+                world.add_dynamic_renderable_at_layer(refcell.clone(), PLAYER_LAYER);
+                world.add_updatable(refcell);
             } else if item == "E" {
                 let ground = Ground {
                     renderable_object: RenderableObject {
@@ -716,7 +769,6 @@ fn main() {
 
     let mut app = App {
         window: window,
-        player: player,
         enemies: enemies,
         last_batch_start_time: time::precise_time_ns(),
         num_frames_in_batch: 0,
@@ -742,17 +794,11 @@ fn main() {
     while let Some(e) = app.window.next() {
         // Input.
         input::gather_input(&e, &mut key_states, &mut mouse_states, &mut mouse_pos);
-
+        
         if let Some(u) = e.update_args() {
             if !app.is_paused {
-                apply_input(&mut app.player,
-                            &key_states,
-                            &mouse_states,
-                            &mouse_pos,
-                            u.dt);
-
                 input::update_input(&mut key_states, &mut mouse_states);
-                app.update(&mouse_pos, &u);
+                app.update(&key_states, &mouse_states, &mouse_pos, &u);
             }
         }
 
