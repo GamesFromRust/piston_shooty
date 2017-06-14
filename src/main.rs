@@ -80,27 +80,17 @@ pub enum WorldRequestType {
     AddDynamicRenderable,
 }
 
-pub struct WorldReq<T> {
-    params: T,
+// trait UpRenderable: Updatable + Renderable {}
+// impl<T> UpRenderable for T where T: Updatable + Renderable {}
+// impl<T> UpRenderable for T where T: Updatable + Renderable {}
+
+pub struct WorldReq {
+    params: Rc<RefCell<Renderable>>,
     req_type: WorldRequestType,
 }
 
-pub trait WorldRequest<T> {
-    fn get_params(&self) -> &T;
-    fn get_req_type(&self) -> &WorldRequestType;
-}
-
-impl<T> WorldRequest<T> for WorldReq<T> {
-    fn get_params(&self) -> &T {
-        &self.params
-    }
-    fn get_req_type(&self) -> &WorldRequestType {
-        &self.req_type
-    }
-}
-
 pub trait Updatable {
-    fn update(&mut self, key_states: &HashMap<Key, input::ButtonState>, mouse_states: &HashMap<MouseButton, input::ButtonState>, mouse_pos: &Vector2, args: &UpdateArgs);
+    fn update(&mut self, key_states: &HashMap<Key, input::ButtonState>, mouse_states: &HashMap<MouseButton, input::ButtonState>, mouse_pos: &Vector2, args: &UpdateArgs) -> Vec<WorldReq>;
 }
 
 impl World {
@@ -123,8 +113,20 @@ impl World {
     }
 
     fn update(&mut self, key_states: &HashMap<Key, input::ButtonState>, mouse_states: &HashMap<MouseButton, input::ButtonState>, mouse_pos: &Vector2, args: &UpdateArgs) {
+        let mut worldReqs: Vec<WorldReq> = Vec::new();
         for updatable in &self.updatables {
-            &updatable.borrow_mut().update(&key_states, &mouse_states, &mouse_pos, &args);
+            let currentWorldReqs = &mut updatable.borrow_mut().update(&key_states, &mouse_states, &mouse_pos, &args);
+            worldReqs.append(currentWorldReqs);
+        }
+        
+        for worldReq in worldReqs {
+            match worldReq.req_type {
+                WorldRequestType::AddDynamicRenderable => {
+                    self.add_dynamic_renderable_at_layer(worldReq.params, PROJECTILE_LAYER);
+                },
+                WorldRequestType::AddStaticRenderable => {},
+                WorldRequestType::AddUpdatable => {},
+            }
         }
     }
 }
@@ -186,32 +188,21 @@ impl Renderable for Projectile {
     }
 }
 
-pub struct GameEndedState {
-    game_ended: bool,
-    won: bool,
-}
+// impl Updatable for Projectile {
+//     fn update(&mut self,
+//                 key_states: &HashMap<Key, input::ButtonState>,
+//                 mouse_states: &HashMap<MouseButton, input::ButtonState>,
+//                 mouse_pos: &Vector2,
+//                 args: &UpdateArgs) -> Vec<WorldReq> {
+//                 Vec::new()
+//     }
+// }
 
 impl Projectile {
     fn shoot_bullet(&self, bullet_texture: &Rc<G2dTexture>) -> Projectile {
         let velocity = Vector2 {
             x: self.renderable_object.rotation.cos(),
             y: self.renderable_object.rotation.sin(),
-        };
-
-        let params: Rc<RefCell<Projectile>> = Rc::new(RefCell::new(Projectile {
-            renderable_object: RenderableObject {
-                position: self.renderable_object.position,
-                texture: bullet_texture.clone(),
-                rotation: self.renderable_object.rotation,
-                scale: BULLET_SCALE,
-            },
-            velocity: velocity * BULLET_VELOCITY_MAGNITUDE,
-            should_delete: false,
-        }));
-
-        let req: WorldReq<Rc<RefCell<Projectile>>> = WorldReq {
-            params: params,
-            req_type: WorldRequestType::AddDynamicRenderable
         };
 
         Projectile {
@@ -225,6 +216,11 @@ impl Projectile {
             should_delete: false,
         }
     }
+}
+
+pub struct GameEndedState {
+    game_ended: bool,
+    won: bool,
 }
 
 pub struct Enemy {
@@ -244,10 +240,10 @@ impl Renderable for Enemy {
 
 pub struct Player {
     renderable_object: RenderableObject,
-    guns: Vec<Projectile>,
+    guns: Vec<Rc<RefCell<Projectile>>>,
     gun_texture: Rc<G2dTexture>,
     gun_sound: Rc<RefCell<Sound>>,
-    bullets: Vec<Projectile>,
+    bullets: Vec<Rc<RefCell<Projectile>>>,
     bullet_texture: Rc<G2dTexture>,
     bullet_sound: Rc<RefCell<Sound>>,
 }
@@ -267,37 +263,71 @@ impl Updatable for Player {
                 key_states: &HashMap<Key, input::ButtonState>,
                 mouse_states: &HashMap<MouseButton, input::ButtonState>,
                 mouse_pos: &Vector2,
-                args: &UpdateArgs) {
+                args: &UpdateArgs) -> Vec<WorldReq> {
         // Rotate to face our mouse.
         let player_to_mouse = *mouse_pos - self.renderable_object.position;
         self.renderable_object.rotation = player_to_mouse.y.atan2(player_to_mouse.x);
 
         // Move our guns.
         for projectile in &mut self.guns {
+            let mut projectile = projectile.borrow_mut();
             projectile.renderable_object.position += projectile.velocity * args.dt;
             projectile.renderable_object.rotation += GUN_ROTATIONAL_VELOCITY * args.dt;
         }
 
         // Move our bullets.
         for bullet in &mut self.bullets {
+            let mut bullet = bullet.borrow_mut();
             bullet.renderable_object.position += bullet.velocity * args.dt;
         }
 
         self.apply_input(&key_states, &mouse_states, &mouse_pos, args.dt);
+
+        let mut worldReqs: Vec<WorldReq> = Vec::new();
+
+        for bullet in &self.bullets {
+            let worldReq: WorldReq = WorldReq {
+                params: bullet.clone(),
+                req_type: WorldRequestType::AddDynamicRenderable,
+            };
+            worldReqs.push(worldReq);
+
+            // let worldReq: WorldReq = WorldReq {
+            //     params: bullet.clone(),
+            //     req_type: WorldRequestType::AddUpdatable,
+            // };
+            // worldReqs.push(worldReq);
+        }
+        
+        for gun in &self.guns {
+            let worldReq: WorldReq = WorldReq {
+                params: gun.clone(),
+                req_type: WorldRequestType::AddDynamicRenderable,
+            };
+            worldReqs.push(worldReq);
+            // let worldReq: WorldReq = WorldReq {
+            //     params: gun.clone(),
+            //     req_type: WorldRequestType::AddUpdatable,
+            // };
+            // worldReqs.push(worldReq);
+        }
+
+        worldReqs
     }
 }
 
 impl Player {
     fn shoot_bullets(&mut self) {
         for projectile in &self.guns {
-            self.bullets.push(projectile.shoot_bullet(&self.bullet_texture));
+            let bullet = Rc::new(RefCell::new(projectile.borrow_mut().shoot_bullet(&self.bullet_texture)));
+            self.bullets.push(bullet);
             self.bullet_sound.borrow_mut().play();
         }    
     }
 
     fn shoot_gun(&mut self, mouse_pos: &Vector2) {
         let rotation = match self.guns.last() {
-            Some(projectile) => projectile.renderable_object.rotation,
+            Some(projectile) => projectile.borrow().renderable_object.rotation,
             None => self.renderable_object.rotation,
         };
 
@@ -313,7 +343,7 @@ impl Player {
         };
 
         let position = match self.guns.last() {
-            Some(projectile) => projectile.renderable_object.position + ( velocity / PROJECTILE_VELOCITY_MAGNITUDE) * 30.0,
+            Some(projectile) => projectile.borrow().renderable_object.position + ( velocity / PROJECTILE_VELOCITY_MAGNITUDE) * 30.0,
             None => self.renderable_object.position,
         };
 
@@ -330,6 +360,7 @@ impl Player {
 
         self.gun_sound.borrow_mut().play();
 
+        let projectile = Rc::new(RefCell::new(projectile));
         self.guns.push(projectile);
     }
 
@@ -368,6 +399,7 @@ impl Player {
             match *button {
                 MouseButton::Left => {
                     if value.pressed {
+                        println!("Left clicked");
                         self.shoot_gun(mouse_pos);
                     }
                 },
@@ -797,8 +829,8 @@ fn main() {
         
         if let Some(u) = e.update_args() {
             if !app.is_paused {
-                input::update_input(&mut key_states, &mut mouse_states);
                 app.update(&key_states, &mouse_states, &mouse_pos, &u);
+                input::update_input(&mut key_states, &mut mouse_states);
             }
         }
 
