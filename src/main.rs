@@ -126,6 +126,27 @@ impl World {
             return;
         }
 
+        for renderable_layer in &self.dynamic_renderables {
+            for renderable in renderable_layer {
+                for renderable_layer2 in &self.static_renderables {
+                    for renderable2 in renderable_layer2 {
+                        if renderable.borrow().get_object_type() == ObjectType::Gun && renderable2.get_object_type() == ObjectType::Wall {
+                            let renderable1_aabb_cuboid2 = create_aabb_cuboid2(&renderable.borrow().get_renderable_object());
+                            let renderable2_aabb_cuboid2 = create_aabb_cuboid2(&renderable2.get_renderable_object());
+                            
+                            if renderable1_aabb_cuboid2.intersects(&renderable2_aabb_cuboid2) {
+                                renderable.borrow_mut().set_should_delete(true);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+
+
+
+
         // {
         //     let bullets = &mut self.self.bullets;
         //     let enemies = &self.enemies;
@@ -155,6 +176,35 @@ impl World {
         //     });
         // }
 
+        // // {
+        // //     let bullets = &mut self.self.bullets;
+        // //     let enemies = &self.enemies;
+        // //     let walls = &self.walls;
+
+        // //     bullets.retain(|ref bullet| {
+        // //         let bullet_aabb_cuboid2 = create_aabb_cuboid2(&bullet.renderable_object);
+
+        // //         let mut intersected = false;
+                
+        // //         for enemy in enemies {
+        // //             let enemy_aabb_cuboid2 = create_aabb_cuboid2(&enemy.borrow().renderable_object);
+
+        // //             let intersects = enemy_aabb_cuboid2.intersects(&bullet_aabb_cuboid2);
+        // //             intersected = intersects || intersected;
+        // //             enemy.borrow_mut().should_delete = intersects;
+        // //         }
+
+        // //         for wall in walls {
+        // //             let wall_aabb_cuboid2 = create_aabb_cuboid2(&wall.renderable_object);
+
+        // //             let intersects = wall_aabb_cuboid2.intersects(&bullet_aabb_cuboid2);
+        // //             intersected = intersects || intersected;
+        // //         }
+
+        // //         !intersected
+        // //     });
+        // // }
+
         // {
         //     let guns = &mut self.self.guns;
         //     let walls = &self.walls;
@@ -181,9 +231,15 @@ impl World {
         //     });
         // }
 
-        // self.enemies.retain( |ref enemy| {
-        //     !enemy.borrow().should_delete()
-        // });
+        for renderable_layer in &mut self.dynamic_renderables {
+            renderable_layer.retain(|ref renderable| {
+                !renderable.borrow().get_should_delete()
+            });
+        }
+
+        self.updatables.retain(|ref updatable| {
+            !updatable.borrow().get_should_delete()
+        });
 
         let mut world_reqs: Vec<WorldReq> = Vec::new();
         for updatable in &self.updatables {
