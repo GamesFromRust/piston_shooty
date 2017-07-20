@@ -291,12 +291,6 @@ impl Updatable for Player {
                 req_type: WorldRequestType::AddDynamicRenderable,
             };
             worldReqs.push(worldReq);
-
-            // let worldReq: WorldReq = WorldReq {
-            //     params: bullet.clone(),
-            //     req_type: WorldRequestType::AddUpdatable,
-            // };
-            // worldReqs.push(worldReq);
         }
         
         for gun in &self.guns {
@@ -305,11 +299,6 @@ impl Updatable for Player {
                 req_type: WorldRequestType::AddDynamicRenderable,
             };
             worldReqs.push(worldReq);
-            // let worldReq: WorldReq = WorldReq {
-            //     params: gun.clone(),
-            //     req_type: WorldRequestType::AddUpdatable,
-            // };
-            // worldReqs.push(worldReq);
         }
 
         worldReqs
@@ -514,32 +503,6 @@ impl App {
                     }
                 }
             }
-            
-            // // Draw our guns.
-            // for projectile in &self.guns {
-            //     render_renderable_object(&c, &mut gl, &projectile.renderable_object);
-            // }
-
-            // // // Draw our bullets.
-            // for bullet in &self.bullets {
-            //     render_renderable_object(&c, &mut gl, &bullet.renderable_object);
-            // }
-
-            // // Debug rectangle.
-            // match self.guns.last() {
-            //     Some(projectile) => {
-            //         let transform = c.transform
-            //             .trans(projectile.renderable_object.position.x, projectile.renderable_object.position.y)
-            //             .rot_rad(projectile.renderable_object.rotation)
-            //             .trans((projectile.renderable_object.texture.get_size().0 as f64) * -0.5 * GUN_SCALE,
-            //                     (projectile.renderable_object.texture.get_size().1 as f64) * -0.5 * GUN_SCALE)
-            //             .scale(GUN_SCALE, GUN_SCALE);
-                    
-            //         let rect: graphics::types::Rectangle = [0.0, 0.0, 10000.0, 1.0];
-            //         rectangle(RED, rect, transform, gl);
-            //     },
-            //     None => (),
-            // }
 
             // Draw our fps.
             let transform = c.transform.trans(10.0, 10.0);
