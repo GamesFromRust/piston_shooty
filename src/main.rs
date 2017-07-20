@@ -61,17 +61,18 @@ const WALL_SCALE: f64 = 1.0;
 const ENEMY_SCALE: f64 = 1.0;
 const GROUND_SCALE: f64 = 1.0;
 
-const GROUND_LAYER: usize = 1;
-const WALL_LAYER: usize = 1;
-const ENEMY_LAYER: usize = 2;
-const PLAYER_LAYER: usize = 2;
-const PROJECTILE_LAYER: usize = 3;
+const GROUND_LAYER: usize = 0;
+const WALL_LAYER: usize = 0;
+const ENEMY_LAYER: usize = 1;
+const PLAYER_LAYER: usize = 1;
+const PROJECTILE_LAYER: usize = 2;
 
 // TODO: Add self/guns/bullets to here.
 pub struct World {
     static_renderables: Vec<Vec<Rc<Renderable>>>,
     dynamic_renderables: Vec<Vec<Rc<RefCell<Renderable>>>>,
     updatables: Vec<Rc<RefCell<Updatable>>>,
+    game_ended_state: GameEndedState,
 }
 
 pub enum WorldRequestType {
@@ -94,17 +95,17 @@ pub trait Updatable {
 
 impl World {
     fn add_static_renderable_at_layer(&mut self, renderable: Rc<Renderable>, layer: usize) {
-        while self.static_renderables.len() < layer {
+        while self.static_renderables.len() <= layer {
             self.static_renderables.push(Vec::new());
         }
-        self.static_renderables[layer - 1].push(renderable);
+        self.static_renderables[layer].push(renderable);
     }
 
     fn add_dynamic_renderable_at_layer(&mut self, renderable: Rc<RefCell<Renderable>>, layer: usize) {
-        while self.dynamic_renderables.len() < layer {
+        while self.dynamic_renderables.len() <= layer {
             self.dynamic_renderables.push(Vec::new());
         }
-        self.dynamic_renderables[layer - 1].push(renderable);
+        self.dynamic_renderables[layer].push(renderable);
     }
 
     fn add_updatable(&mut self, updatable: Rc<RefCell<Updatable>>) {
@@ -112,24 +113,96 @@ impl World {
     }
 
     fn update(&mut self, key_states: &HashMap<Key, input::ButtonState>, mouse_states: &HashMap<MouseButton, input::ButtonState>, mouse_pos: &Vector2, args: &UpdateArgs) {
-        let mut worldReqs: Vec<WorldReq> = Vec::new();
+        let mut no_enemies = true;
+        for renderable in &self.dynamic_renderables[ENEMY_LAYER] {
+            if renderable.borrow().get_object_type() == ObjectType::Enemy {
+                no_enemies = false;
+                break;
+            }
+        }
+
+        if no_enemies {
+            self.game_ended_state = GameEndedState { game_ended: true, won: true };
+            return;
+        }
+
+        // {
+        //     let bullets = &mut self.self.bullets;
+        //     let enemies = &self.enemies;
+        //     let walls = &self.walls;
+
+        //     bullets.retain(|ref bullet| {
+        //         let bullet_aabb_cuboid2 = create_aabb_cuboid2(&bullet.renderable_object);
+
+        //         let mut intersected = false;
+                
+        //         for enemy in enemies {
+        //             let enemy_aabb_cuboid2 = create_aabb_cuboid2(&enemy.borrow().renderable_object);
+
+        //             let intersects = enemy_aabb_cuboid2.intersects(&bullet_aabb_cuboid2);
+        //             intersected = intersects || intersected;
+        //             enemy.borrow_mut().should_delete = intersects;
+        //         }
+
+        //         for wall in walls {
+        //             let wall_aabb_cuboid2 = create_aabb_cuboid2(&wall.renderable_object);
+
+        //             let intersects = wall_aabb_cuboid2.intersects(&bullet_aabb_cuboid2);
+        //             intersected = intersects || intersected;
+        //         }
+
+        //         !intersected
+        //     });
+        // }
+
+        // {
+        //     let guns = &mut self.self.guns;
+        //     let walls = &self.walls;
+
+        //     guns.retain(|ref gun| {
+        //         let gun_aabb_cuboid2 = create_aabb_cuboid2(&gun.renderable_object);
+
+        //         let mut intersected = false;
+
+        //         for wall in walls {
+        //             let wall_aabb_cuboid2 = create_aabb_cuboid2(&wall.renderable_object);
+
+        //             let intersects = wall_aabb_cuboid2.intersects(&gun_aabb_cuboid2);
+        //             intersected = intersects || intersected;
+        //         }
+
+        //         !intersected
+        //     });
+        // }
+
+        // for renderables_in_layer in &mut self.world.dynamic_renderables {
+        //     renderables_in_layer.retain( |ref renderable| {
+        //         !renderable.borrow().should_delete()
+        //     });
+        // }
+
+        // self.enemies.retain( |ref enemy| {
+        //     !enemy.borrow().should_delete()
+        // });
+
+        let mut world_reqs: Vec<WorldReq> = Vec::new();
         for updatable in &self.updatables {
             let currentWorldReqs = &mut updatable.borrow_mut().update(&key_states, &mouse_states, &mouse_pos, &args);
-            worldReqs.append(currentWorldReqs);
+            world_reqs.append(currentWorldReqs);
         }
         
-        for worldReq in worldReqs {
-            match worldReq.req_type {
+        for world_req in world_reqs {
+            match world_req.req_type {
                 WorldRequestType::AddDynamicRenderable => {
-                    assert!(worldReq.renderable.is_some());
-                    if let Some(renderable) = worldReq.renderable {
+                    assert!(world_req.renderable.is_some());
+                    if let Some(renderable) = world_req.renderable {
                         self.add_dynamic_renderable_at_layer(renderable, PROJECTILE_LAYER);
                     }
                 },
                 WorldRequestType::AddStaticRenderable => {},
                 WorldRequestType::AddUpdatable => {
-                    assert!(worldReq.updatable.is_some());
-                    if let Some(updatable) = worldReq.updatable {
+                    assert!(world_req.updatable.is_some());
+                    if let Some(updatable) = world_req.updatable {
                         self.add_updatable(updatable);
                     }
                 },
@@ -146,7 +219,7 @@ pub struct RenderableObject {
     texture: Rc<G2dTexture>,
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, PartialEq, Eq)]
 pub enum ObjectType {
     Wall,
     Bullet,
@@ -160,7 +233,7 @@ pub trait Renderable {
     fn get_renderable_object(&self) -> &RenderableObject;
     fn get_should_delete(&self) -> bool;
     fn set_should_delete(&mut self, should_delete: bool);
-    fn check_type(&self) -> ObjectType;
+    fn get_object_type(&self) -> ObjectType;
 }
 
 pub struct Ground {
@@ -180,7 +253,7 @@ impl Renderable for Ground {
         // do nothing
     }
 
-    fn check_type(&self) -> ObjectType {
+    fn get_object_type(&self) -> ObjectType {
         ObjectType::Ground
     }
 }
@@ -202,7 +275,7 @@ impl Renderable for Wall {
         // do nothing
     }
 
-    fn check_type(&self) -> ObjectType {
+    fn get_object_type(&self) -> ObjectType {
         ObjectType::Wall
     }
 }
@@ -226,7 +299,7 @@ impl Renderable for Gun {
         self.should_delete = should_delete
     }
 
-    fn check_type(&self) -> ObjectType {
+    fn get_object_type(&self) -> ObjectType {
         ObjectType::Gun
     }
 }
@@ -290,7 +363,7 @@ impl Renderable for Bullet {
         self.should_delete = should_delete
     }
 
-    fn check_type(&self) -> ObjectType {
+    fn get_object_type(&self) -> ObjectType {
         ObjectType::Bullet
     }
 }
@@ -337,7 +410,7 @@ impl Renderable for Enemy {
         self.should_delete = should_delete
     }
 
-    fn check_type(&self) -> ObjectType {
+    fn get_object_type(&self) -> ObjectType {
         ObjectType::Enemy
     }
 }
@@ -365,7 +438,7 @@ impl Renderable for Player {
         // do nothing
     }
 
-    fn check_type(&self) -> ObjectType {
+    fn get_object_type(&self) -> ObjectType {
         ObjectType::Player
     }
 }
@@ -542,7 +615,6 @@ pub struct App {
     font_manager: FontManager,
     enemies: Vec<Rc<RefCell<Enemy>>>,
     walls: Vec<Rc<Wall>>,
-    game_ended_state: GameEndedState,
     window_height: f64,
     window_width: f64,
     is_paused: bool,
@@ -603,7 +675,7 @@ impl App {
         let mut font_manager = &mut self.font_manager;
         let window_width = self.window_width;
         let window_height = self.window_height;
-        let game_ended_state = &self.game_ended_state;
+        let game_ended_state = &self.world.game_ended_state;
         let world = &self.world;
 
         self.window.draw_2d(event, |c: Context, mut gl: &mut G2d| {
@@ -640,72 +712,15 @@ impl App {
     }
 
     fn update(&mut self, key_states: &HashMap<Key, input::ButtonState>, mouse_states: &HashMap<MouseButton, input::ButtonState>, mouse_pos: &Vector2, args: &UpdateArgs) {
-        // if self.enemies.is_empty() {
-        //     self.game_ended_state = GameEndedState { game_ended: true, won: true };
-        //     self.is_paused = true;
-        //     return;
-        // }
+        if self.is_paused {
+            return;
+        }
 
         self.world.update(&key_states, &mouse_states, &mouse_pos, &args);
 
-        // {
-        //     let bullets = &mut self.self.bullets;
-        //     let enemies = &self.enemies;
-        //     let walls = &self.walls;
-
-        //     bullets.retain(|ref bullet| {
-        //         let bullet_aabb_cuboid2 = create_aabb_cuboid2(&bullet.renderable_object);
-
-        //         let mut intersected = false;
-                
-        //         for enemy in enemies {
-        //             let enemy_aabb_cuboid2 = create_aabb_cuboid2(&enemy.borrow().renderable_object);
-
-        //             let intersects = enemy_aabb_cuboid2.intersects(&bullet_aabb_cuboid2);
-        //             intersected = intersects || intersected;
-        //             enemy.borrow_mut().should_delete = intersects;
-        //         }
-
-        //         for wall in walls {
-        //             let wall_aabb_cuboid2 = create_aabb_cuboid2(&wall.renderable_object);
-
-        //             let intersects = wall_aabb_cuboid2.intersects(&bullet_aabb_cuboid2);
-        //             intersected = intersects || intersected;
-        //         }
-
-        //         !intersected
-        //     });
-        // }
-
-        // {
-        //     let guns = &mut self.self.guns;
-        //     let walls = &self.walls;
-
-        //     guns.retain(|ref gun| {
-        //         let gun_aabb_cuboid2 = create_aabb_cuboid2(&gun.renderable_object);
-
-        //         let mut intersected = false;
-
-        //         for wall in walls {
-        //             let wall_aabb_cuboid2 = create_aabb_cuboid2(&wall.renderable_object);
-
-        //             let intersects = wall_aabb_cuboid2.intersects(&gun_aabb_cuboid2);
-        //             intersected = intersects || intersected;
-        //         }
-
-        //         !intersected
-        //     });
-        // }
-
-        // for renderables_in_layer in &mut self.world.dynamic_renderables {
-        //     renderables_in_layer.retain( |ref renderable| {
-        //         !renderable.borrow().should_delete()
-        //     });
-        // }
-
-        // self.enemies.retain( |ref enemy| {
-        //     !enemy.borrow().should_delete()
-        // });
+        if self.world.game_ended_state.game_ended == true {
+            self.is_paused = true;
+        }
     }
 }
 
@@ -776,6 +791,10 @@ fn main() {
         static_renderables: Vec::new(),
         dynamic_renderables: Vec::new(),
         updatables: Vec::new(),
+        game_ended_state: GameEndedState {
+            game_ended: false,
+            won: false
+        },
     };
 
     let mut enemies:Vec<Rc<RefCell<Enemy>>> = Vec::new();
@@ -894,10 +913,6 @@ fn main() {
         average_frame_time: 1,
         font_manager: font_manager,
         walls: walls,
-        game_ended_state: GameEndedState {
-            game_ended: false,
-            won: false
-        },
         window_height: HEIGHT as f64,
         window_width: WIDTH as f64,
         is_paused: false,
