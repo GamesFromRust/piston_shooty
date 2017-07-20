@@ -207,14 +207,13 @@ impl Renderable for Wall {
     }
 }
 
-pub struct Projectile {
+pub struct Gun {
     renderable_object: RenderableObject,
     velocity: Vector2,
     should_delete: bool,
-    obj_type: ObjectType,
 }
 
-impl Renderable for Projectile {
+impl Renderable for Gun {
     fn get_renderable_object(&self) -> &RenderableObject {
         &self.renderable_object
     }
@@ -228,11 +227,11 @@ impl Renderable for Projectile {
     }
 
     fn check_type(&self) -> ObjectType {
-        self.obj_type
+        ObjectType::Gun
     }
 }
 
-impl Updatable for Projectile {
+impl Updatable for Gun {
     fn update(&mut self,
                 key_states: &HashMap<Key, input::ButtonState>,
                 mouse_states: &HashMap<MouseButton, input::ButtonState>,
@@ -250,14 +249,14 @@ impl Updatable for Projectile {
     }
 }
 
-impl Projectile {
-    fn shoot_bullet(&self, bullet_texture: &Rc<G2dTexture>) -> Projectile {
+impl Gun {
+    fn shoot_bullet(&self, bullet_texture: &Rc<G2dTexture>) -> Bullet {
         let velocity = Vector2 {
             x: self.renderable_object.rotation.cos(),
             y: self.renderable_object.rotation.sin(),
         };
 
-        Projectile {
+        Bullet {
             renderable_object: RenderableObject {
                 position: self.renderable_object.position,
                 texture: bullet_texture.clone(),
@@ -266,8 +265,49 @@ impl Projectile {
             },
             velocity: velocity * BULLET_VELOCITY_MAGNITUDE,
             should_delete: false,
-            obj_type: ObjectType::Bullet
         }
+    }
+}
+
+pub struct Bullet {
+    renderable_object: RenderableObject,
+    velocity: Vector2,
+    should_delete: bool,
+}
+
+impl Renderable for Bullet {
+    fn get_renderable_object(&self) -> &RenderableObject {
+        &self.renderable_object
+    }
+    
+    fn get_should_delete(&self) -> bool {
+        self.should_delete
+    }
+
+    fn set_should_delete(&mut self, should_delete: bool) {
+        self.should_delete = should_delete
+    }
+
+    fn check_type(&self) -> ObjectType {
+        ObjectType::Bullet
+    }
+}
+
+impl Updatable for Bullet {
+    fn update(&mut self,
+                key_states: &HashMap<Key, input::ButtonState>,
+                mouse_states: &HashMap<MouseButton, input::ButtonState>,
+                mouse_pos: &Vector2,
+                args: &UpdateArgs) -> Vec<WorldReq> {
+        Vec::new()
+    }
+
+    fn get_should_delete(&self) -> bool {
+        self.should_delete
+    }
+
+    fn set_should_delete(&mut self, should_delete: bool) {
+        self.should_delete = should_delete
     }
 }
 
@@ -301,10 +341,10 @@ impl Renderable for Enemy {
 
 pub struct Player {
     renderable_object: RenderableObject,
-    guns: Vec<Rc<RefCell<Projectile>>>,
+    guns: Vec<Rc<RefCell<Gun>>>,
     gun_texture: Rc<G2dTexture>,
     gun_sound: Rc<RefCell<Sound>>,
-    bullets: Vec<Rc<RefCell<Projectile>>>,
+    bullets: Vec<Rc<RefCell<Bullet>>>,
     bullet_texture: Rc<G2dTexture>,
     bullet_sound: Rc<RefCell<Sound>>,
 }
@@ -429,7 +469,7 @@ impl Player {
             None => self.renderable_object.position,
         };
 
-        let projectile = Projectile {
+        let projectile = Gun {
             renderable_object: RenderableObject {
                 position: position,
                 texture: self.gun_texture.clone(),
@@ -438,7 +478,6 @@ impl Player {
             },
             velocity: velocity,
             should_delete: false,
-            obj_type: ObjectType::Gun
         };
 
         self.gun_sound.borrow_mut().play();
