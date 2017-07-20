@@ -80,17 +80,16 @@ pub enum WorldRequestType {
     AddDynamicRenderable,
 }
 
-// trait UpRenderable: Updatable + Renderable {}
-// impl<T> UpRenderable for T where T: Updatable + Renderable {}
-// impl<T> UpRenderable for T where T: Updatable + Renderable {}
-
 pub struct WorldReq {
-    params: Rc<RefCell<Renderable>>,
+    renderable: Option<Rc<RefCell<Renderable>>>,
+    updatable: Option<Rc<RefCell<Updatable>>>,
     req_type: WorldRequestType,
 }
 
 pub trait Updatable {
     fn update(&mut self, key_states: &HashMap<Key, input::ButtonState>, mouse_states: &HashMap<MouseButton, input::ButtonState>, mouse_pos: &Vector2, args: &UpdateArgs) -> Vec<WorldReq>;
+    fn get_should_delete(&self) -> bool;
+    fn set_should_delete(&mut self, should_delete: bool);
 }
 
 impl World {
@@ -122,10 +121,18 @@ impl World {
         for worldReq in worldReqs {
             match worldReq.req_type {
                 WorldRequestType::AddDynamicRenderable => {
-                    self.add_dynamic_renderable_at_layer(worldReq.params, PROJECTILE_LAYER);
+                    assert!(worldReq.renderable.is_some());
+                    if let Some(renderable) = worldReq.renderable {
+                        self.add_dynamic_renderable_at_layer(renderable, PROJECTILE_LAYER);
+                    }
                 },
                 WorldRequestType::AddStaticRenderable => {},
-                WorldRequestType::AddUpdatable => {},
+                WorldRequestType::AddUpdatable => {
+                    assert!(worldReq.updatable.is_some());
+                    if let Some(updatable) = worldReq.updatable {
+                        self.add_updatable(updatable);
+                    }
+                },
             }
         }
     }
@@ -139,9 +146,21 @@ pub struct RenderableObject {
     texture: Rc<G2dTexture>,
 }
 
+#[derive(Copy, Clone)]
+pub enum ObjectType {
+    Wall,
+    Bullet,
+    Gun,
+    Enemy,
+    Player,
+    Ground,
+}
+
 pub trait Renderable {
     fn get_renderable_object(&self) -> &RenderableObject;
-    fn should_delete(&self) -> bool;
+    fn get_should_delete(&self) -> bool;
+    fn set_should_delete(&mut self, should_delete: bool);
+    fn check_type(&self) -> ObjectType;
 }
 
 pub struct Ground {
@@ -153,8 +172,16 @@ impl Renderable for Ground {
         &self.renderable_object
     }
     
-    fn should_delete(&self) -> bool {
+    fn get_should_delete(&self) -> bool {
         false
+    }
+
+    fn set_should_delete(&mut self, should_delete: bool) {
+        // do nothing
+    }
+
+    fn check_type(&self) -> ObjectType {
+        ObjectType::Ground
     }
 }
 
@@ -167,8 +194,16 @@ impl Renderable for Wall {
         &self.renderable_object
     }
     
-    fn should_delete(&self) -> bool {
+    fn get_should_delete(&self) -> bool {
         false
+    }
+
+    fn set_should_delete(&mut self, should_delete: bool) {
+        // do nothing
+    }
+
+    fn check_type(&self) -> ObjectType {
+        ObjectType::Wall
     }
 }
 
@@ -176,6 +211,7 @@ pub struct Projectile {
     renderable_object: RenderableObject,
     velocity: Vector2,
     should_delete: bool,
+    obj_type: ObjectType,
 }
 
 impl Renderable for Projectile {
@@ -183,20 +219,36 @@ impl Renderable for Projectile {
         &self.renderable_object
     }
     
-    fn should_delete(&self) -> bool {
+    fn get_should_delete(&self) -> bool {
         self.should_delete
+    }
+
+    fn set_should_delete(&mut self, should_delete: bool) {
+        self.should_delete = should_delete
+    }
+
+    fn check_type(&self) -> ObjectType {
+        self.obj_type
     }
 }
 
-// impl Updatable for Projectile {
-//     fn update(&mut self,
-//                 key_states: &HashMap<Key, input::ButtonState>,
-//                 mouse_states: &HashMap<MouseButton, input::ButtonState>,
-//                 mouse_pos: &Vector2,
-//                 args: &UpdateArgs) -> Vec<WorldReq> {
-//                 Vec::new()
-//     }
-// }
+impl Updatable for Projectile {
+    fn update(&mut self,
+                key_states: &HashMap<Key, input::ButtonState>,
+                mouse_states: &HashMap<MouseButton, input::ButtonState>,
+                mouse_pos: &Vector2,
+                args: &UpdateArgs) -> Vec<WorldReq> {
+        Vec::new()
+    }
+
+    fn get_should_delete(&self) -> bool {
+        self.should_delete
+    }
+
+    fn set_should_delete(&mut self, should_delete: bool) {
+        self.should_delete = should_delete
+    }
+}
 
 impl Projectile {
     fn shoot_bullet(&self, bullet_texture: &Rc<G2dTexture>) -> Projectile {
@@ -214,6 +266,7 @@ impl Projectile {
             },
             velocity: velocity * BULLET_VELOCITY_MAGNITUDE,
             should_delete: false,
+            obj_type: ObjectType::Bullet
         }
     }
 }
@@ -233,8 +286,16 @@ impl Renderable for Enemy {
         &self.renderable_object
     }
     
-    fn should_delete(&self) -> bool {
+    fn get_should_delete(&self) -> bool {
         self.should_delete
+    }
+
+    fn set_should_delete(&mut self, should_delete: bool) {
+        self.should_delete = should_delete
+    }
+
+    fn check_type(&self) -> ObjectType {
+        ObjectType::Enemy
     }
 }
 
@@ -253,8 +314,16 @@ impl Renderable for Player {
         &self.renderable_object
     }
     
-    fn should_delete(&self) -> bool {
+    fn get_should_delete(&self) -> bool {
         false
+    }
+
+    fn set_should_delete(&mut self, should_delete: bool) {
+        // do nothing
+    }
+
+    fn check_type(&self) -> ObjectType {
+        ObjectType::Player
     }
 }
 
@@ -287,21 +356,45 @@ impl Updatable for Player {
 
         for bullet in &self.bullets {
             let worldReq: WorldReq = WorldReq {
-                params: bullet.clone(),
+                renderable: Some(bullet.clone()),
+                updatable: None,
                 req_type: WorldRequestType::AddDynamicRenderable,
+            };
+            worldReqs.push(worldReq);
+
+            let worldReq: WorldReq = WorldReq {
+                renderable: None,
+                updatable: Some(bullet.clone()),
+                req_type: WorldRequestType::AddUpdatable,
             };
             worldReqs.push(worldReq);
         }
         
         for gun in &self.guns {
             let worldReq: WorldReq = WorldReq {
-                params: gun.clone(),
+                renderable: Some(gun.clone()),
+                updatable: None,
                 req_type: WorldRequestType::AddDynamicRenderable,
+            };
+            worldReqs.push(worldReq);
+
+            let worldReq: WorldReq = WorldReq {
+                renderable: None,
+                updatable: Some(gun.clone()),
+                req_type: WorldRequestType::AddUpdatable,
             };
             worldReqs.push(worldReq);
         }
 
         worldReqs
+    }
+    
+    fn get_should_delete(&self) -> bool {
+        false
+    }
+
+    fn set_should_delete(&mut self, should_delete: bool) {
+        // do nothing
     }
 }
 
@@ -345,6 +438,7 @@ impl Player {
             },
             velocity: velocity,
             should_delete: false,
+            obj_type: ObjectType::Gun
         };
 
         self.gun_sound.borrow_mut().play();
