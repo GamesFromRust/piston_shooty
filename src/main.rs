@@ -89,8 +89,9 @@ pub struct WorldReq {
 
 pub trait Updatable {
     fn update(&mut self, key_states: &HashMap<Key, input::ButtonState>, mouse_states: &HashMap<MouseButton, input::ButtonState>, mouse_pos: &Vector2, args: &UpdateArgs) -> Vec<WorldReq>;
-    fn get_should_delete(&self) -> bool;
-    fn set_should_delete(&mut self, should_delete: bool);
+    // TODO: Deletable?
+    fn get_should_delete_updatable(&self) -> bool;
+    fn set_should_delete_updatable(&mut self, should_delete: bool);
 }
 
 impl World {
@@ -135,46 +136,13 @@ impl World {
                             let renderable2_aabb_cuboid2 = create_aabb_cuboid2(&renderable2.get_renderable_object());
                             
                             if renderable1_aabb_cuboid2.intersects(&renderable2_aabb_cuboid2) {
-                                renderable.borrow_mut().set_should_delete(true);
+                                renderable.borrow_mut().set_should_delete_renderable(true);
                             }
                         }
                     }
                 }
             }
         }
-
-
-
-
-
-        // {
-        //     let bullets = &mut self.self.bullets;
-        //     let enemies = &self.enemies;
-        //     let walls = &self.walls;
-
-        //     bullets.retain(|ref bullet| {
-        //         let bullet_aabb_cuboid2 = create_aabb_cuboid2(&bullet.renderable_object);
-
-        //         let mut intersected = false;
-                
-        //         for enemy in enemies {
-        //             let enemy_aabb_cuboid2 = create_aabb_cuboid2(&enemy.borrow().renderable_object);
-
-        //             let intersects = enemy_aabb_cuboid2.intersects(&bullet_aabb_cuboid2);
-        //             intersected = intersects || intersected;
-        //             enemy.borrow_mut().should_delete = intersects;
-        //         }
-
-        //         for wall in walls {
-        //             let wall_aabb_cuboid2 = create_aabb_cuboid2(&wall.renderable_object);
-
-        //             let intersects = wall_aabb_cuboid2.intersects(&bullet_aabb_cuboid2);
-        //             intersected = intersects || intersected;
-        //         }
-
-        //         !intersected
-        //     });
-        // }
 
         // // {
         // //     let bullets = &mut self.self.bullets;
@@ -225,20 +193,14 @@ impl World {
         //     });
         // }
 
-        // for renderables_in_layer in &mut self.world.dynamic_renderables {
-        //     renderables_in_layer.retain( |ref renderable| {
-        //         !renderable.borrow().should_delete()
-        //     });
-        // }
-
         for renderable_layer in &mut self.dynamic_renderables {
             renderable_layer.retain(|ref renderable| {
-                !renderable.borrow().get_should_delete()
+                !renderable.borrow().get_should_delete_renderable()
             });
         }
 
         self.updatables.retain(|ref updatable| {
-            !updatable.borrow().get_should_delete()
+            !updatable.borrow().get_should_delete_updatable()
         });
 
         let mut world_reqs: Vec<WorldReq> = Vec::new();
@@ -287,8 +249,8 @@ pub enum ObjectType {
 
 pub trait Renderable {
     fn get_renderable_object(&self) -> &RenderableObject;
-    fn get_should_delete(&self) -> bool;
-    fn set_should_delete(&mut self, should_delete: bool);
+    fn get_should_delete_renderable(&self) -> bool;
+    fn set_should_delete_renderable(&mut self, should_delete: bool);
     fn get_object_type(&self) -> ObjectType;
 }
 
@@ -301,11 +263,11 @@ impl Renderable for Ground {
         &self.renderable_object
     }
     
-    fn get_should_delete(&self) -> bool {
+    fn get_should_delete_renderable(&self) -> bool {
         false
     }
 
-    fn set_should_delete(&mut self, should_delete: bool) {
+    fn set_should_delete_renderable(&mut self, should_delete: bool) {
         // do nothing
     }
 
@@ -323,11 +285,11 @@ impl Renderable for Wall {
         &self.renderable_object
     }
     
-    fn get_should_delete(&self) -> bool {
+    fn get_should_delete_renderable(&self) -> bool {
         false
     }
 
-    fn set_should_delete(&mut self, should_delete: bool) {
+    fn set_should_delete_renderable(&mut self, should_delete: bool) {
         // do nothing
     }
 
@@ -347,11 +309,11 @@ impl Renderable for Gun {
         &self.renderable_object
     }
     
-    fn get_should_delete(&self) -> bool {
+    fn get_should_delete_renderable(&self) -> bool {
         self.should_delete
     }
 
-    fn set_should_delete(&mut self, should_delete: bool) {
+    fn set_should_delete_renderable(&mut self, should_delete: bool) {
         self.should_delete = should_delete
     }
 
@@ -371,11 +333,11 @@ impl Updatable for Gun {
         Vec::new()
     }
 
-    fn get_should_delete(&self) -> bool {
+    fn get_should_delete_updatable(&self) -> bool {
         self.should_delete
     }
 
-    fn set_should_delete(&mut self, should_delete: bool) {
+    fn set_should_delete_updatable(&mut self, should_delete: bool) {
         self.should_delete = should_delete
     }
 }
@@ -411,11 +373,11 @@ impl Renderable for Bullet {
         &self.renderable_object
     }
     
-    fn get_should_delete(&self) -> bool {
+    fn get_should_delete_renderable(&self) -> bool {
         self.should_delete
     }
 
-    fn set_should_delete(&mut self, should_delete: bool) {
+    fn set_should_delete_renderable(&mut self, should_delete: bool) {
         self.should_delete = should_delete
     }
 
@@ -434,11 +396,11 @@ impl Updatable for Bullet {
         Vec::new()
     }
 
-    fn get_should_delete(&self) -> bool {
+    fn get_should_delete_updatable(&self) -> bool {
         self.should_delete
     }
 
-    fn set_should_delete(&mut self, should_delete: bool) {
+    fn set_should_delete_updatable(&mut self, should_delete: bool) {
         self.should_delete = should_delete
     }
 }
@@ -458,11 +420,11 @@ impl Renderable for Enemy {
         &self.renderable_object
     }
     
-    fn get_should_delete(&self) -> bool {
+    fn get_should_delete_renderable(&self) -> bool {
         self.should_delete
     }
 
-    fn set_should_delete(&mut self, should_delete: bool) {
+    fn set_should_delete_renderable(&mut self, should_delete: bool) {
         self.should_delete = should_delete
     }
 
@@ -486,11 +448,11 @@ impl Renderable for Player {
         &self.renderable_object
     }
     
-    fn get_should_delete(&self) -> bool {
+    fn get_should_delete_renderable(&self) -> bool {
         false
     }
 
-    fn set_should_delete(&mut self, should_delete: bool) {
+    fn set_should_delete_renderable(&mut self, should_delete: bool) {
         // do nothing
     }
 
@@ -505,6 +467,13 @@ impl Updatable for Player {
                 mouse_states: &HashMap<MouseButton, input::ButtonState>,
                 mouse_pos: &Vector2,
                 args: &UpdateArgs) -> Vec<WorldReq> {
+        self.bullets.retain(|ref bullet| {
+            !bullet.borrow().get_should_delete_updatable()
+        });
+        self.guns.retain(|ref gun| {
+            !gun.borrow().get_should_delete_updatable()
+        });
+        
         // Rotate to face our mouse.
         let player_to_mouse = *mouse_pos - self.renderable_object.position;
         self.renderable_object.rotation = player_to_mouse.y.atan2(player_to_mouse.x);
@@ -512,11 +481,11 @@ impl Updatable for Player {
         return self.apply_input(&key_states, &mouse_states, &mouse_pos, args.dt);
     }
     
-    fn get_should_delete(&self) -> bool {
+    fn get_should_delete_updatable(&self) -> bool {
         false
     }
 
-    fn set_should_delete(&mut self, should_delete: bool) {
+    fn set_should_delete_updatable(&mut self, should_delete: bool) {
         // do nothing
     }
 }
