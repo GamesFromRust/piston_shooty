@@ -237,6 +237,8 @@ impl Updatable for Gun {
                 mouse_states: &HashMap<MouseButton, input::ButtonState>,
                 mouse_pos: &Vector2,
                 args: &UpdateArgs) -> Vec<WorldReq> {
+        self.renderable_object.position += self.velocity * args.dt;
+        self.renderable_object.rotation += GUN_ROTATIONAL_VELOCITY * args.dt;
         Vec::new()
     }
 
@@ -299,6 +301,7 @@ impl Updatable for Bullet {
                 mouse_states: &HashMap<MouseButton, input::ButtonState>,
                 mouse_pos: &Vector2,
                 args: &UpdateArgs) -> Vec<WorldReq> {
+        self.renderable_object.position += self.velocity * args.dt;
         Vec::new()
     }
 
@@ -377,56 +380,7 @@ impl Updatable for Player {
         let player_to_mouse = *mouse_pos - self.renderable_object.position;
         self.renderable_object.rotation = player_to_mouse.y.atan2(player_to_mouse.x);
 
-        // Move our guns.
-        for projectile in &mut self.guns {
-            let mut projectile = projectile.borrow_mut();
-            projectile.renderable_object.position += projectile.velocity * args.dt;
-            projectile.renderable_object.rotation += GUN_ROTATIONAL_VELOCITY * args.dt;
-        }
-
-        // Move our bullets.
-        for bullet in &mut self.bullets {
-            let mut bullet = bullet.borrow_mut();
-            bullet.renderable_object.position += bullet.velocity * args.dt;
-        }
-
-        self.apply_input(&key_states, &mouse_states, &mouse_pos, args.dt);
-
-        let mut worldReqs: Vec<WorldReq> = Vec::new();
-
-        for bullet in &self.bullets {
-            let worldReq: WorldReq = WorldReq {
-                renderable: Some(bullet.clone()),
-                updatable: None,
-                req_type: WorldRequestType::AddDynamicRenderable,
-            };
-            worldReqs.push(worldReq);
-
-            let worldReq: WorldReq = WorldReq {
-                renderable: None,
-                updatable: Some(bullet.clone()),
-                req_type: WorldRequestType::AddUpdatable,
-            };
-            worldReqs.push(worldReq);
-        }
-        
-        for gun in &self.guns {
-            let worldReq: WorldReq = WorldReq {
-                renderable: Some(gun.clone()),
-                updatable: None,
-                req_type: WorldRequestType::AddDynamicRenderable,
-            };
-            worldReqs.push(worldReq);
-
-            let worldReq: WorldReq = WorldReq {
-                renderable: None,
-                updatable: Some(gun.clone()),
-                req_type: WorldRequestType::AddUpdatable,
-            };
-            worldReqs.push(worldReq);
-        }
-
-        worldReqs
+        return self.apply_input(&key_states, &mouse_states, &mouse_pos, args.dt);
     }
     
     fn get_should_delete(&self) -> bool {
@@ -439,15 +393,33 @@ impl Updatable for Player {
 }
 
 impl Player {
-    fn shoot_bullets(&mut self) {
+    fn shoot_bullets(&mut self) -> Vec<WorldReq> {
+        let mut world_reqs: Vec<WorldReq> = Vec::new();
+
         for projectile in &self.guns {
             let bullet = Rc::new(RefCell::new(projectile.borrow_mut().shoot_bullet(&self.bullet_texture)));
-            self.bullets.push(bullet);
+            self.bullets.push(bullet.clone());
             self.bullet_sound.borrow_mut().play();
-        }    
+
+            let world_req: WorldReq = WorldReq {
+                renderable: Some(bullet.clone()),
+                updatable: None,
+                req_type: WorldRequestType::AddDynamicRenderable,
+            };
+            world_reqs.push(world_req);
+
+            let world_req: WorldReq = WorldReq {
+                renderable: None,
+                updatable: Some(bullet.clone()),
+                req_type: WorldRequestType::AddUpdatable,
+            };
+            world_reqs.push(world_req);
+        }
+
+        world_reqs
     }
 
-    fn shoot_gun(&mut self, mouse_pos: &Vector2) {
+    fn shoot_gun(&mut self, mouse_pos: &Vector2) -> Vec<WorldReq>  {
         let rotation = match self.guns.last() {
             Some(projectile) => projectile.borrow().renderable_object.rotation,
             None => self.renderable_object.rotation,
@@ -483,11 +455,30 @@ impl Player {
         self.gun_sound.borrow_mut().play();
 
         let projectile = Rc::new(RefCell::new(projectile));
-        self.guns.push(projectile);
+        self.guns.push(projectile.clone());
+
+        let mut world_reqs: Vec<WorldReq> = Vec::new();
+        
+        let world_req: WorldReq = WorldReq {
+            renderable: Some(projectile.clone()),
+            updatable: None,
+            req_type: WorldRequestType::AddDynamicRenderable,
+        };
+        world_reqs.push(world_req);
+
+        let world_req: WorldReq = WorldReq {
+            renderable: None,
+            updatable: Some(projectile.clone()),
+            req_type: WorldRequestType::AddUpdatable,
+        };
+        world_reqs.push(world_req);
+
+        world_reqs
     }
 
-    fn apply_input(&mut self, key_states: &HashMap<Key, input::ButtonState>, mouse_states: &HashMap<MouseButton, input::ButtonState>, mouse_pos: &Vector2, dt: f64) {
+    fn apply_input(&mut self, key_states: &HashMap<Key, input::ButtonState>, mouse_states: &HashMap<MouseButton, input::ButtonState>, mouse_pos: &Vector2, dt: f64) -> Vec<WorldReq> {
         let mut player_velocity: Vector2 = Vector2::default();
+        let mut world_reqs: Vec<WorldReq> = Vec::new();
 
         for (key, value) in key_states {
             match *key {
@@ -521,13 +512,12 @@ impl Player {
             match *button {
                 MouseButton::Left => {
                     if value.pressed {
-                        println!("Left clicked");
-                        self.shoot_gun(mouse_pos);
+                        world_reqs.append(&mut self.shoot_gun(mouse_pos));
                     }
                 },
                 MouseButton::Right => {
                     if value.pressed {
-                        self.shoot_bullets();
+                        world_reqs.append(&mut self.shoot_bullets());
                     }
                 }
                 // Default
@@ -535,11 +525,12 @@ impl Player {
             }
         }
 
-        if player_velocity == Vector2::default() {
-            return;
+        if player_velocity != Vector2::default() {
+            player_velocity.normalize();
+            self.renderable_object.position += player_velocity * MOVE_SPEED_MAX * dt;
         }
-        player_velocity.normalize();
-        self.renderable_object.position += player_velocity * MOVE_SPEED_MAX * dt;
+
+        world_reqs
     }
 }
 
