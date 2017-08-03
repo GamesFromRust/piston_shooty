@@ -167,55 +167,6 @@ impl World {
             }
         }
 
-        // // {
-        // //     let bullets = &mut self.self.bullets;
-        // //     let enemies = &self.enemies;
-        // //     let walls = &self.walls;
-
-        // //     bullets.retain(|ref bullet| {
-        // //         let bullet_aabb_cuboid2 = create_aabb_cuboid2(&bullet.renderable_object);
-
-        // //         let mut intersected = false;
-                
-        // //         for enemy in enemies {
-        // //             let enemy_aabb_cuboid2 = create_aabb_cuboid2(&enemy.borrow().renderable_object);
-
-        // //             let intersects = enemy_aabb_cuboid2.intersects(&bullet_aabb_cuboid2);
-        // //             intersected = intersects || intersected;
-        // //             enemy.borrow_mut().should_delete = intersects;
-        // //         }
-
-        // //         for wall in walls {
-        // //             let wall_aabb_cuboid2 = create_aabb_cuboid2(&wall.renderable_object);
-
-        // //             let intersects = wall_aabb_cuboid2.intersects(&bullet_aabb_cuboid2);
-        // //             intersected = intersects || intersected;
-        // //         }
-
-        // //         !intersected
-        // //     });
-        // // }
-
-        // {
-        //     let guns = &mut self.self.guns;
-        //     let walls = &self.walls;
-
-        //     guns.retain(|ref gun| {
-        //         let gun_aabb_cuboid2 = create_aabb_cuboid2(&gun.renderable_object);
-
-        //         let mut intersected = false;
-
-        //         for wall in walls {
-        //             let wall_aabb_cuboid2 = create_aabb_cuboid2(&wall.renderable_object);
-
-        //             let intersects = wall_aabb_cuboid2.intersects(&gun_aabb_cuboid2);
-        //             intersected = intersects || intersected;
-        //         }
-
-        //         !intersected
-        //     });
-        // }
-
         for renderable_layer in &mut self.dynamic_renderables {
             renderable_layer.retain(|ref renderable| {
                 !renderable.borrow().get_should_delete_renderable()
@@ -461,7 +412,6 @@ pub struct Player {
     guns: Vec<Rc<RefCell<Gun>>>,
     gun_texture: Rc<G2dTexture>,
     gun_sound: Rc<RefCell<Sound>>,
-    bullets: Vec<Rc<RefCell<Bullet>>>,
     bullet_texture: Rc<G2dTexture>,
     bullet_sound: Rc<RefCell<Sound>>,
 }
@@ -490,9 +440,6 @@ impl Updatable for Player {
                 mouse_states: &HashMap<MouseButton, input::ButtonState>,
                 mouse_pos: &Vector2,
                 args: &UpdateArgs) -> Vec<WorldReq> {
-        self.bullets.retain(|ref bullet| {
-            !bullet.borrow().get_should_delete_updatable()
-        });
         self.guns.retain(|ref gun| {
             !gun.borrow().get_should_delete_updatable()
         });
@@ -519,7 +466,6 @@ impl Player {
 
         for projectile in &self.guns {
             let bullet = Rc::new(RefCell::new(projectile.borrow_mut().shoot_bullet(&self.bullet_texture)));
-            self.bullets.push(bullet.clone());
             self.bullet_sound.borrow_mut().play();
 
             let world_req: WorldReq = WorldReq {
@@ -897,7 +843,6 @@ fn main() {
                     gun_texture: gun_gun.clone(),
                     gun_sound: sound_manager.get("sounds\\boom.ogg"),
                     bullet_texture: bullet.clone(),
-                    bullets: Vec::new(),
                     bullet_sound: sound_manager.get("sounds\\boop.ogg"),
                 };
                 let refcell = Rc::new(RefCell::new(player));
