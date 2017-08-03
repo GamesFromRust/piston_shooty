@@ -618,6 +618,8 @@ pub struct App {
     window_width: f64,
     is_paused: bool,
     world: World,
+    texture_manager: TextureManager,
+    sound_manager: SoundManager,
 }
 
 fn draw_victory_overlay(font_manager: &mut FontManager, c: &Context, gl: &mut G2d, window_width: f64, window_height: f64) {
@@ -718,23 +720,31 @@ impl App {
         self.world.update(&key_states, &mouse_states, &mouse_pos, &args);
 
         if self.world.game_ended_state.game_ended == true {
-            self.is_paused = true;
+            // self.is_paused = true;
+            self.world = load_level(&mut self.texture_manager, &mut self.sound_manager, "Level1");
         }
     }
 }
 
-fn main() {
-    let window_settings = WindowSettings::new("piston_shooty", [WIDTH, HEIGHT]);
+fn load_level(texture_manager:&mut TextureManager, sound_manager:&mut SoundManager, level_name:&str) -> World {
+    let hand_gun = texture_manager.get("textures\\hand-gun_square.png");
+    let gun_gun = texture_manager.get("textures\\GunGunV1.png");
+    let bullet = texture_manager.get("textures\\bullet.png");
+    let wall = texture_manager.get("textures\\brick_square.png");
+    let enemy = texture_manager.get("textures\\enemy.png");
+    let ground = texture_manager.get("textures\\ground.png");
 
-    let assets_path: std::path::PathBuf = find_folder::Search::ParentsThenKids(3, 3)
-        .for_folder("assets")
-        .unwrap();
+    let mut world: World = World {
+        static_renderables: Vec::new(),
+        dynamic_renderables: Vec::new(),
+        updatables: Vec::new(),
+        game_ended_state: GameEndedState {
+            game_ended: false,
+            won: false
+        },
+    };
 
-    let window: piston_window::PistonWindow = window_settings.exit_on_esc(true)
-        .build()
-        .unwrap();
-
-    let new_csv_rdr = || csv::Reader::from_file("assets\\Levels\\Level2.csv").unwrap().has_headers(false);
+    let new_csv_rdr = || csv::Reader::from_file(format!("assets\\Levels\\{}.csv", level_name)).unwrap().has_headers(false);
     let mut index_data = io::Cursor::new(Vec::new());
     create_index(new_csv_rdr(), index_data.by_ref()).unwrap();
     let mut index = Indexed::open(new_csv_rdr(), index_data).unwrap();
@@ -755,46 +765,6 @@ fn main() {
     for row in &level {
         assert!(row.len() as u32 == GRID_WIDTH);
     }
-
-    let asset_loader = AssetLoader {
-        assets_path: assets_path,
-        factory: window.factory.clone(),
-    };
-    let asset_loader = Rc::new(asset_loader);
-
-    let mut font_manager = FontManager {
-        asset_loader: asset_loader.clone(),
-        fonts_by_filename: HashMap::new(),
-    };
-    
-    let mut texture_manager = TextureManager {
-        asset_loader: asset_loader.clone(),
-        textures_by_filename: HashMap::new(),
-    };
-
-    let mut sound_manager = SoundManager {
-        asset_loader: asset_loader.clone(),
-        sounds_by_filename: HashMap::new(),
-    };
-
-    let hand_gun = texture_manager.get("textures\\hand-gun_square.png");
-    let gun_gun = texture_manager.get("textures\\GunGunV1.png");
-    let bullet = texture_manager.get("textures\\bullet.png");
-    let wall = texture_manager.get("textures\\brick_square.png");
-    let enemy = texture_manager.get("textures\\enemy.png");
-    let ground = texture_manager.get("textures\\ground.png");
-
-    font_manager.get("Roboto-Regular.ttf");
-
-    let mut world: World = World {
-        static_renderables: Vec::new(),
-        dynamic_renderables: Vec::new(),
-        updatables: Vec::new(),
-        game_ended_state: GameEndedState {
-            game_ended: false,
-            won: false
-        },
-    };
 
     // Read in a level.
     let mut line_num = 0;
@@ -897,6 +867,44 @@ fn main() {
         }
         line_num += 1;
     }
+    world
+}
+
+fn main() {
+    let window_settings = WindowSettings::new("piston_shooty", [WIDTH, HEIGHT]);
+
+    let assets_path: std::path::PathBuf = find_folder::Search::ParentsThenKids(3, 3)
+        .for_folder("assets")
+        .unwrap();
+
+    let window: piston_window::PistonWindow = window_settings.exit_on_esc(true)
+        .build()
+        .unwrap();
+
+    let asset_loader = AssetLoader {
+        assets_path: assets_path,
+        factory: window.factory.clone(),
+    };
+    let asset_loader = Rc::new(asset_loader);
+
+    let mut font_manager = FontManager {
+        asset_loader: asset_loader.clone(),
+        fonts_by_filename: HashMap::new(),
+    };
+    
+    let mut texture_manager = TextureManager {
+        asset_loader: asset_loader.clone(),
+        textures_by_filename: HashMap::new(),
+    };
+
+    let mut sound_manager = SoundManager {
+        asset_loader: asset_loader.clone(),
+        sounds_by_filename: HashMap::new(),
+    };
+
+    font_manager.get("Roboto-Regular.ttf");
+
+    let world = load_level(&mut texture_manager, &mut sound_manager, "Level2"); 
 
     let mut app = App {
         window: window,
@@ -908,6 +916,8 @@ fn main() {
         window_width: WIDTH as f64,
         is_paused: false,
         world: world,
+        texture_manager: texture_manager,
+        sound_manager: sound_manager,
     };
     app.window.set_max_fps(u64::max_value());
 
