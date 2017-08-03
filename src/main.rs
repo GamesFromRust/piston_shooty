@@ -75,6 +75,7 @@ pub struct World {
     dynamic_renderables: Vec<Vec<Rc<RefCell<Renderable>>>>,
     updatables: Vec<Rc<RefCell<Updatable>>>,
     game_ended_state: GameEndedState,
+    player: Rc<RefCell<Player>>,
 }
 
 pub enum WorldRequestType {
@@ -116,6 +117,8 @@ impl World {
     }
 
     fn update(&mut self, key_states: &HashMap<Key, input::ButtonState>, mouse_states: &HashMap<MouseButton, input::ButtonState>, mouse_pos: &Vector2, args: &UpdateArgs) {
+
+        // check for victory
         let mut no_enemies = true;
         for renderable in &self.dynamic_renderables[ENEMY_LAYER] {
             if renderable.borrow().get_object_type() == ObjectType::Enemy {
@@ -123,9 +126,22 @@ impl World {
                 break;
             }
         }
-
         if no_enemies {
             self.game_ended_state = GameEndedState { game_ended: true, won: true };
+            return;
+        }
+
+        // check for defeat
+        let mut has_bullets = false;
+        for renderable_layer in &self.dynamic_renderables {
+            for renderable in renderable_layer {
+                if renderable.borrow().get_object_type() == ObjectType::Bullet {
+                    has_bullets = true;
+                }
+            }
+        }
+        if self.player.borrow().has_shot && !has_bullets {
+            self.game_ended_state = GameEndedState { game_ended: true, won: false };
             return;
         }
 
@@ -421,6 +437,7 @@ pub struct Player {
     gun_sound: Rc<RefCell<Sound>>,
     bullet_texture: Rc<G2dTexture>,
     bullet_sound: Rc<RefCell<Sound>>,
+    has_shot: bool,
 }
 
 impl Renderable for Player {
@@ -473,6 +490,10 @@ impl Player {
     fn shoot_bullets(&mut self) -> Vec<WorldReq> {
         let mut world_reqs: Vec<WorldReq> = Vec::new();
 
+        if self.has_shot {
+            return world_reqs;
+        }
+
         for projectile in &self.guns {
             let bullet = Rc::new(RefCell::new(projectile.borrow_mut().shoot_bullet(&self.bullet_texture)));
             self.bullet_sound.borrow_mut().play();
@@ -491,6 +512,8 @@ impl Player {
             };
             world_reqs.push(world_req);
         }
+
+        self.has_shot = true;
 
         world_reqs
     }
@@ -723,6 +746,11 @@ impl App {
         self.world.update(&key_states, &mouse_states, &mouse_pos, &args);
 
         if self.world.game_ended_state.game_ended == true {
+            if self.world.game_ended_state.won == false {
+                self.world = load_level(&mut self.texture_manager, &mut self.sound_manager, LEVEL_LIST[self.level_index]);
+                return;
+            }
+            
             self.level_index = self.level_index + 1;
             if self.level_index >= LEVEL_LIST.len() {
                 self.is_paused = true;
@@ -741,6 +769,26 @@ fn load_level(texture_manager:&mut TextureManager, sound_manager:&mut SoundManag
     let enemy = texture_manager.get("textures\\enemy.png");
     let ground = texture_manager.get("textures\\ground.png");
 
+    let player: Player = Player {
+        renderable_object: RenderableObject {
+            texture: hand_gun.clone(),
+            position: Vector2 {
+                x: 0.0,
+                y: 0.0,
+            },
+            rotation: 0.0,
+            scale: PLAYER_SCALE,
+        },
+        guns: Vec::new(),
+        gun_texture: gun_gun.clone(),
+        gun_sound: sound_manager.get("sounds\\boom.ogg"),
+        bullet_texture: bullet.clone(),
+        bullet_sound: sound_manager.get("sounds\\boop.ogg"),
+        has_shot: false,
+    };
+    
+    let player = Rc::new(RefCell::new(player));
+
     let mut world: World = World {
         static_renderables: Vec::new(),
         dynamic_renderables: Vec::new(),
@@ -749,6 +797,7 @@ fn load_level(texture_manager:&mut TextureManager, sound_manager:&mut SoundManag
             game_ended: false,
             won: false
         },
+        player: player.clone(),
     };
 
     let new_csv_rdr = || csv::Reader::from_file(format!("assets\\Levels\\{}.csv", level_name)).unwrap().has_headers(false);
@@ -807,25 +856,11 @@ fn load_level(texture_manager:&mut TextureManager, sound_manager:&mut SoundManag
                 let rc = Rc::new(ground);
                 world.add_static_renderable_at_layer(rc.clone(), GROUND_LAYER);
 
-                let player: Player = Player {
-                    renderable_object: RenderableObject {
-                        texture: hand_gun.clone(),
-                        position: Vector2 {
-                            x: (item_num * CELL_WIDTH + CELL_WIDTH / 2) as f64,
-                            y: (line_num * CELL_HEIGHT + CELL_HEIGHT / 2) as f64,
-                        },
-                        rotation: 0.0,
-                        scale: PLAYER_SCALE,
-                    },
-                    guns: Vec::new(),
-                    gun_texture: gun_gun.clone(),
-                    gun_sound: sound_manager.get("sounds\\boom.ogg"),
-                    bullet_texture: bullet.clone(),
-                    bullet_sound: sound_manager.get("sounds\\boop.ogg"),
-                };
-                let refcell = Rc::new(RefCell::new(player));
-                world.add_dynamic_renderable_at_layer(refcell.clone(), PLAYER_LAYER);
-                world.add_updatable(refcell);
+                player.borrow_mut().renderable_object.position.x = (item_num * CELL_WIDTH + CELL_WIDTH / 2) as f64;
+                player.borrow_mut().renderable_object.position.y = (line_num * CELL_HEIGHT + CELL_HEIGHT / 2) as f64;
+
+                world.add_dynamic_renderable_at_layer(player.clone(), PLAYER_LAYER);
+                world.add_updatable(player.clone());
             } else if item == "E" {
                 let ground = Ground {
                     renderable_object: RenderableObject {
