@@ -67,6 +67,8 @@ const ENEMY_LAYER: usize = 1;
 const PLAYER_LAYER: usize = 1;
 const PROJECTILE_LAYER: usize = 2;
 
+const LEVEL_LIST: [&'static str; 2] = ["Level2", "Level3"];
+
 // TODO: Add self/guns/bullets to here.
 pub struct World {
     static_renderables: Vec<Vec<Rc<Renderable>>>,
@@ -620,6 +622,7 @@ pub struct App {
     world: World,
     texture_manager: TextureManager,
     sound_manager: SoundManager,
+    level_index: usize,
 }
 
 fn draw_victory_overlay(font_manager: &mut FontManager, c: &Context, gl: &mut G2d, window_width: f64, window_height: f64) {
@@ -720,8 +723,12 @@ impl App {
         self.world.update(&key_states, &mouse_states, &mouse_pos, &args);
 
         if self.world.game_ended_state.game_ended == true {
-            // self.is_paused = true;
-            self.world = load_level(&mut self.texture_manager, &mut self.sound_manager, "Level1");
+            self.level_index = self.level_index + 1;
+            if self.level_index >= LEVEL_LIST.len() {
+                self.is_paused = true;
+            } else {
+                self.world = load_level(&mut self.texture_manager, &mut self.sound_manager, LEVEL_LIST[self.level_index]);
+            }
         }
     }
 }
@@ -918,6 +925,7 @@ fn main() {
         world: world,
         texture_manager: texture_manager,
         sound_manager: sound_manager,
+        level_index: 0,
     };
     app.window.set_max_fps(u64::max_value());
 
