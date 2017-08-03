@@ -139,6 +139,15 @@ impl World {
                                 renderable.borrow_mut().set_should_delete_renderable(true);
                             }
                         }
+
+                        if renderable.borrow().get_object_type() == ObjectType::Bullet && renderable2.get_object_type() == ObjectType::Wall {
+                            let renderable1_aabb_cuboid2 = create_aabb_cuboid2(&renderable.borrow().get_renderable_object());
+                            let renderable2_aabb_cuboid2 = create_aabb_cuboid2(&renderable2.get_renderable_object());
+                            
+                            if renderable1_aabb_cuboid2.intersects(&renderable2_aabb_cuboid2) {
+                                renderable.borrow_mut().set_should_delete_renderable(true);
+                            }
+                        }
                     }
                 }
             }
