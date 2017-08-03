@@ -150,6 +150,20 @@ impl World {
                         }
                     }
                 }
+
+                for renderable_layer2 in &self.dynamic_renderables {
+                    for renderable2 in renderable_layer2 {
+                        if renderable.borrow().get_object_type() == ObjectType::Bullet && renderable2.borrow().get_object_type() == ObjectType::Enemy {
+                            let renderable1_aabb_cuboid2 = create_aabb_cuboid2(&renderable.borrow().get_renderable_object());
+                            let renderable2_aabb_cuboid2 = create_aabb_cuboid2(&renderable2.borrow().get_renderable_object());
+                            
+                            if renderable1_aabb_cuboid2.intersects(&renderable2_aabb_cuboid2) {
+                                renderable.borrow_mut().set_should_delete_renderable(true);
+                                renderable2.borrow_mut().set_should_delete_renderable(true);
+                            }
+                        }
+                    }
+                }
             }
         }
 
