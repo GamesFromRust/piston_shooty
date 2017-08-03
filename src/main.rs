@@ -46,7 +46,7 @@ const BULLET_VELOCITY_MAGNITUDE: f64 = 200.0;
 const GUN_ROTATIONAL_VELOCITY: f64 = 4.0;
 const GUN_SCALE: f64 = 0.5;
 const GREEN: [f32; 4] = [0.0, 1.0, 0.0, 1.0];
-const RED:      [f32; 4] = [1.0, 0.0, 0.0, 1.0];
+// const RED:      [f32; 4] = [1.0, 0.0, 0.0, 1.0];
 // const BLUE:     [f32; 4] = [0.0, 0.0, 1.0, 1.0];
 const WHITE: [f32; 4] = [1.0, 1.0, 1.0, 1.0];
 const MOVE_SPEED_MAX: f64 = 500.0;
@@ -179,8 +179,8 @@ impl World {
 
         let mut world_reqs: Vec<WorldReq> = Vec::new();
         for updatable in &self.updatables {
-            let currentWorldReqs = &mut updatable.borrow_mut().update(&key_states, &mouse_states, &mouse_pos, &args);
-            world_reqs.append(currentWorldReqs);
+            let current_world_reqs = &mut updatable.borrow_mut().update(&key_states, &mouse_states, &mouse_pos, &args);
+            world_reqs.append(current_world_reqs);
         }
         
         for world_req in world_reqs {
@@ -241,6 +241,7 @@ impl Renderable for Ground {
         false
     }
 
+    #[allow(unused_variables)]
     fn set_should_delete_renderable(&mut self, should_delete: bool) {
         // do nothing
     }
@@ -263,6 +264,7 @@ impl Renderable for Wall {
         false
     }
 
+    #[allow(unused_variables)]
     fn set_should_delete_renderable(&mut self, should_delete: bool) {
         // do nothing
     }
@@ -297,6 +299,7 @@ impl Renderable for Gun {
 }
 
 impl Updatable for Gun {
+    #[allow(unused_variables)]
     fn update(&mut self,
                 key_states: &HashMap<Key, input::ButtonState>,
                 mouse_states: &HashMap<MouseButton, input::ButtonState>,
@@ -361,6 +364,8 @@ impl Renderable for Bullet {
 }
 
 impl Updatable for Bullet {
+
+    #[allow(unused_variables)]
     fn update(&mut self,
                 key_states: &HashMap<Key, input::ButtonState>,
                 mouse_states: &HashMap<MouseButton, input::ButtonState>,
@@ -425,6 +430,7 @@ impl Renderable for Player {
         false
     }
 
+    #[allow(unused_variables)]
     fn set_should_delete_renderable(&mut self, should_delete: bool) {
         // do nothing
     }
@@ -455,6 +461,7 @@ impl Updatable for Player {
         false
     }
 
+    #[allow(unused_variables)]
     fn set_should_delete_updatable(&mut self, should_delete: bool) {
         // do nothing
     }
@@ -607,8 +614,6 @@ pub struct App {
     num_frames_in_batch: u64,
     average_frame_time: u64,
     font_manager: FontManager,
-    enemies: Vec<Rc<RefCell<Enemy>>>,
-    walls: Vec<Rc<Wall>>,
     window_height: f64,
     window_width: f64,
     is_paused: bool,
@@ -791,9 +796,6 @@ fn main() {
         },
     };
 
-    let mut enemies:Vec<Rc<RefCell<Enemy>>> = Vec::new();
-    let mut walls: Vec<Rc<Wall>> = Vec::new();
-
     // Read in a level.
     let mut line_num = 0;
     for line in &level {
@@ -812,7 +814,6 @@ fn main() {
                     },
                 };
                 let rc = Rc::new(wall);
-                walls.push(rc.clone());
                 world.add_static_renderable_at_layer(rc.clone(), WALL_LAYER);
             } else if item == "P" {
                 let ground = Ground {
@@ -829,7 +830,7 @@ fn main() {
                 let rc = Rc::new(ground);
                 world.add_static_renderable_at_layer(rc.clone(), GROUND_LAYER);
 
-                let mut player: Player = Player {
+                let player: Player = Player {
                     renderable_object: RenderableObject {
                         texture: hand_gun.clone(),
                         position: Vector2 {
@@ -876,7 +877,6 @@ fn main() {
                     should_delete: false,
                 };
                 let refcell = Rc::new(RefCell::new(enemy));
-                enemies.push(refcell.clone());
                 world.add_dynamic_renderable_at_layer(refcell.clone(), ENEMY_LAYER);
             } else if item == "_" {
                 let ground = Ground {
@@ -900,12 +900,10 @@ fn main() {
 
     let mut app = App {
         window: window,
-        enemies: enemies,
         last_batch_start_time: time::precise_time_ns(),
         num_frames_in_batch: 0,
         average_frame_time: 1,
         font_manager: font_manager,
-        walls: walls,
         window_height: HEIGHT as f64,
         window_width: WIDTH as f64,
         is_paused: false,
