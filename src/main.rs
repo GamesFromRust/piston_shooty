@@ -70,7 +70,7 @@ const ENEMY_LAYER: usize = 1;
 const PLAYER_LAYER: usize = 1;
 const PROJECTILE_LAYER: usize = 2;
 
-const LEVEL_LIST: [&'static str; 2] = ["Level2", "Level3"];
+const LEVEL_LIST: [&'static str; 2] = ["Sunday-Gunday", "Multi-Level Mark-hitting"];
 
 // TODO: Add self/guns/bullets to here.
 pub struct World {
