@@ -49,7 +49,6 @@ const GREEN: [f32; 4] = [0.0, 1.0, 0.0, 1.0];
 // const RED:      [f32; 4] = [1.0, 0.0, 0.0, 1.0];
 // const BLUE:     [f32; 4] = [0.0, 0.0, 1.0, 1.0];
 const WHITE: [f32; 4] = [1.0, 1.0, 1.0, 1.0];
-const MOVE_SPEED_MAX: f64 = 500.0;
 const NSEC_PER_SEC: u64 = 1_000_000_000;
 const BULLET_SCALE:f64 = 0.03125;
 const GRID_WIDTH: u32 = 32;
@@ -575,6 +574,7 @@ impl Player {
         world_reqs
     }
 
+    #[allow(unused_variables)]
     fn apply_input(&mut self, key_states: &HashMap<Key, input::ButtonState>, mouse_states: &HashMap<MouseButton, input::ButtonState>, mouse_pos: &Vector2, dt: f64) -> Vec<WorldReq> {
         let mut world_reqs: Vec<WorldReq> = Vec::new();
 
@@ -779,7 +779,7 @@ fn load_level(texture_manager:&mut TextureManager, sound_manager:&mut SoundManag
         //     print!("{},", item);
         // }
         // println!("");
-        
+
         level.push(row);
     }
 
