@@ -37,6 +37,10 @@ use ncollide_geometry::bounding_volume::BoundingVolume;
 use std::io::{self, Write};
 use csv::index::{Indexed, create_index};
 use std::cmp;
+use std::sync::mpsc::channel;
+use std::sync::mpsc::Receiver;
+use std::thread;
+use std::time::Duration;
 
 const WIDTH: u32 = 1280;
 const HEIGHT: u32 = 720;
@@ -75,6 +79,8 @@ pub struct World {
     updatables: Vec<Rc<RefCell<Updatable>>>,
     game_ended_state: GameEndedState,
     player: Rc<RefCell<Player>>,
+    receiver: Receiver<u64>,
+    should_display_level_name: bool,
 }
 
 pub enum WorldRequestType {
@@ -116,6 +122,7 @@ impl World {
     }
 
     fn update(&mut self, key_states: &HashMap<Key, input::ButtonState>, mouse_states: &HashMap<MouseButton, input::ButtonState>, mouse_pos: &Vector2, args: &UpdateArgs) {
+        let _ = self.receiver.try_recv().map(|_| self.should_display_level_name = false);
 
         // check for victory
         let mut no_enemies = true;
@@ -487,11 +494,11 @@ impl Updatable for Player {
 
 impl Player {
     fn shoot_bullets(&mut self) -> Vec<WorldReq> {
-        let mut world_reqs: Vec<WorldReq> = Vec::new();
-
         if self.has_shot {
-            return world_reqs;
+            return Vec::new();
         }
+
+        let mut world_reqs: Vec<WorldReq> = Vec::new();
 
         for projectile in &self.guns {
             let bullet = Rc::new(RefCell::new(projectile.borrow_mut().shoot_bullet(&self.bullet_texture)));
@@ -512,12 +519,18 @@ impl Player {
             world_reqs.push(world_req);
         }
 
-        self.has_shot = true;
+        if !world_reqs.is_empty() {
+            self.has_shot = true;
+        }
 
         world_reqs
     }
 
     fn shoot_gun(&mut self, mouse_pos: &Vector2) -> Vec<WorldReq>  {
+        if self.has_shot {
+            return Vec::new()
+        }
+
         let rotation = match self.guns.last() {
             Some(projectile) => projectile.borrow().renderable_object.rotation,
             None => self.renderable_object.rotation,
@@ -694,9 +707,14 @@ impl App {
             }
 
             // Draw our fps.
-            let transform = c.transform.trans(10.0, 10.0);
+            let fps_transform = c.transform.trans(10.0, 10.0);
             let cache_rc = font_manager.get("Roboto-Regular.ttf");
-            text(WHITE, 14, &fps_text, cache_rc.borrow_mut().deref_mut(), transform, gl);
+            text(WHITE, 14, &fps_text, cache_rc.borrow_mut().deref_mut(), fps_transform, gl);
+
+            // Draw our level name.
+            if world.should_display_level_name {
+                draw_text_overlay(&mut font_manager, &c, &mut gl, window_width, window_height, LEVEL_LIST[level_index]);
+            }
 
             if game_ended_state.game_ended {
                 if game_ended_state.won {
@@ -765,6 +783,8 @@ fn load_level(texture_manager:&mut TextureManager, sound_manager:&mut SoundManag
     };
     
     let player = Rc::new(RefCell::new(player));
+    
+    let (sender, receiver) = channel();
 
     let mut world: World = World {
         static_renderables: Vec::new(),
@@ -775,6 +795,8 @@ fn load_level(texture_manager:&mut TextureManager, sound_manager:&mut SoundManag
             won: false
         },
         player: player.clone(),
+        receiver: receiver,
+        should_display_level_name: true,
     };
 
     let new_csv_rdr = || csv::Reader::from_file(format!("assets\\Levels\\{}.csv", level_name)).unwrap().has_headers(false);
@@ -886,6 +908,16 @@ fn load_level(texture_manager:&mut TextureManager, sound_manager:&mut SoundManag
         }
         line_num += 1;
     }
+
+    // Spawn one second timer.
+    thread::spawn(move || {
+        thread::sleep(Duration::from_secs(1));
+        // The send only fails if the receiver is disconnected.
+        // For us, this (probably) means the receiver's been deallocated
+        // and replaced with the next world's receiver.
+        let _ = sender.send(0);
+    });
+
     world
 }
 
