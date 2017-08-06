@@ -614,11 +614,10 @@ pub struct App {
     level_index: usize,
 }
 
-fn draw_victory_overlay(font_manager: &mut FontManager, c: &Context, gl: &mut G2d, window_width: f64, window_height: f64) {
-    let victory_text = "Success!";
+fn draw_text_overlay(font_manager: &mut FontManager, c: &Context, gl: &mut G2d, window_width: f64, window_height: f64, string: &str) {
     let transform = c.transform.trans(window_width * 0.5, window_height * 0.5);
     let cache_rc = font_manager.get("Roboto-Regular.ttf");
-    text(WHITE, 36, &victory_text, cache_rc.borrow_mut().deref_mut(), transform, gl);
+    text(WHITE, 36, string, cache_rc.borrow_mut().deref_mut(), transform, gl);
 }
 
 fn render_renderable_object(c: &Context, gl: &mut G2d, renderable_object: &RenderableObject) {
@@ -670,6 +669,7 @@ impl App {
         let window_height = self.window_height;
         let game_ended_state = &self.world.game_ended_state;
         let world = &self.world;
+        let level_index = self.level_index;
 
         self.window.draw_2d(event, |c: Context, mut gl: &mut G2d| {
             // Clear the screen.
@@ -698,30 +698,41 @@ impl App {
             let cache_rc = font_manager.get("Roboto-Regular.ttf");
             text(WHITE, 14, &fps_text, cache_rc.borrow_mut().deref_mut(), transform, gl);
 
-            if game_ended_state.game_ended && game_ended_state.won {
-                draw_victory_overlay(&mut font_manager, &c, &mut gl, window_width, window_height);
+            if game_ended_state.game_ended {
+                if game_ended_state.won {
+                    if level_index < LEVEL_LIST.len() {
+                        draw_text_overlay(&mut font_manager, &c, &mut gl, window_width, window_height, "Success! Click to continue.");
+                    } else {
+                        draw_text_overlay(&mut font_manager, &c, &mut gl, window_width, window_height, "Success! You win!");
+                    }
+                } else {
+                    draw_text_overlay(&mut font_manager, &c, &mut gl, window_width, window_height, "Defeat! Click to retry.");
+                }
             }
         });
     }
 
     fn update(&mut self, key_states: &HashMap<Key, input::ButtonState>, mouse_states: &HashMap<MouseButton, input::ButtonState>, mouse_pos: &Vector2, args: &UpdateArgs) {
-        if self.is_paused {
-            return;
+        if !self.is_paused {
+            self.world.update(&key_states, &mouse_states, &mouse_pos, &args);
         }
+        
+        if self.world.game_ended_state.game_ended {
+            self.is_paused = true;
 
-        self.world.update(&key_states, &mouse_states, &mouse_pos, &args);
-
-        if self.world.game_ended_state.game_ended == true {
-            if self.world.game_ended_state.won == false {
-                self.world = load_level(&mut self.texture_manager, &mut self.sound_manager, LEVEL_LIST[self.level_index]);
-                return;
-            }
-            
-            self.level_index = self.level_index + 1;
-            if self.level_index >= LEVEL_LIST.len() {
-                self.is_paused = true;
-            } else {
-                self.world = load_level(&mut self.texture_manager, &mut self.sound_manager, LEVEL_LIST[self.level_index]);
+            match mouse_states.get(&MouseButton::Left) {
+                Some(value) => {
+                    if value.pressed {
+                        if self.world.game_ended_state.won {
+                            self.level_index = self.level_index + 1;
+                        }
+                        if self.level_index < LEVEL_LIST.len() {
+                            self.world = load_level(&mut self.texture_manager, &mut self.sound_manager, LEVEL_LIST[self.level_index]);
+                            self.is_paused = false;
+                        }
+                    }
+                },
+                _ => {}
             }
         }
     }
@@ -912,7 +923,7 @@ fn main() {
 
     font_manager.get("Roboto-Regular.ttf");
 
-    let world = load_level(&mut texture_manager, &mut sound_manager, "Level2"); 
+    let world = load_level(&mut texture_manager, &mut sound_manager, LEVEL_LIST[0]); 
 
     let mut app = App {
         window: window,
@@ -940,10 +951,8 @@ fn main() {
         input::gather_input(&e, &mut key_states, &mut mouse_states, &mut mouse_pos);
         
         if let Some(u) = e.update_args() {
-            if !app.is_paused {
-                app.update(&key_states, &mouse_states, &mouse_pos, &u);
-                input::update_input(&mut key_states, &mut mouse_states);
-            }
+            app.update(&key_states, &mouse_states, &mouse_pos, &u);
+            input::update_input(&mut key_states, &mut mouse_states);
         }
 
         // Render.
