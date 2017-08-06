@@ -576,36 +576,7 @@ impl Player {
     }
 
     fn apply_input(&mut self, key_states: &HashMap<Key, input::ButtonState>, mouse_states: &HashMap<MouseButton, input::ButtonState>, mouse_pos: &Vector2, dt: f64) -> Vec<WorldReq> {
-        let mut player_velocity: Vector2 = Vector2::default();
         let mut world_reqs: Vec<WorldReq> = Vec::new();
-
-        for (key, value) in key_states {
-            match *key {
-                // self
-                Key::W => {
-                    if value.pressed || value.held {
-                        player_velocity.y -= 1.0 * dt;
-                    }
-                }
-                Key::A => {
-                    if value.pressed || value.held {
-                        player_velocity.x -= 1.0 * dt;
-                    }
-                }
-                Key::S => {
-                    if value.pressed || value.held {
-                        player_velocity.y += 1.0 * dt;
-                    }
-                }
-                Key::D => {
-                    if value.pressed || value.held {
-                        player_velocity.x += 1.0 * dt;
-                    }
-                }
-                // Default
-                _ => {}
-            }
-        }
 
         for (button, value) in mouse_states {
             match *button {
@@ -622,11 +593,6 @@ impl Player {
                 // Default
                 _ => {}
             }
-        }
-
-        if player_velocity != Vector2::default() {
-            player_velocity.normalize();
-            self.renderable_object.position += player_velocity * MOVE_SPEED_MAX * dt;
         }
 
         world_reqs
@@ -808,12 +774,12 @@ fn load_level(texture_manager:&mut TextureManager, sound_manager:&mut SoundManag
     let mut level: Vec<Vec<String>> = Vec::new();
     for row in index.records() {
         let row = row.unwrap();
-
-        for item in &row {
-            print!("{},", item);
-        }
-        println!("");
-
+        
+        // for item in &row {
+        //     print!("{},", item);
+        // }
+        // println!("");
+        
         level.push(row);
     }
 
