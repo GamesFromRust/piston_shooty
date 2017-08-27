@@ -9,6 +9,12 @@ mod renderable_object;
 mod renderable;
 mod object_type;
 mod updatable;
+mod ground;
+mod wall;
+mod enemy;
+mod gun;
+mod bullet;
+mod player;
 
 extern crate piston;
 extern crate glutin_window;
@@ -42,10 +48,10 @@ use std::sync::mpsc::channel;
 use std::thread;
 use std::time::Duration;
 use world::World;
-use world::Player;
-use world::Wall;
-use world::Ground;
-use world::Enemy;
+use player::Player;
+use wall::Wall;
+use ground::Ground;
+use enemy::Enemy;
 use world::GameEndedState;
 use renderable_object::RenderableObject;
 
