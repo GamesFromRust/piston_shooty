@@ -36,14 +36,12 @@ use vector2::*;
 use asset_loader::AssetLoader;
 use std::rc::Rc;
 use std::cell::RefCell;
-use std::ops::Deref;
 use texture_manager::TextureManager;
 use sound_manager::SoundManager;
 use font_manager::FontManager;
 use std::ops::DerefMut;
 use std::io::{self, Write};
 use csv::index::{Indexed, create_index};
-use std::cmp;
 use std::sync::mpsc::channel;
 use std::thread;
 use std::time::Duration;
@@ -94,22 +92,6 @@ pub struct App {
     level_index: usize,
 }
 
-fn draw_text_overlay(font_manager: &mut FontManager, c: &Context, gl: &mut G2d, window_width: f64, window_height: f64, string: &str) {
-    let transform = c.transform.trans(window_width * 0.5, window_height * 0.5);
-    let cache_rc = font_manager.get("Roboto-Regular.ttf");
-    text(WHITE, 36, string, cache_rc.borrow_mut().deref_mut(), transform, gl);
-}
-
-fn render_renderable_object(c: &Context, gl: &mut G2d, renderable_object: &RenderableObject) {
-    let transform = c.transform
-        .trans(renderable_object.position.x, renderable_object.position.y)
-        .rot_rad(renderable_object.rotation)
-        .trans((renderable_object.texture.get_size().0 as f64) * -0.5 * renderable_object.scale,
-                (renderable_object.texture.get_size().1 as f64) * -0.5 * renderable_object.scale)
-        .scale(renderable_object.scale, renderable_object.scale);
-    image(renderable_object.texture.deref(), transform, gl);
-}
-
 impl App {
     fn render(&mut self, event: &Input) {
         // TODO: Read a book on how to do a fps counter.
@@ -137,7 +119,7 @@ impl App {
         let mut font_manager = &mut self.font_manager;
         let window_width = self.window_width;
         let window_height = self.window_height;
-        let game_ended_state = &self.world.game_ended_state;
+        // let game_ended_state = &self.world.game_ended_state;
         let world = &self.world;
         let level_index = self.level_index;
 
@@ -145,42 +127,12 @@ impl App {
             // Clear the screen.
             clear(GREEN, gl);
 
-            let max_layers = cmp::max(world.static_renderables.len(), world.dynamic_renderables.len());
-            for i in 0..max_layers {
-                if i < world.static_renderables.len() {
-                    for renderable in &world.static_renderables[i] {
-                        let renderable_object = renderable.get_renderable_object();
-                        render_renderable_object(&c, &mut gl, &renderable_object);
-                    }
-                }
-                if i < world.dynamic_renderables.len() {
-                    for renderable in &world.dynamic_renderables[i] {
-                        // TODO: Why can't we do this?
-                        // let renderable_object = renderable.borrow().get_renderable_object();
-                        // render_renderable_object(&c, &mut gl, &renderable_object);
-                        render_renderable_object(&c, &mut gl, &renderable.borrow().get_renderable_object());
-                    }
-                }
-            }
+            world.render(c, gl, font_manager, window_width, window_height);
 
             // Draw our fps.
             let fps_transform = c.transform.trans(10.0, 10.0);
             let cache_rc = font_manager.get("Roboto-Regular.ttf");
             text(WHITE, 14, &fps_text, cache_rc.borrow_mut().deref_mut(), fps_transform, gl);
-
-            if game_ended_state.game_ended {
-                if game_ended_state.won {
-                    if level_index < LEVEL_LIST.len() {
-                        draw_text_overlay(&mut font_manager, &c, &mut gl, window_width, window_height, "Success! Click to continue.");
-                    } else {
-                        draw_text_overlay(&mut font_manager, &c, &mut gl, window_width, window_height, "Success! You win!");
-                    }
-                } else {
-                    draw_text_overlay(&mut font_manager, &c, &mut gl, window_width, window_height, "Defeat! Click to retry.");
-                }
-            } else if world.should_display_level_name {
-                draw_text_overlay(&mut font_manager, &c, &mut gl, window_width, window_height, LEVEL_LIST[level_index]);
-            }
         });
     }
 
@@ -251,6 +203,7 @@ fn load_level(texture_manager:&mut TextureManager, sound_manager:&mut SoundManag
         player: player.clone(),
         receiver: receiver,
         should_display_level_name: true,
+        name: String::from(level_name),
     };
 
     let new_csv_rdr = || csv::Reader::from_file(format!("assets\\Levels\\{}.csv", level_name)).unwrap().has_headers(false);

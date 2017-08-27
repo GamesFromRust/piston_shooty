@@ -15,9 +15,14 @@ use renderable::Renderable;
 use object_type::ObjectType;
 use updatable::Updatable;
 use player::Player;
+use std::cmp;
+use font_manager::FontManager;
+use std::ops::Deref;
+use std::ops::DerefMut;
 
 const ENEMY_LAYER: usize = 1;
 const PROJECTILE_LAYER: usize = 2;
+const WHITE: [f32; 4] = [1.0, 1.0, 1.0, 1.0];
 
 pub struct GameEndedState {
     pub game_ended: bool,
@@ -44,9 +49,45 @@ pub struct World {
     pub player: Rc<RefCell<Player>>,
     pub receiver: Receiver<u64>,
     pub should_display_level_name: bool,
+    pub name: String,
 }
 
 impl World {
+    pub fn render(&self, c: Context, mut gl: &mut G2d, mut font_manager: &mut FontManager, window_width: f64, window_height: f64) {
+        let max_layers = cmp::max(self.static_renderables.len(), self.dynamic_renderables.len());
+        for i in 0..max_layers {
+            if i < self.static_renderables.len() {
+                for renderable in &self.static_renderables[i] {
+                    let renderable_object = renderable.get_renderable_object();
+                    render_renderable_object(&c, &mut gl, &renderable_object);
+                }
+            }
+            if i < self.dynamic_renderables.len() {
+                for renderable in &self.dynamic_renderables[i] {
+                    // TODO: Why can't we do this?
+                    // let renderable_object = renderable.borrow().get_renderable_object();
+                    // render_renderable_object(&c, &mut gl, &renderable_object);
+                    render_renderable_object(&c, &mut gl, &renderable.borrow().get_renderable_object());
+                }
+            }
+        }
+
+        if self.game_ended_state.game_ended {
+            if self.game_ended_state.won {
+                // if level_index < LEVEL_LIST.len() {
+                draw_text_overlay(&mut font_manager, &c, &mut gl, window_width, window_height, "Success! Click to continue.");
+                // } 
+                // else {
+                //     draw_text_overlay(&mut font_manager, &c, &mut gl, window_width, window_height, "Success! You win!");
+                // }
+            } else {
+                draw_text_overlay(&mut font_manager, &c, &mut gl, window_width, window_height, "Defeat! Click to retry.");
+            }
+        } else if self.should_display_level_name {
+            draw_text_overlay(&mut font_manager, &c, &mut gl, window_width, window_height, self.name.as_str());
+        }
+    }
+
     pub fn add_static_renderable_at_layer(&mut self, renderable: Rc<Renderable>, layer: usize) {
         while self.static_renderables.len() <= layer {
             self.static_renderables.push(Vec::new());
@@ -178,4 +219,20 @@ fn create_aabb_cuboid2(renderable_object: &RenderableObject) -> ncollide_geometr
     let cuboid2_pos = nalgebra::geometry::Isometry2::new(nalgebra::core::Vector2::new(renderable_object.position.x, renderable_object.position.y), renderable_object.rotation);
     let aabb_cuboid2 = bounding_volume::aabb(&cuboid2, &cuboid2_pos);
     aabb_cuboid2
+}
+
+fn render_renderable_object(c: &Context, gl: &mut G2d, renderable_object: &RenderableObject) {
+    let transform = c.transform
+        .trans(renderable_object.position.x, renderable_object.position.y)
+        .rot_rad(renderable_object.rotation)
+        .trans((renderable_object.texture.get_size().0 as f64) * -0.5 * renderable_object.scale,
+                (renderable_object.texture.get_size().1 as f64) * -0.5 * renderable_object.scale)
+        .scale(renderable_object.scale, renderable_object.scale);
+    image(renderable_object.texture.deref(), transform, gl);
+}
+
+fn draw_text_overlay(font_manager: &mut FontManager, c: &Context, gl: &mut G2d, window_width: f64, window_height: f64, string: &str) {
+    let transform = c.transform.trans(window_width * 0.5, window_height * 0.5);
+    let cache_rc = font_manager.get("Roboto-Regular.ttf");
+    text(WHITE, 36, string, cache_rc.borrow_mut().deref_mut(), transform, gl);
 }
