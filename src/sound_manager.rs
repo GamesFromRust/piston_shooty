@@ -1,5 +1,3 @@
-extern crate std;
-
 use ears::*;
 use asset_loader::AssetLoader;
 use std::rc::Rc;

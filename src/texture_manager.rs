@@ -1,7 +1,3 @@
-extern crate gfx_device_gl;
-extern crate std;
-extern crate piston_window;
-
 use asset_loader::AssetLoader;
 use std::collections::HashMap;
 use std::rc::Rc;

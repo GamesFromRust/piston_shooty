@@ -1,6 +1,3 @@
-extern crate piston_window;
-extern crate std;
-
 use piston_window::*;
 use asset_loader::AssetLoader;
 use std::rc::Rc;

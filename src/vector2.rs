@@ -12,11 +12,11 @@ impl Vector2 {
         return ((self.x * self.x) + (self.y * self.y) as f64).sqrt();
     }
 
-    pub fn normalize(&mut self) {
-        let inv_mag = 1.0 / self.magnitude();
-        self.x *= inv_mag;
-        self.y *= inv_mag;
-    }
+    // pub fn normalize(&mut self) {
+    //     let inv_mag = 1.0 / self.magnitude();
+    //     self.x *= inv_mag;
+    //     self.y *= inv_mag;
+    // }
 
     pub fn normalized(&self) -> Vector2 {
         let inv_mag = 1.0 / self.magnitude();

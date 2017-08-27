@@ -1,10 +1,7 @@
-extern crate gfx_device_gl;
-extern crate find_folder;
-extern crate std;
-extern crate piston_window;
-
 use ears::*;
 use piston_window::*;
+use std;
+use gfx_device_gl;
 
 pub struct AssetLoader {
     pub assets_path: std::path::PathBuf,
