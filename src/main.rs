@@ -6,6 +6,9 @@ mod font_manager;
 mod sound_manager;
 mod world;
 mod renderable_object;
+mod renderable;
+mod object_type;
+mod updatable;
 
 extern crate piston;
 extern crate glutin_window;

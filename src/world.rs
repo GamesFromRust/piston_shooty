@@ -12,6 +12,9 @@ use std::sync::mpsc::Receiver;
 use input;
 use renderable_object::RenderableObject;
 use nalgebra;
+use renderable::Renderable;
+use object_type::ObjectType;
+use updatable::Updatable;
 
 const PROJECTILE_VELOCITY_MAGNITUDE: f64 = 75.0;
 const BULLET_VELOCITY_MAGNITUDE: f64 = 200.0;
@@ -42,13 +45,6 @@ pub struct WorldReq {
     renderable: Option<Rc<RefCell<Renderable>>>,
     updatable: Option<Rc<RefCell<Updatable>>>,
     req_type: WorldRequestType,
-}
-
-pub trait Updatable {
-    fn update(&mut self, key_states: &HashMap<Key, input::ButtonState>, mouse_states: &HashMap<MouseButton, input::ButtonState>, mouse_pos: &Vector2, args: &UpdateArgs) -> Vec<WorldReq>;
-    // TODO: Deletable?
-    fn get_should_delete_updatable(&self) -> bool;
-    fn set_should_delete_updatable(&mut self, should_delete: bool);
 }
 
 impl World {
@@ -173,23 +169,6 @@ impl World {
             }
         }
     }
-}
-
-#[derive(Copy, Clone, PartialEq, Eq)]
-pub enum ObjectType {
-    Wall,
-    Bullet,
-    Gun,
-    Enemy,
-    Player,
-    Ground,
-}
-
-pub trait Renderable {
-    fn get_renderable_object(&self) -> &RenderableObject;
-    fn get_should_delete_renderable(&self) -> bool;
-    fn set_should_delete_renderable(&mut self, should_delete: bool);
-    fn get_object_type(&self) -> ObjectType;
 }
 
 pub struct Ground {
