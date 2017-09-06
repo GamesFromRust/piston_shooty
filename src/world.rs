@@ -19,6 +19,7 @@ use std::cmp;
 use font_manager::FontManager;
 use std::ops::Deref;
 use std::ops::DerefMut;
+use game_state::GameState;
 
 const ENEMY_LAYER: usize = 1;
 const PROJECTILE_LAYER: usize = 2;
@@ -53,7 +54,27 @@ pub struct World {
 }
 
 impl World {
-    pub fn render(&self, c: Context, mut gl: &mut G2d, mut font_manager: &mut FontManager, window_width: f64, window_height: f64) {
+    pub fn add_static_renderable_at_layer(&mut self, renderable: Rc<Renderable>, layer: usize) {
+        while self.static_renderables.len() <= layer {
+            self.static_renderables.push(Vec::new());
+        }
+        self.static_renderables[layer].push(renderable);
+    }
+
+    pub fn add_dynamic_renderable_at_layer(&mut self, renderable: Rc<RefCell<Renderable>>, layer: usize) {
+        while self.dynamic_renderables.len() <= layer {
+            self.dynamic_renderables.push(Vec::new());
+        }
+        self.dynamic_renderables[layer].push(renderable);
+    }
+
+    pub fn add_updatable(&mut self, updatable: Rc<RefCell<Updatable>>) {
+        self.updatables.push(updatable);
+    }
+}
+
+impl GameState for World {
+    fn render(&self, c: Context, mut gl: &mut G2d, mut font_manager: &mut FontManager, window_width: f64, window_height: f64) {
         let max_layers = cmp::max(self.static_renderables.len(), self.dynamic_renderables.len());
         for i in 0..max_layers {
             if i < self.static_renderables.len() {
@@ -88,25 +109,7 @@ impl World {
         }
     }
 
-    pub fn add_static_renderable_at_layer(&mut self, renderable: Rc<Renderable>, layer: usize) {
-        while self.static_renderables.len() <= layer {
-            self.static_renderables.push(Vec::new());
-        }
-        self.static_renderables[layer].push(renderable);
-    }
-
-    pub fn add_dynamic_renderable_at_layer(&mut self, renderable: Rc<RefCell<Renderable>>, layer: usize) {
-        while self.dynamic_renderables.len() <= layer {
-            self.dynamic_renderables.push(Vec::new());
-        }
-        self.dynamic_renderables[layer].push(renderable);
-    }
-
-    pub fn add_updatable(&mut self, updatable: Rc<RefCell<Updatable>>) {
-        self.updatables.push(updatable);
-    }
-
-    pub fn update(&mut self, key_states: &HashMap<Key, input::ButtonState>, mouse_states: &HashMap<MouseButton, input::ButtonState>, mouse_pos: &Vector2, args: &UpdateArgs) {
+    fn update(&mut self, key_states: &HashMap<Key, input::ButtonState>, mouse_states: &HashMap<MouseButton, input::ButtonState>, mouse_pos: &Vector2, args: &UpdateArgs) {
         let _ = self.receiver.try_recv().map(|_| self.should_display_level_name = false);
 
         // check for victory

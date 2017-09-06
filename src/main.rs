@@ -15,6 +15,7 @@ mod enemy;
 mod gun;
 mod bullet;
 mod player;
+mod game_state;
 
 extern crate piston;
 extern crate glutin_window;
@@ -52,6 +53,7 @@ use ground::Ground;
 use enemy::Enemy;
 use world::GameEndedState;
 use renderable_object::RenderableObject;
+use game_state::GameState;
 
 const WIDTH: u32 = 1280;
 const HEIGHT: u32 = 720;
@@ -116,12 +118,11 @@ impl App {
             &self.last_batch_start_time.to_string() +
             &"\ncurr_frame_time: ".to_string() + &curr_frame_time.to_string();
 
-        let mut font_manager = &mut self.font_manager;
+        let font_manager = &mut self.font_manager;
         let window_width = self.window_width;
         let window_height = self.window_height;
         // let game_ended_state = &self.world.game_ended_state;
         let world = &self.world;
-        let level_index = self.level_index;
 
         self.window.draw_2d(event, |c: Context, mut gl: &mut G2d| {
             // Clear the screen.
