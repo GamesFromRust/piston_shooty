@@ -16,6 +16,8 @@ mod gun;
 mod bullet;
 mod player;
 mod game_state;
+mod render_utils;
+mod victory_screen;
 
 extern crate piston;
 extern crate glutin_window;
@@ -54,6 +56,8 @@ use enemy::Enemy;
 use world::GameEndedState;
 use renderable_object::RenderableObject;
 use game_state::GameState;
+use game_state::UpdateResult;
+use victory_screen::VictoryScreen;
 
 const WIDTH: u32 = 1280;
 const HEIGHT: u32 = 720;
@@ -77,7 +81,7 @@ const WALL_LAYER: usize = 0;
 const ENEMY_LAYER: usize = 1;
 const PLAYER_LAYER: usize = 1;
 
-const LEVEL_LIST: [&'static str; 2] = ["Sunday-Gunday", "Multi-Level Mark-hitting"];
+const LEVEL_LIST: [&'static str; 1] = ["Sunday-Gunday"];//, "Multi-Level Mark-hitting"];
 
 pub struct App {
     window: piston_window::PistonWindow,
@@ -87,8 +91,7 @@ pub struct App {
     font_manager: FontManager,
     window_height: f64,
     window_width: f64,
-    is_paused: bool,
-    world: World,
+    game_state: Box<GameState>,
     texture_manager: TextureManager,
     sound_manager: SoundManager,
     level_index: usize,
@@ -122,13 +125,13 @@ impl App {
         let window_width = self.window_width;
         let window_height = self.window_height;
         // let game_ended_state = &self.world.game_ended_state;
-        let world = &self.world;
+        let game_state = &self.game_state;
 
         self.window.draw_2d(event, |c: Context, mut gl: &mut G2d| {
             // Clear the screen.
             clear(GREEN, gl);
 
-            world.render(c, gl, font_manager, window_width, window_height);
+            game_state.render(c, gl, font_manager, window_width, window_height);
 
             // Draw our fps.
             let fps_transform = c.transform.trans(10.0, 10.0);
@@ -138,27 +141,32 @@ impl App {
     }
 
     fn update(&mut self, key_states: &HashMap<Key, input::ButtonState>, mouse_states: &HashMap<MouseButton, input::ButtonState>, mouse_pos: &Vector2, args: &UpdateArgs) {
-        if !self.is_paused {
-            self.world.update(&key_states, &mouse_states, &mouse_pos, &args);
-        }
-        
-        if self.world.game_ended_state.game_ended {
-            self.is_paused = true;
+        let update_result = self.game_state.update(&key_states, &mouse_states, &mouse_pos, &args);
 
-            match mouse_states.get(&MouseButton::Left) {
-                Some(value) => {
-                    if value.pressed {
-                        if self.world.game_ended_state.won {
-                            self.level_index = self.level_index + 1;
-                        }
-                        if self.level_index < LEVEL_LIST.len() {
-                            self.world = load_level(&mut self.texture_manager, &mut self.sound_manager, LEVEL_LIST[self.level_index]);
-                            self.is_paused = false;
-                        }
-                    }
-                },
-                _ => {}
-            }
+        match update_result {
+            UpdateResult::Running => {
+                // do nothing
+            },
+            UpdateResult::Success => {
+                self.level_index = self.level_index + 1;
+                self.advance_level(&mouse_states);
+            },
+            UpdateResult::Fail => {
+                self.advance_level(&mouse_states);
+            },
+        }
+    }
+
+    fn advance_level(&mut self) {
+        if self.level_index > LEVEL_LIST.len() {
+            self.level_index = 0;
+        }
+
+        if self.level_index < LEVEL_LIST.len() {
+            let world = load_level(&mut self.texture_manager, &mut self.sound_manager, LEVEL_LIST[self.level_index]);
+            self.game_state = Box::new(world);
+        } else if self.level_index == LEVEL_LIST.len() {
+            self.game_state = Box::new(VictoryScreen{});
         }
     }
 }
@@ -373,8 +381,7 @@ fn main() {
         font_manager: font_manager,
         window_height: HEIGHT as f64,
         window_width: WIDTH as f64,
-        is_paused: false,
-        world: world,
+        game_state: Box::new(world),
         texture_manager: texture_manager,
         sound_manager: sound_manager,
         level_index: 0,

@@ -18,12 +18,12 @@ use player::Player;
 use std::cmp;
 use font_manager::FontManager;
 use std::ops::Deref;
-use std::ops::DerefMut;
 use game_state::GameState;
+use game_state::UpdateResult;
+use render_utils;
 
 const ENEMY_LAYER: usize = 1;
 const PROJECTILE_LAYER: usize = 2;
-const WHITE: [f32; 4] = [1.0, 1.0, 1.0, 1.0];
 
 pub struct GameEndedState {
     pub game_ended: bool,
@@ -71,6 +71,18 @@ impl World {
     pub fn add_updatable(&mut self, updatable: Rc<RefCell<Updatable>>) {
         self.updatables.push(updatable);
     }
+
+    fn did_click(&mut self, mouse_states: &HashMap<MouseButton, input::ButtonState>) -> bool{
+        match mouse_states.get(&MouseButton::Left) {
+            Some(value) => {
+                if value.pressed {
+                    return true;
+                }
+            },
+            _ => {}
+        }
+        false
+    }
 }
 
 impl GameState for World {
@@ -95,21 +107,16 @@ impl GameState for World {
 
         if self.game_ended_state.game_ended {
             if self.game_ended_state.won {
-                // if level_index < LEVEL_LIST.len() {
-                draw_text_overlay(&mut font_manager, &c, &mut gl, window_width, window_height, "Success! Click to continue.");
-                // } 
-                // else {
-                //     draw_text_overlay(&mut font_manager, &c, &mut gl, window_width, window_height, "Success! You win!");
-                // }
+                render_utils::draw_text_overlay(&mut font_manager, &c, &mut gl, window_width, window_height, "Success! Click to continue.");
             } else {
-                draw_text_overlay(&mut font_manager, &c, &mut gl, window_width, window_height, "Defeat! Click to retry.");
+                render_utils::draw_text_overlay(&mut font_manager, &c, &mut gl, window_width, window_height, "Defeat! Click to retry.");
             }
         } else if self.should_display_level_name {
-            draw_text_overlay(&mut font_manager, &c, &mut gl, window_width, window_height, self.name.as_str());
+            render_utils::draw_text_overlay(&mut font_manager, &c, &mut gl, window_width, window_height, self.name.as_str());
         }
     }
 
-    fn update(&mut self, key_states: &HashMap<Key, input::ButtonState>, mouse_states: &HashMap<MouseButton, input::ButtonState>, mouse_pos: &Vector2, args: &UpdateArgs) {
+    fn update(&mut self, key_states: &HashMap<Key, input::ButtonState>, mouse_states: &HashMap<MouseButton, input::ButtonState>, mouse_pos: &Vector2, args: &UpdateArgs) -> UpdateResult {
         let _ = self.receiver.try_recv().map(|_| self.should_display_level_name = false);
 
         // check for victory
@@ -122,7 +129,11 @@ impl GameState for World {
         }
         if no_enemies {
             self.game_ended_state = GameEndedState { game_ended: true, won: true };
-            return;
+            if self.did_click(&mouse_states) {
+                return UpdateResult::Success;
+            } else {
+                return UpdateResult::Running;
+            }
         }
 
         // check for defeat
@@ -136,7 +147,11 @@ impl GameState for World {
         }
         if self.player.borrow().has_shot && !has_bullets {
             self.game_ended_state = GameEndedState { game_ended: true, won: false };
-            return;
+            if self.did_click(&mouse_states) {
+                return UpdateResult::Fail;
+            } else {
+                return UpdateResult::Running;
+            }
         }
 
         for renderable_layer in &self.dynamic_renderables {
@@ -211,6 +226,8 @@ impl GameState for World {
                 },
             }
         }
+
+        UpdateResult::Running
     }
 }
 
@@ -232,10 +249,4 @@ fn render_renderable_object(c: &Context, gl: &mut G2d, renderable_object: &Rende
                 (renderable_object.texture.get_size().1 as f64) * -0.5 * renderable_object.scale)
         .scale(renderable_object.scale, renderable_object.scale);
     image(renderable_object.texture.deref(), transform, gl);
-}
-
-fn draw_text_overlay(font_manager: &mut FontManager, c: &Context, gl: &mut G2d, window_width: f64, window_height: f64, string: &str) {
-    let transform = c.transform.trans(window_width * 0.5, window_height * 0.5);
-    let cache_rc = font_manager.get("Roboto-Regular.ttf");
-    text(WHITE, 36, string, cache_rc.borrow_mut().deref_mut(), transform, gl);
 }

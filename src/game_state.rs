@@ -8,6 +8,12 @@ use std::collections::HashMap;
 use input;
 use vector2::Vector2;
 
+pub enum UpdateResult {
+    Running,
+    Success,
+    Fail,
+}
+
 pub trait GameState {
     fn render(
         &self, 
@@ -22,5 +28,5 @@ pub trait GameState {
         key_states: &HashMap<Key, input::ButtonState>, 
         mouse_states: &HashMap<MouseButton, input::ButtonState>, 
         mouse_pos: &Vector2, 
-        args: &UpdateArgs);
+        args: &UpdateArgs) -> UpdateResult;
 }
