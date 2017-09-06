@@ -21,6 +21,7 @@ use std::ops::Deref;
 use game_state::GameState;
 use game_state::UpdateResult;
 use render_utils;
+use game_state_utils;
 
 const ENEMY_LAYER: usize = 1;
 const PROJECTILE_LAYER: usize = 2;
@@ -72,86 +73,43 @@ impl World {
         self.updatables.push(updatable);
     }
 
-    fn did_click(&mut self, mouse_states: &HashMap<MouseButton, input::ButtonState>) -> bool{
-        match mouse_states.get(&MouseButton::Left) {
-            Some(value) => {
-                if value.pressed {
-                    return true;
-                }
-            },
-            _ => {}
-        }
-        false
-    }
-}
-
-impl GameState for World {
-    fn render(&self, c: Context, mut gl: &mut G2d, mut font_manager: &mut FontManager, window_width: f64, window_height: f64) {
-        let max_layers = cmp::max(self.static_renderables.len(), self.dynamic_renderables.len());
-        for i in 0..max_layers {
-            if i < self.static_renderables.len() {
-                for renderable in &self.static_renderables[i] {
-                    let renderable_object = renderable.get_renderable_object();
-                    render_renderable_object(&c, &mut gl, &renderable_object);
-                }
-            }
-            if i < self.dynamic_renderables.len() {
-                for renderable in &self.dynamic_renderables[i] {
-                    // TODO: Why can't we do this?
-                    // let renderable_object = renderable.borrow().get_renderable_object();
-                    // render_renderable_object(&c, &mut gl, &renderable_object);
-                    render_renderable_object(&c, &mut gl, &renderable.borrow().get_renderable_object());
-                }
-            }
-        }
-
-        if self.game_ended_state.game_ended {
-            if self.game_ended_state.won {
-                render_utils::draw_text_overlay(&mut font_manager, &c, &mut gl, window_width, window_height, "Success! Click to continue.");
-            } else {
-                render_utils::draw_text_overlay(&mut font_manager, &c, &mut gl, window_width, window_height, "Defeat! Click to retry.");
-            }
-        } else if self.should_display_level_name {
-            render_utils::draw_text_overlay(&mut font_manager, &c, &mut gl, window_width, window_height, self.name.as_str());
-        }
-    }
-
-    fn update(&mut self, key_states: &HashMap<Key, input::ButtonState>, mouse_states: &HashMap<MouseButton, input::ButtonState>, mouse_pos: &Vector2, args: &UpdateArgs) -> UpdateResult {
-        let _ = self.receiver.try_recv().map(|_| self.should_display_level_name = false);
-
-        // check for victory
-        let mut no_enemies = true;
+    fn is_victorious(&self) -> bool {
         for renderable in &self.dynamic_renderables[ENEMY_LAYER] {
             if renderable.borrow().get_object_type() == ObjectType::Enemy {
-                no_enemies = false;
-                break;
+                return false;
             }
         }
-        if no_enemies {
-            self.game_ended_state = GameEndedState { game_ended: true, won: true };
-            if self.did_click(&mouse_states) {
-                return UpdateResult::Success;
-            } else {
-                return UpdateResult::Running;
-            }
-        }
+        
+        true
+    }
 
-        // check for defeat
-        let mut has_bullets = false;
+    fn was_defeated(&self) -> bool {
+        if !self.player.borrow().has_shot {
+            return false;
+        }
+        
         for renderable_layer in &self.dynamic_renderables {
             for renderable in renderable_layer {
                 if renderable.borrow().get_object_type() == ObjectType::Bullet {
-                    has_bullets = true;
+                    return false;
                 }
             }
         }
-        if self.player.borrow().has_shot && !has_bullets {
+
+        true
+    }
+
+    fn update_game_running(&mut self, key_states: &HashMap<Key, input::ButtonState>, mouse_states: &HashMap<MouseButton, input::ButtonState>, mouse_pos: &Vector2, args: &UpdateArgs) -> UpdateResult {
+        let _ = self.receiver.try_recv().map(|_| self.should_display_level_name = false);
+
+        if self.is_victorious() {
+            self.game_ended_state = GameEndedState { game_ended: true, won: true };
+            return UpdateResult::Running;
+        }
+
+        if self.was_defeated() {
             self.game_ended_state = GameEndedState { game_ended: true, won: false };
-            if self.did_click(&mouse_states) {
-                return UpdateResult::Fail;
-            } else {
-                return UpdateResult::Running;
-            }
+            return UpdateResult::Running;
         }
 
         for renderable_layer in &self.dynamic_renderables {
@@ -227,6 +185,71 @@ impl GameState for World {
             }
         }
 
+        UpdateResult::Running
+    }
+
+    fn update_game_ended_lost(&self, mouse_states: &HashMap<MouseButton, input::ButtonState>) -> UpdateResult {
+        if game_state_utils::did_click(&mouse_states) {
+            return UpdateResult::Fail;
+        } else {
+            return UpdateResult::Running;
+        }
+    }
+
+    fn update_game_ended_won(&self, mouse_states: &HashMap<MouseButton, input::ButtonState>) -> UpdateResult {
+        if game_state_utils::did_click(&mouse_states) {
+            return UpdateResult::Success;
+        } else {
+            return UpdateResult::Running;
+        }
+    }
+}
+
+impl GameState for World {
+    fn render(&self, c: Context, mut gl: &mut G2d, mut font_manager: &mut FontManager, window_width: f64, window_height: f64) {
+        let max_layers = cmp::max(self.static_renderables.len(), self.dynamic_renderables.len());
+        for i in 0..max_layers {
+            if i < self.static_renderables.len() {
+                for renderable in &self.static_renderables[i] {
+                    let renderable_object = renderable.get_renderable_object();
+                    render_renderable_object(&c, &mut gl, &renderable_object);
+                }
+            }
+            if i < self.dynamic_renderables.len() {
+                for renderable in &self.dynamic_renderables[i] {
+                    // TODO: Why can't we do this?
+                    // let renderable_object = renderable.borrow().get_renderable_object();
+                    // render_renderable_object(&c, &mut gl, &renderable_object);
+                    render_renderable_object(&c, &mut gl, &renderable.borrow().get_renderable_object());
+                }
+            }
+        }
+
+        if self.game_ended_state.game_ended {
+            if self.game_ended_state.won {
+                render_utils::draw_text_overlay(&mut font_manager, &c, &mut gl, window_width, window_height, "Success! Click to continue.");
+            } else {
+                render_utils::draw_text_overlay(&mut font_manager, &c, &mut gl, window_width, window_height, "Defeat! Click to retry.");
+            }
+        } else if self.should_display_level_name {
+            render_utils::draw_text_overlay(&mut font_manager, &c, &mut gl, window_width, window_height, self.name.as_str());
+        }
+    }
+
+    fn update(&mut self, key_states: &HashMap<Key, input::ButtonState>, mouse_states: &HashMap<MouseButton, input::ButtonState>, mouse_pos: &Vector2, args: &UpdateArgs) -> UpdateResult {
+        if self.game_ended_state.game_ended == false && self.game_ended_state.won == false {
+            return self.update_game_running(&key_states, &mouse_states, &mouse_pos, &args);
+        }
+
+        if self.game_ended_state.game_ended == true && self.game_ended_state.won == false {
+            return self.update_game_ended_lost(&mouse_states);
+        }
+
+        if self.game_ended_state.game_ended == true && self.game_ended_state.won == true {
+            return self.update_game_ended_won(&mouse_states);
+        }
+        
+        assert_eq!(false, true, "Invalid game ended state! Shouldn't have gotten here!");
         UpdateResult::Running
     }
 }

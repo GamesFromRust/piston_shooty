@@ -10,6 +10,7 @@ use piston_window::UpdateArgs;
 use std::collections::HashMap;
 use input;
 use vector2::Vector2;
+use game_state_utils;
 
 pub struct VictoryScreen {
 
@@ -41,15 +42,10 @@ impl GameState for VictoryScreen {
         mouse_pos: &Vector2, 
         args: &UpdateArgs) -> UpdateResult {
 
-        match mouse_states.get(&MouseButton::Left) {
-            Some(value) => {
-                if value.pressed {
-                    return UpdateResult::Success;
-                }
-            },
-            _ => {}
+        if game_state_utils::did_click(&mouse_states) {
+            return UpdateResult::Success;
+        } else {
+            return UpdateResult::Running;
         }
-        
-        UpdateResult::Running
     }
 }

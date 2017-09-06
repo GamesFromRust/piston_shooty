@@ -18,6 +18,7 @@ mod player;
 mod game_state;
 mod render_utils;
 mod victory_screen;
+mod game_state_utils;
 
 extern crate piston;
 extern crate glutin_window;
@@ -149,10 +150,10 @@ impl App {
             },
             UpdateResult::Success => {
                 self.level_index = self.level_index + 1;
-                self.advance_level(&mouse_states);
+                self.advance_level();
             },
             UpdateResult::Fail => {
-                self.advance_level(&mouse_states);
+                self.advance_level();
             },
         }
     }
