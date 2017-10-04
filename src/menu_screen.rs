@@ -81,13 +81,17 @@ impl<'a> GameState for MenuScreen<'a> {
             }
         }
 
-        if game_state_utils::did_click(&mouse_states) {
+        if game_state_utils::did_press_key(&key_states, Key::Down) {
+            if self.selected_world_index < self.world_list.len() - 1 {
+                self.selected_world_index = self.selected_world_index + 1;
+            }
+        }
+
+        if game_state_utils::did_click(&mouse_states) || game_state_utils::did_press_key(&key_states, Key::Return) {
             return UpdateResult {
                 result_type: UpdateResultType::Success,
                 result_code: self.selected_world_index as i64,
             }
-
-
         } else {
             return UPDATE_RESULT_RUNNING;
         }
