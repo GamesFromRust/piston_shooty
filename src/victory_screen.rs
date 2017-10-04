@@ -1,6 +1,9 @@
 use render_utils;
 use game_state::GameState;
+use game_state::GameStateType;
 use game_state::UpdateResult;
+use game_state::UPDATE_RESULT_SUCCESS;
+use game_state::UPDATE_RESULT_RUNNING;
 use font_manager::FontManager;
 use piston_window::Context;
 use piston_window::G2d;
@@ -11,6 +14,7 @@ use std::collections::HashMap;
 use input;
 use vector2::Vector2;
 use game_state_utils;
+use colors;
 
 pub struct VictoryScreen {
 
@@ -30,10 +34,14 @@ impl GameState for VictoryScreen {
             &c, 
             &mut gl,
             window_width, 
-            window_height, 
-            "VICTORY! Click to continue.");
+            window_height,
+            0.5,
+            0.5,
+            "VICTORY! Click to continue.",
+            colors::WHITE);
     }
 
+    #[allow(unused_variables)]
     fn update(
         &mut self, 
         key_states: &HashMap<Key, input::ButtonState>, 
@@ -43,9 +51,13 @@ impl GameState for VictoryScreen {
         args: &UpdateArgs) -> UpdateResult {
 
         if game_state_utils::did_click(&mouse_states) {
-            return UpdateResult::Success;
+            return UPDATE_RESULT_SUCCESS;
         } else {
-            return UpdateResult::Running;
+            return UPDATE_RESULT_RUNNING;
         }
+    }
+
+    fn get_type(&self) -> GameStateType {
+        return GameStateType::Victory;        
     }
 }

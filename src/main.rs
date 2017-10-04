@@ -19,6 +19,8 @@ mod game_state;
 mod render_utils;
 mod victory_screen;
 mod game_state_utils;
+mod menu_screen;
+mod colors;
 
 extern crate piston;
 extern crate glutin_window;
@@ -57,8 +59,11 @@ use enemy::Enemy;
 use world::GameEndedState;
 use renderable_object::RenderableObject;
 use game_state::GameState;
+use game_state::GameStateType;
 use game_state::UpdateResult;
+use game_state::UpdateResultType;
 use victory_screen::VictoryScreen;
+use menu_screen::MenuScreen;
 
 const WIDTH: u32 = 1280;
 const HEIGHT: u32 = 720;
@@ -82,9 +87,7 @@ const WALL_LAYER: usize = 0;
 const ENEMY_LAYER: usize = 1;
 const PLAYER_LAYER: usize = 1;
 
-const LEVEL_LIST: [&'static str; 1] = ["Sunday-Gunday"];//, "Multi-Level Mark-hitting"];
-
-pub struct App {
+pub struct App<'a> {
     window: piston_window::PistonWindow,
     last_batch_start_time: u64,
     num_frames_in_batch: u64,
@@ -96,9 +99,10 @@ pub struct App {
     texture_manager: TextureManager,
     sound_manager: SoundManager,
     level_index: usize,
+    world_list: Rc<Vec<&'a str>>
 }
 
-impl App {
+impl<'a> App<'a> {
     fn render(&mut self, event: &Input) {
         // TODO: Read a book on how to do a fps counter.
         let curr_frame_time: u64 = time::precise_time_ns();
@@ -143,30 +147,59 @@ impl App {
 
     fn update(&mut self, key_states: &HashMap<Key, input::ButtonState>, mouse_states: &HashMap<MouseButton, input::ButtonState>, mouse_pos: &Vector2, args: &UpdateArgs) {
         let update_result = self.game_state.update(&key_states, &mouse_states, &mouse_pos, &args);
+        self.advance_game_state(update_result);
+    }
 
-        match update_result {
-            UpdateResult::Running => {
+    fn advance_game_state_from_world_select(&mut self, update_result:UpdateResult) {
+        match update_result.result_type {
+            UpdateResultType::Running => {
                 // do nothing
             },
-            UpdateResult::Success => {
+            UpdateResultType::Success => {
+                self.level_index = update_result.result_code as usize;
+                let world = load_level(&mut self.texture_manager, &mut self.sound_manager, self.world_list[self.level_index]);
+                self.game_state = Box::new(world);
+            },
+            UpdateResultType::Fail => {
+                // do nothing
+            },
+        }
+    }
+
+    fn advance_game_state_from_world(&mut self, update_result:UpdateResult) {
+        match update_result.result_type {
+            UpdateResultType::Running => {
+                // do nothing
+            },
+            UpdateResultType::Success => {
                 self.level_index = self.level_index + 1;
                 self.advance_level();
             },
-            UpdateResult::Fail => {
+            UpdateResultType::Fail => {
                 self.advance_level();
             },
         }
     }
 
+    fn advance_game_state(&mut self, update_result:UpdateResult) {
+        if GameStateType::WorldSelect == self.game_state.get_type() {
+            self.advance_game_state_from_world_select(update_result);
+        } else if GameStateType::World == self.game_state.get_type() {
+            self.advance_game_state_from_world(update_result);
+        } else if GameStateType::Victory == self.game_state.get_type() {
+            self.advance_game_state_from_world(update_result);
+        }
+    }
+
     fn advance_level(&mut self) {
-        if self.level_index > LEVEL_LIST.len() {
+        if self.level_index > self.world_list.len() {
             self.level_index = 0;
         }
 
-        if self.level_index < LEVEL_LIST.len() {
-            let world = load_level(&mut self.texture_manager, &mut self.sound_manager, LEVEL_LIST[self.level_index]);
+        if self.level_index < self.world_list.len() {
+            let world = load_level(&mut self.texture_manager, &mut self.sound_manager, self.world_list[self.level_index]);
             self.game_state = Box::new(world);
-        } else if self.level_index == LEVEL_LIST.len() {
+        } else if self.level_index == self.world_list.len() {
             self.game_state = Box::new(VictoryScreen{});
         }
     }
@@ -360,20 +393,25 @@ fn main() {
         fonts_by_filename: HashMap::new(),
     };
     
-    let mut texture_manager = TextureManager {
+    let texture_manager = TextureManager {
         asset_loader: asset_loader.clone(),
         textures_by_filename: HashMap::new(),
     };
 
-    let mut sound_manager = SoundManager {
+    let sound_manager = SoundManager {
         asset_loader: asset_loader.clone(),
         sounds_by_filename: HashMap::new(),
     };
 
     font_manager.get("Roboto-Regular.ttf");
+    
+    let world_list = Rc::new(vec!["Sunday-Gunday", "Multi-Level Mark-hitting"]);
 
-    let world = load_level(&mut texture_manager, &mut sound_manager, LEVEL_LIST[0]); 
-
+    let menu_screen = MenuScreen {
+        world_list: world_list.clone(),
+        selected_world_index: 0,
+    };
+    
     let mut app = App {
         window: window,
         last_batch_start_time: time::precise_time_ns(),
@@ -382,10 +420,11 @@ fn main() {
         font_manager: font_manager,
         window_height: HEIGHT as f64,
         window_width: WIDTH as f64,
-        game_state: Box::new(world),
+        game_state: Box::new(menu_screen),
         texture_manager: texture_manager,
         sound_manager: sound_manager,
         level_index: 0,
+        world_list: world_list
     };
     app.window.set_max_fps(u64::max_value());
 

@@ -8,10 +8,37 @@ use std::collections::HashMap;
 use input;
 use vector2::Vector2;
 
-pub enum UpdateResult {
+pub struct UpdateResult {
+    pub result_type: UpdateResultType,
+    pub result_code: i64,
+}
+
+pub const UPDATE_RESULT_RUNNING: UpdateResult = UpdateResult {
+    result_type: UpdateResultType::Running,
+    result_code: 0,
+};
+
+pub const UPDATE_RESULT_SUCCESS: UpdateResult = UpdateResult {
+    result_type: UpdateResultType::Success,
+    result_code: 0,
+};
+
+pub const UPDATE_RESULT_FAIL: UpdateResult = UpdateResult {
+    result_type: UpdateResultType::Fail,
+    result_code: 0,
+};
+
+pub enum UpdateResultType {
     Running,
     Success,
     Fail,
+}
+
+#[derive(PartialEq, Eq)]
+pub enum GameStateType {
+    WorldSelect,
+    World,
+    Victory
 }
 
 pub trait GameState {
@@ -29,4 +56,6 @@ pub trait GameState {
         mouse_states: &HashMap<MouseButton, input::ButtonState>, 
         mouse_pos: &Vector2, 
         args: &UpdateArgs) -> UpdateResult;
+
+    fn get_type(&self) -> GameStateType;
 }

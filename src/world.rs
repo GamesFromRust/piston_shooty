@@ -19,9 +19,14 @@ use std::cmp;
 use font_manager::FontManager;
 use std::ops::Deref;
 use game_state::GameState;
+use game_state::GameStateType;
 use game_state::UpdateResult;
+use game_state::UPDATE_RESULT_SUCCESS;
+use game_state::UPDATE_RESULT_RUNNING;
+use game_state::UPDATE_RESULT_FAIL;
 use render_utils;
 use game_state_utils;
+use colors;
 
 const ENEMY_LAYER: usize = 1;
 const PROJECTILE_LAYER: usize = 2;
@@ -104,12 +109,12 @@ impl World {
 
         if self.is_victorious() {
             self.game_ended_state = GameEndedState { game_ended: true, won: true };
-            return UpdateResult::Running;
+            return UPDATE_RESULT_RUNNING;
         }
 
         if self.was_defeated() {
             self.game_ended_state = GameEndedState { game_ended: true, won: false };
-            return UpdateResult::Running;
+            return UPDATE_RESULT_RUNNING;
         }
 
         for renderable_layer in &self.dynamic_renderables {
@@ -185,22 +190,22 @@ impl World {
             }
         }
 
-        UpdateResult::Running
+        UPDATE_RESULT_RUNNING
     }
 
     fn update_game_ended_lost(&self, mouse_states: &HashMap<MouseButton, input::ButtonState>) -> UpdateResult {
         if game_state_utils::did_click(&mouse_states) {
-            return UpdateResult::Fail;
+            return UPDATE_RESULT_FAIL;
         } else {
-            return UpdateResult::Running;
+            return UPDATE_RESULT_RUNNING;
         }
     }
 
     fn update_game_ended_won(&self, mouse_states: &HashMap<MouseButton, input::ButtonState>) -> UpdateResult {
         if game_state_utils::did_click(&mouse_states) {
-            return UpdateResult::Success;
+            return UPDATE_RESULT_SUCCESS;
         } else {
-            return UpdateResult::Running;
+            return UPDATE_RESULT_RUNNING;
         }
     }
 }
@@ -227,12 +232,12 @@ impl GameState for World {
 
         if self.game_ended_state.game_ended {
             if self.game_ended_state.won {
-                render_utils::draw_text_overlay(&mut font_manager, &c, &mut gl, window_width, window_height, "Success! Click to continue.");
+                render_utils::draw_text_overlay(&mut font_manager, &c, &mut gl, window_width, window_height, 0.5, 0.5, "Success! Click to continue.", colors::WHITE);
             } else {
-                render_utils::draw_text_overlay(&mut font_manager, &c, &mut gl, window_width, window_height, "Defeat! Click to retry.");
+                render_utils::draw_text_overlay(&mut font_manager, &c, &mut gl, window_width, window_height, 0.5, 0.5, "Defeat! Click to retry.", colors::WHITE);
             }
         } else if self.should_display_level_name {
-            render_utils::draw_text_overlay(&mut font_manager, &c, &mut gl, window_width, window_height, self.name.as_str());
+            render_utils::draw_text_overlay(&mut font_manager, &c, &mut gl, window_width, window_height, 0.5, 0.5, self.name.as_str(), colors::WHITE);
         }
     }
 
@@ -250,7 +255,11 @@ impl GameState for World {
         }
         
         assert_eq!(false, true, "Invalid game ended state! Shouldn't have gotten here!");
-        UpdateResult::Running
+        UPDATE_RESULT_RUNNING
+    }
+
+    fn get_type(&self) -> GameStateType {
+        return GameStateType::World;        
     }
 }
 
