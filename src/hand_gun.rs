@@ -17,28 +17,49 @@ use gun::GUN_ROTATIONAL_VELOCITY;
 use gun::BULLET_VELOCITY_MAGNITUDE;
 use gun::BULLET_SCALE;
 use gun::Gun;
+use collidable_object::CollidableObject;
+use game_object::GameObject;
+use piston_window::ImageSize;
 
 pub struct HandGun {
+    pub position: Vector2,
+    pub rotation: f64,
+    pub scale: f64,
     pub renderable_object: RenderableObject,
+    pub collidable_object: CollidableObject,
     pub velocity: Vector2,
     pub should_delete: bool,
+}
+
+impl GameObject for HandGun {
+    fn get_position(&self) -> &Vector2 {
+        &self.position
+    }
+
+    fn get_rotation(&self) -> f64 {
+        self.rotation
+    }
+    
+    fn get_scale(&self) -> f64 {
+        self.scale
+    }
+    
+    fn get_should_delete(&self) -> bool {
+        self.should_delete
+    }
+    
+    fn set_should_delete(&mut self, should_delete: bool) {
+        self.should_delete = should_delete
+    }
+    
+    fn get_object_type(&self) -> ObjectType {
+        ObjectType::HandGun
+    }
 }
 
 impl Renderable for HandGun {
     fn get_renderable_object(&self) -> &RenderableObject {
         &self.renderable_object
-    }
-    
-    fn get_should_delete_renderable(&self) -> bool {
-        self.should_delete
-    }
-
-    fn set_should_delete_renderable(&mut self, should_delete: bool) {
-        self.should_delete = should_delete
-    }
-
-    fn get_object_type(&self) -> ObjectType {
-        ObjectType::HandGun
     }
 }
 
@@ -49,21 +70,17 @@ impl Updatable for HandGun {
                 mouse_states: &HashMap<MouseButton, input::ButtonState>,
                 mouse_pos: &Vector2,
                 args: &UpdateArgs) -> Vec<WorldReq> {
-        self.renderable_object.position += self.velocity * args.dt;
-        self.renderable_object.rotation += GUN_ROTATIONAL_VELOCITY * args.dt;
+        self.position += self.velocity * args.dt;
+        self.rotation += GUN_ROTATIONAL_VELOCITY * args.dt;
         Vec::new()
-    }
-
-    fn get_should_delete_updatable(&self) -> bool {
-        self.should_delete
-    }
-
-    fn set_should_delete_updatable(&mut self, should_delete: bool) {
-        self.should_delete = should_delete
     }
 }
 
 impl Collidable for HandGun {
+    fn get_collidable_object(&self) -> &CollidableObject {
+        &self.collidable_object
+    }
+
     fn collide(&self, other_object_type: ObjectType) {
         
     }
@@ -72,19 +89,23 @@ impl Collidable for HandGun {
 impl Gun for HandGun {
     fn shoot_bullet(&self, bullet_texture: &Rc<G2dTexture>) -> Bullet {
         let velocity = Vector2 {
-            x: self.renderable_object.rotation.cos(),
-            y: self.renderable_object.rotation.sin(),
+            x: self.rotation.cos(),
+            y: self.rotation.sin(),
         };
 
         Bullet {
+            position: self.position,
+            rotation: self.rotation,
+            scale: BULLET_SCALE,
             renderable_object: RenderableObject {
-                position: self.renderable_object.position,
                 texture: bullet_texture.clone(),
-                rotation: self.renderable_object.rotation,
-                scale: BULLET_SCALE,
             },
             velocity: velocity * BULLET_VELOCITY_MAGNITUDE,
             should_delete: false,
+            collidable_object: CollidableObject {
+                width: bullet_texture.get_size().0 as f64,
+                height: bullet_texture.get_size().1 as f64,
+            },
         }
     }
 }

@@ -27,6 +27,9 @@ use game_state::UPDATE_RESULT_FAIL;
 use render_utils;
 use game_state_utils;
 use colors;
+use collidable::Collidable;
+use collidable_object::CollidableObject;
+use game_object::GameObject;
 
 const ENEMY_LAYER: usize = 1;
 const PROJECTILE_LAYER: usize = 2;
@@ -36,6 +39,7 @@ pub struct GameEndedState {
     pub won: bool,
 }
 
+// TODO: Split DynamicRenderable into Updatable and Collidable
 pub enum WorldRequestType {
     AddUpdatable,
     AddDynamicRenderable,
@@ -44,13 +48,14 @@ pub enum WorldRequestType {
 pub struct WorldReq {
     pub renderable: Option<Rc<RefCell<Renderable>>>,
     pub updatable: Option<Rc<RefCell<Updatable>>>,
+    pub collidable: Option<Rc<RefCell<Collidable>>>,
     pub req_type: WorldRequestType,
 }
 
 // TODO: Add self/guns/bullets to here.
 pub struct World {
-    pub static_renderables: Vec<Vec<Rc<Renderable>>>,
-    pub dynamic_renderables: Vec<Vec<Rc<RefCell<Renderable>>>>,
+    pub renderables: Vec<Vec<Rc<RefCell<Renderable>>>>, // doesn't need to be a refcell but how do we make it not???????
+    pub collidables: Vec<Rc<RefCell<Collidable>>>,
     pub updatables: Vec<Rc<RefCell<Updatable>>>,
     pub game_ended_state: GameEndedState,
     pub player: Rc<RefCell<Player>>,
@@ -60,26 +65,23 @@ pub struct World {
 }
 
 impl World {
-    pub fn add_static_renderable_at_layer(&mut self, renderable: Rc<Renderable>, layer: usize) {
-        while self.static_renderables.len() <= layer {
-            self.static_renderables.push(Vec::new());
+    pub fn add_renderable_at_layer(&mut self, renderable: Rc<RefCell<Renderable>>, layer: usize) {
+        while self.renderables.len() <= layer {
+            self.renderables.push(Vec::new());
         }
-        self.static_renderables[layer].push(renderable);
+        self.renderables[layer].push(renderable);
     }
 
-    pub fn add_dynamic_renderable_at_layer(&mut self, renderable: Rc<RefCell<Renderable>>, layer: usize) {
-        while self.dynamic_renderables.len() <= layer {
-            self.dynamic_renderables.push(Vec::new());
-        }
-        self.dynamic_renderables[layer].push(renderable);
+    pub fn add_collidable(&mut self, collidable: Rc<RefCell<Collidable>>) {
+        self.collidables.push(collidable);
     }
-
+    
     pub fn add_updatable(&mut self, updatable: Rc<RefCell<Updatable>>) {
         self.updatables.push(updatable);
     }
 
     fn is_victorious(&self) -> bool {
-        for renderable in &self.dynamic_renderables[ENEMY_LAYER] {
+        for renderable in &self.renderables[ENEMY_LAYER] {
             if renderable.borrow().get_object_type() == ObjectType::Enemy {
                 return false;
             }
@@ -93,7 +95,7 @@ impl World {
             return false;
         }
         
-        for renderable_layer in &self.dynamic_renderables {
+        for renderable_layer in &self.renderables {
             for renderable in renderable_layer {
                 if renderable.borrow().get_object_type() == ObjectType::Bullet {
                     return false;
@@ -117,54 +119,55 @@ impl World {
             return UPDATE_RESULT_RUNNING;
         }
 
-        for renderable_layer in &self.dynamic_renderables {
-            for renderable in renderable_layer {
-                for renderable_layer2 in &self.static_renderables {
-                    for renderable2 in renderable_layer2 {
-                        if renderable.borrow().get_object_type() == ObjectType::HandGun && renderable2.get_object_type() == ObjectType::Wall {
-                            let renderable1_aabb_cuboid2 = create_aabb_cuboid2(&renderable.borrow().get_renderable_object());
-                            let renderable2_aabb_cuboid2 = create_aabb_cuboid2(&renderable2.get_renderable_object());
-                            
-                            if renderable1_aabb_cuboid2.intersects(&renderable2_aabb_cuboid2) {
-                                renderable.borrow_mut().set_should_delete_renderable(true);
-                            }
-                        }
+        for collidable1 in &self.collidables {
+            for collidable2 in &self.collidables {
+                
+                if Rc::ptr_eq(collidable1, collidable2) {
+                    continue;
+                }
 
-                        if renderable.borrow().get_object_type() == ObjectType::Bullet && renderable2.get_object_type() == ObjectType::Wall {
-                            let renderable1_aabb_cuboid2 = create_aabb_cuboid2(&renderable.borrow().get_renderable_object());
-                            let renderable2_aabb_cuboid2 = create_aabb_cuboid2(&renderable2.get_renderable_object());
-                            
-                            if renderable1_aabb_cuboid2.intersects(&renderable2_aabb_cuboid2) {
-                                renderable.borrow_mut().set_should_delete_renderable(true);
-                            }
-                        }
+                if collidable1.borrow().get_object_type() == ObjectType::HandGun && collidable2.borrow().get_object_type() == ObjectType::Wall {
+                    let collidable1_aabb_cuboid2 = create_aabb_cuboid2(collidable1.borrow().deref());
+                    let collidable2_aabb_cuboid2 = create_aabb_cuboid2(collidable2.borrow().deref());
+                    
+                    if collidable1_aabb_cuboid2.intersects(&collidable2_aabb_cuboid2) {
+                        collidable1.borrow_mut().set_should_delete(true);
                     }
                 }
 
-                for renderable_layer2 in &self.dynamic_renderables {
-                    for renderable2 in renderable_layer2 {
-                        if renderable.borrow().get_object_type() == ObjectType::Bullet && renderable2.borrow().get_object_type() == ObjectType::Enemy {
-                            let renderable1_aabb_cuboid2 = create_aabb_cuboid2(&renderable.borrow().get_renderable_object());
-                            let renderable2_aabb_cuboid2 = create_aabb_cuboid2(&renderable2.borrow().get_renderable_object());
-                            
-                            if renderable1_aabb_cuboid2.intersects(&renderable2_aabb_cuboid2) {
-                                renderable.borrow_mut().set_should_delete_renderable(true);
-                                renderable2.borrow_mut().set_should_delete_renderable(true);
-                            }
-                        }
+                if collidable1.borrow().get_object_type() == ObjectType::Bullet && collidable2.borrow().get_object_type() == ObjectType::Wall {
+                    let collidable1_aabb_cuboid2 = create_aabb_cuboid2(collidable1.borrow().deref());
+                    let collidable2_aabb_cuboid2 = create_aabb_cuboid2(collidable2.borrow().deref());
+                    
+                    if collidable1_aabb_cuboid2.intersects(&collidable2_aabb_cuboid2) {
+                        collidable1.borrow_mut().set_should_delete(true);
+                    }
+                }
+                
+                if collidable1.borrow().get_object_type() == ObjectType::Bullet && collidable2.borrow().get_object_type() == ObjectType::Enemy {
+                    let collidable1_aabb_cuboid2 = create_aabb_cuboid2(collidable1.borrow().deref());
+                    let collidable2_aabb_cuboid2 = create_aabb_cuboid2(collidable2.borrow().deref());
+                    
+                    if collidable1_aabb_cuboid2.intersects(&collidable2_aabb_cuboid2) {
+                        collidable1.borrow_mut().set_should_delete(true);
+                        collidable2.borrow_mut().set_should_delete(true);
                     }
                 }
             }
         }
 
-        for renderable_layer in &mut self.dynamic_renderables {
+        for renderable_layer in &mut self.renderables {
             renderable_layer.retain(|ref renderable| {
-                !renderable.borrow().get_should_delete_renderable()
+                !renderable.borrow().get_should_delete()
             });
         }
 
         self.updatables.retain(|ref updatable| {
-            !updatable.borrow().get_should_delete_updatable()
+            !updatable.borrow().get_should_delete()
+        });
+
+        self.collidables.retain(|ref collidable| {
+            !collidable.borrow().get_should_delete()
         });
 
         let mut world_reqs: Vec<WorldReq> = Vec::new();
@@ -177,8 +180,12 @@ impl World {
             match world_req.req_type {
                 WorldRequestType::AddDynamicRenderable => {
                     assert!(world_req.renderable.is_some());
+                    assert!(world_req.collidable.is_some());
                     if let Some(renderable) = world_req.renderable {
-                        self.add_dynamic_renderable_at_layer(renderable, PROJECTILE_LAYER);
+                        self.add_renderable_at_layer(renderable, PROJECTILE_LAYER);
+                    }
+                    if let Some(collidable) = world_req.collidable {
+                        self.add_collidable(collidable);
                     }
                 },
                 WorldRequestType::AddUpdatable => {
@@ -212,21 +219,9 @@ impl World {
 
 impl GameState for World {
     fn render(&self, c: Context, mut gl: &mut G2d, mut font_manager: &mut FontManager, window_width: f64, window_height: f64) {
-        let max_layers = cmp::max(self.static_renderables.len(), self.dynamic_renderables.len());
-        for i in 0..max_layers {
-            if i < self.static_renderables.len() {
-                for renderable in &self.static_renderables[i] {
-                    let renderable_object = renderable.get_renderable_object();
-                    render_renderable_object(&c, &mut gl, &renderable_object);
-                }
-            }
-            if i < self.dynamic_renderables.len() {
-                for renderable in &self.dynamic_renderables[i] {
-                    // TODO: Why can't we do this?
-                    // let renderable_object = renderable.borrow().get_renderable_object();
-                    // render_renderable_object(&c, &mut gl, &renderable_object);
-                    render_renderable_object(&c, &mut gl, &renderable.borrow().get_renderable_object());
-                }
+        for i in 0..self.renderables.len() {
+            for renderable in &self.renderables[i] {
+                render_renderable(&c, &mut gl, renderable.borrow().deref());
             }
         }
 
@@ -263,22 +258,27 @@ impl GameState for World {
     }
 }
 
-fn create_aabb_cuboid2(renderable_object: &RenderableObject) -> ncollide_geometry::bounding_volume::AABB<nalgebra::PointBase<f64, nalgebra::U2, nalgebra::MatrixArray<f64, nalgebra::U2, nalgebra::U1>>> {
+fn create_aabb_cuboid2(collidable: &Collidable) -> ncollide_geometry::bounding_volume::AABB<nalgebra::PointBase<f64, nalgebra::U2, nalgebra::MatrixArray<f64, nalgebra::U2, nalgebra::U1>>> {
     let half_extents: nalgebra::core::Vector2<f64> = nalgebra::core::Vector2::new(
-        renderable_object.texture.get_size().0 as f64 * 0.5 * renderable_object.scale,
-        renderable_object.texture.get_size().1 as f64 * 0.5 * renderable_object.scale);
+        collidable.get_collidable_object().width as f64 * 0.5 * collidable.get_scale(),
+        collidable.get_collidable_object().height as f64 * 0.5 * collidable.get_scale());
     let cuboid2 = Cuboid2::new(half_extents);
-    let cuboid2_pos = nalgebra::geometry::Isometry2::new(nalgebra::core::Vector2::new(renderable_object.position.x, renderable_object.position.y), renderable_object.rotation);
+    let cuboid2_pos = nalgebra::geometry::Isometry2::new(
+        nalgebra::core::Vector2::new(
+            collidable.get_position().x, 
+            collidable.get_position().y), 
+        collidable.get_rotation());
     let aabb_cuboid2 = bounding_volume::aabb(&cuboid2, &cuboid2_pos);
     aabb_cuboid2
 }
 
-fn render_renderable_object(c: &Context, gl: &mut G2d, renderable_object: &RenderableObject) {
+fn render_renderable(c: &Context, gl: &mut G2d, renderable: &Renderable) {
+    let texture = &renderable.get_renderable_object().texture;
     let transform = c.transform
-        .trans(renderable_object.position.x, renderable_object.position.y)
-        .rot_rad(renderable_object.rotation)
-        .trans((renderable_object.texture.get_size().0 as f64) * -0.5 * renderable_object.scale,
-                (renderable_object.texture.get_size().1 as f64) * -0.5 * renderable_object.scale)
-        .scale(renderable_object.scale, renderable_object.scale);
-    image(renderable_object.texture.deref(), transform, gl);
+        .trans(renderable.get_position().x, renderable.get_position().y)
+        .rot_rad(renderable.get_rotation())
+        .trans((texture.get_size().0 as f64) * -0.5 * renderable.get_scale(),
+                (texture.get_size().1 as f64) * -0.5 * renderable.get_scale())
+        .scale(renderable.get_scale(), renderable.get_scale());
+    image(texture.deref(), transform, gl);
 }

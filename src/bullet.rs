@@ -9,28 +9,49 @@ use piston_window::MouseButton;
 use piston_window::UpdateArgs;
 use std::collections::HashMap;
 use world::WorldReq;
+use collidable_object::CollidableObject;
+use collidable::Collidable;
+use game_object::GameObject;
 
 pub struct Bullet {
+    pub position: Vector2,
+    pub rotation: f64,
+    pub scale: f64,
     pub renderable_object: RenderableObject,
     pub velocity: Vector2,
     pub should_delete: bool,
+    pub collidable_object: CollidableObject,
+}
+
+impl GameObject for Bullet {
+    fn get_position(&self) -> &Vector2 {
+        &self.position
+    }
+
+    fn get_rotation(&self) -> f64 {
+        self.rotation
+    }
+    
+    fn get_scale(&self) -> f64 {
+        self.scale
+    }
+    
+    fn get_should_delete(&self) -> bool {
+        self.should_delete
+    }
+    
+    fn set_should_delete(&mut self, should_delete: bool) {
+        self.should_delete = should_delete
+    }
+    
+    fn get_object_type(&self) -> ObjectType {
+        ObjectType::Bullet
+    }
 }
 
 impl Renderable for Bullet {
     fn get_renderable_object(&self) -> &RenderableObject {
         &self.renderable_object
-    }
-    
-    fn get_should_delete_renderable(&self) -> bool {
-        self.should_delete
-    }
-
-    fn set_should_delete_renderable(&mut self, should_delete: bool) {
-        self.should_delete = should_delete
-    }
-
-    fn get_object_type(&self) -> ObjectType {
-        ObjectType::Bullet
     }
 }
 
@@ -41,15 +62,17 @@ impl Updatable for Bullet {
                 mouse_states: &HashMap<MouseButton, input::ButtonState>,
                 mouse_pos: &Vector2,
                 args: &UpdateArgs) -> Vec<WorldReq> {
-        self.renderable_object.position += self.velocity * args.dt;
+        self.position += self.velocity * args.dt;
         Vec::new()
     }
+}
 
-    fn get_should_delete_updatable(&self) -> bool {
-        self.should_delete
+impl Collidable for Bullet {
+    fn get_collidable_object(&self) -> &CollidableObject {
+        &self.collidable_object
     }
 
-    fn set_should_delete_updatable(&mut self, should_delete: bool) {
-        self.should_delete = should_delete
+    fn collide(&self, other_object_type: ObjectType) {
+        
     }
 }

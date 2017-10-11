@@ -23,6 +23,8 @@ mod menu_screen;
 mod colors;
 mod collidable;
 mod hand_gun;
+mod collidable_object;
+mod game_object;
 
 extern crate piston;
 extern crate glutin_window;
@@ -66,6 +68,7 @@ use game_state::UpdateResult;
 use game_state::UpdateResultType;
 use victory_screen::VictoryScreen;
 use menu_screen::MenuScreen;
+use collidable_object::CollidableObject;
 
 const WIDTH: u32 = 1280;
 const HEIGHT: u32 = 720;
@@ -216,14 +219,14 @@ fn load_level(texture_manager:&mut TextureManager, sound_manager:&mut SoundManag
     let ground = texture_manager.get("textures\\ground.png");
 
     let player: Player = Player {
+        position: Vector2 {
+            x: 0.0,
+            y: 0.0,
+        },
+        rotation: 0.0,
+        scale: PLAYER_SCALE,
         renderable_object: RenderableObject {
             texture: hand_gun.clone(),
-            position: Vector2 {
-                x: 0.0,
-                y: 0.0,
-            },
-            rotation: 0.0,
-            scale: PLAYER_SCALE,
         },
         guns: Vec::new(),
         gun_texture: gun_gun.clone(),
@@ -238,8 +241,8 @@ fn load_level(texture_manager:&mut TextureManager, sound_manager:&mut SoundManag
     let (sender, receiver) = channel();
 
     let mut world: World = World {
-        static_renderables: Vec::new(),
-        dynamic_renderables: Vec::new(),
+        renderables: Vec::new(),
+        collidables: Vec::new(),
         updatables: Vec::new(),
         game_ended_state: GameEndedState {
             game_ended: false,
@@ -280,81 +283,92 @@ fn load_level(texture_manager:&mut TextureManager, sound_manager:&mut SoundManag
         for item in line {
             if item == "W" {
                 let wall = Wall {
+                    position: Vector2 {
+                        x: (item_num * CELL_WIDTH + CELL_WIDTH / 2) as f64 ,
+                        y: (line_num * CELL_HEIGHT + CELL_HEIGHT / 2) as f64
+                    },
+                    rotation: 0.0,
+                    scale: WALL_SCALE,
                     renderable_object: RenderableObject {
-                        position: Vector2 {
-                            x: (item_num * CELL_WIDTH + CELL_WIDTH / 2) as f64 ,
-                            y: (line_num * CELL_HEIGHT + CELL_HEIGHT / 2) as f64
-                        },
-                        rotation: 0.0,
                         texture: wall.clone(),
-                        scale: WALL_SCALE,
+                    },
+                    collidable_object: CollidableObject {
+                        width: wall.get_size().0 as f64,
+                        height: wall.get_size().1 as f64,
                     },
                 };
-                let rc = Rc::new(wall);
-                world.add_static_renderable_at_layer(rc.clone(), WALL_LAYER);
+                let refcell = Rc::new(RefCell::new(wall));
+                world.add_renderable_at_layer(refcell.clone(), WALL_LAYER);
+                world.add_collidable(refcell.clone());
             } else if item == "P" {
                 let ground = Ground {
+                    position: Vector2 {
+                        x: (item_num * CELL_WIDTH + CELL_WIDTH / 2) as f64 ,
+                        y: (line_num * CELL_HEIGHT + CELL_HEIGHT / 2) as f64
+                    },
+                    rotation: 0.0,
+                    scale: GROUND_SCALE,
                     renderable_object: RenderableObject {
-                        position: Vector2 {
-                            x: (item_num * CELL_WIDTH + CELL_WIDTH / 2) as f64 ,
-                            y: (line_num * CELL_HEIGHT + CELL_HEIGHT / 2) as f64
-                        },
-                        rotation: 0.0,
                         texture: ground.clone(),
-                        scale: GROUND_SCALE,
                     },
                 };
-                let rc = Rc::new(ground);
-                world.add_static_renderable_at_layer(rc.clone(), GROUND_LAYER);
+                let refcell = Rc::new(RefCell::new(ground));
+                world.add_renderable_at_layer(refcell.clone(), GROUND_LAYER);
 
-                player.borrow_mut().renderable_object.position.x = (item_num * CELL_WIDTH + CELL_WIDTH / 2) as f64;
-                player.borrow_mut().renderable_object.position.y = (line_num * CELL_HEIGHT + CELL_HEIGHT / 2) as f64;
+                player.borrow_mut().position.x = (item_num * CELL_WIDTH + CELL_WIDTH / 2) as f64;
+                player.borrow_mut().position.y = (line_num * CELL_HEIGHT + CELL_HEIGHT / 2) as f64;
 
-                world.add_dynamic_renderable_at_layer(player.clone(), PLAYER_LAYER);
+                world.add_renderable_at_layer(player.clone(), PLAYER_LAYER);
                 world.add_updatable(player.clone());
             } else if item == "E" {
                 let ground = Ground {
+                    position: Vector2 {
+                        x: (item_num * CELL_WIDTH + CELL_WIDTH / 2) as f64 ,
+                        y: (line_num * CELL_HEIGHT + CELL_HEIGHT / 2) as f64
+                    },
+                    rotation: 0.0,
+                    scale: GROUND_SCALE,
                     renderable_object: RenderableObject {
-                        position: Vector2 {
-                            x: (item_num * CELL_WIDTH + CELL_WIDTH / 2) as f64 ,
-                            y: (line_num * CELL_HEIGHT + CELL_HEIGHT / 2) as f64
-                        },
-                        rotation: 0.0,
                         texture: ground.clone(),
-                        scale: GROUND_SCALE,
                     },
                 };
-                let rc = Rc::new(ground);
-                world.add_static_renderable_at_layer(rc.clone(), GROUND_LAYER);
+                let refcell = Rc::new(RefCell::new(ground));
+                world.add_renderable_at_layer(refcell.clone(), GROUND_LAYER);
 
                 let enemy = Enemy {
+                    position: Vector2 {
+                        x: (item_num * CELL_WIDTH + CELL_WIDTH / 2) as f64,
+                        y: (line_num * CELL_HEIGHT + CELL_HEIGHT / 2) as f64
+                    },
+                    rotation: 0.0,
+                    scale: ENEMY_SCALE,
                     renderable_object: RenderableObject {
-                        position: Vector2 {
-                            x: (item_num * CELL_WIDTH + CELL_WIDTH / 2) as f64,
-                            y: (line_num * CELL_HEIGHT + CELL_HEIGHT / 2) as f64
-                        },
-                        rotation: 0.0,
                         texture: enemy.clone(),
-                        scale: ENEMY_SCALE,
                     },
                     should_delete: false,
-                };
-                let refcell = Rc::new(RefCell::new(enemy));
-                world.add_dynamic_renderable_at_layer(refcell.clone(), ENEMY_LAYER);
-            } else if item == "_" {
-                let ground = Ground {
-                    renderable_object: RenderableObject {
-                        position: Vector2 {
-                            x: (item_num * CELL_WIDTH + CELL_WIDTH / 2) as f64 ,
-                            y: (line_num * CELL_HEIGHT + CELL_HEIGHT / 2) as f64
-                        },
-                        rotation: 0.0,
-                        texture: ground.clone(),
-                        scale: GROUND_SCALE,
+                    collidable_object: CollidableObject {
+                        width: enemy.get_size().0 as f64,
+                        height: enemy.get_size().1 as f64,
                     },
                 };
-                let rc = Rc::new(ground);
-                world.add_static_renderable_at_layer(rc.clone(), GROUND_LAYER);
+                let refcell = Rc::new(RefCell::new(enemy));
+                world.add_renderable_at_layer(refcell.clone(), ENEMY_LAYER);
+                world.add_collidable(refcell.clone());
+            } else if item == "_" {
+                // todo: make this a func and factor out from 3 ifs above
+                let ground = Ground {
+                    position: Vector2 {
+                        x: (item_num * CELL_WIDTH + CELL_WIDTH / 2) as f64 ,
+                        y: (line_num * CELL_HEIGHT + CELL_HEIGHT / 2) as f64
+                    },
+                    rotation: 0.0,
+                    scale: GROUND_SCALE,
+                    renderable_object: RenderableObject {
+                        texture: ground.clone(),
+                    },
+                };
+                let refcell = Rc::new(RefCell::new(ground));
+                world.add_renderable_at_layer(refcell.clone(), GROUND_LAYER);
             }
             item_num += 1;
         }

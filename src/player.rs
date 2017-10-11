@@ -16,11 +16,17 @@ use hand_gun::HandGun;
 use ears::*;
 use world::WorldRequestType;
 use gun::Gun;
+use game_object::GameObject;
+use collidable_object::CollidableObject;
+use piston_window::ImageSize;
 
 const PROJECTILE_VELOCITY_MAGNITUDE: f64 = 75.0;
 const GUN_SCALE: f64 = 0.5;
 
 pub struct Player {
+    pub position: Vector2,
+    pub rotation: f64,
+    pub scale: f64,
     pub renderable_object: RenderableObject,
     pub guns: Vec<Rc<RefCell<Gun>>>,
     pub gun_texture: Rc<G2dTexture>,
@@ -30,22 +36,36 @@ pub struct Player {
     pub has_shot: bool,
 }
 
+impl GameObject for Player {
+    fn get_position(&self) -> &Vector2 {
+        &self.position
+    }
+
+    fn get_rotation(&self) -> f64 {
+        self.rotation
+    }
+    
+    fn get_scale(&self) -> f64 {
+        self.scale
+    }
+    
+    fn get_should_delete(&self) -> bool {
+        false
+    }
+    
+    #[allow(unused_variables)]
+    fn set_should_delete(&mut self, should_delete: bool) {
+        // do nothing
+    }
+    
+    fn get_object_type(&self) -> ObjectType {
+        ObjectType::Player
+    }
+}
+
 impl Renderable for Player {
     fn get_renderable_object(&self) -> &RenderableObject {
         &self.renderable_object
-    }
-    
-    fn get_should_delete_renderable(&self) -> bool {
-        false
-    }
-
-    #[allow(unused_variables)]
-    fn set_should_delete_renderable(&mut self, should_delete: bool) {
-        // do nothing
-    }
-
-    fn get_object_type(&self) -> ObjectType {
-        ObjectType::Player
     }
 }
 
@@ -56,23 +76,14 @@ impl Updatable for Player {
                 mouse_pos: &Vector2,
                 args: &UpdateArgs) -> Vec<WorldReq> {
         self.guns.retain(|ref gun| {
-            !gun.borrow().get_should_delete_updatable()
+            !gun.borrow().get_should_delete()
         });
         
         // Rotate to face our mouse.
-        let player_to_mouse = *mouse_pos - self.renderable_object.position;
-        self.renderable_object.rotation = player_to_mouse.y.atan2(player_to_mouse.x);
+        let player_to_mouse = *mouse_pos - self.position;
+        self.rotation = player_to_mouse.y.atan2(player_to_mouse.x);
 
         return self.apply_input(&key_states, &mouse_states, &mouse_pos, args.dt);
-    }
-    
-    fn get_should_delete_updatable(&self) -> bool {
-        false
-    }
-
-    #[allow(unused_variables)]
-    fn set_should_delete_updatable(&mut self, should_delete: bool) {
-        // do nothing
     }
 }
 
@@ -91,6 +102,7 @@ impl Player {
             let world_req: WorldReq = WorldReq {
                 renderable: Some(bullet.clone()),
                 updatable: None,
+                collidable: Some(bullet.clone()),
                 req_type: WorldRequestType::AddDynamicRenderable,
             };
             world_reqs.push(world_req);
@@ -98,6 +110,7 @@ impl Player {
             let world_req: WorldReq = WorldReq {
                 renderable: None,
                 updatable: Some(bullet.clone()),
+                collidable: None,
                 req_type: WorldRequestType::AddUpdatable,
             };
             world_reqs.push(world_req);
@@ -116,8 +129,8 @@ impl Player {
         }
 
         let rotation = match self.guns.last() {
-            Some(gun) => gun.borrow().get_renderable_object().rotation,
-            None => self.renderable_object.rotation,
+            Some(gun) => gun.borrow().get_rotation(),
+            None => self.rotation,
         };
 
         let velocity = match self.guns.last() {
@@ -128,23 +141,27 @@ impl Player {
                 };
                 vel * PROJECTILE_VELOCITY_MAGNITUDE
             },
-            None => (*mouse_pos - self.renderable_object.position).normalized() * PROJECTILE_VELOCITY_MAGNITUDE,
+            None => (*mouse_pos - self.position).normalized() * PROJECTILE_VELOCITY_MAGNITUDE,
         };
 
         let position = match self.guns.last() {
-            Some(gun) => gun.borrow().get_renderable_object().position + ( velocity / PROJECTILE_VELOCITY_MAGNITUDE) * 30.0,
-            None => self.renderable_object.position,
+            Some(gun) => *gun.borrow().get_position() + (velocity / PROJECTILE_VELOCITY_MAGNITUDE) * 30.0,
+            None => self.position,
         };
 
         let projectile = HandGun {
+            position: position,
+            rotation: rotation,
+            scale: GUN_SCALE,
             renderable_object: RenderableObject {
-                position: position,
                 texture: self.gun_texture.clone(),
-                rotation: rotation,
-                scale: GUN_SCALE,
             },
             velocity: velocity,
             should_delete: false,
+            collidable_object: CollidableObject {
+                width: self.gun_texture.get_size().0 as f64,
+                height: self.gun_texture.get_size().1 as f64,
+            }
         };
 
         self.gun_sound.borrow_mut().play();
@@ -157,6 +174,7 @@ impl Player {
         let world_req: WorldReq = WorldReq {
             renderable: Some(projectile.clone()),
             updatable: None,
+            collidable: Some(projectile.clone()),
             req_type: WorldRequestType::AddDynamicRenderable,
         };
         world_reqs.push(world_req);
@@ -164,6 +182,7 @@ impl Player {
         let world_req: WorldReq = WorldReq {
             renderable: None,
             updatable: Some(projectile.clone()),
+            collidable: None,
             req_type: WorldRequestType::AddUpdatable,
         };
         world_reqs.push(world_req);
