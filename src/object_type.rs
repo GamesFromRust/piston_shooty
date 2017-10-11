@@ -2,7 +2,8 @@
 pub enum ObjectType {
     Wall,
     Bullet,
-    Gun,
+    HandGun,
+    AxeGun,
     Enemy,
     Player,
     Ground,

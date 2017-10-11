@@ -121,7 +121,7 @@ impl World {
             for renderable in renderable_layer {
                 for renderable_layer2 in &self.static_renderables {
                     for renderable2 in renderable_layer2 {
-                        if renderable.borrow().get_object_type() == ObjectType::Gun && renderable2.get_object_type() == ObjectType::Wall {
+                        if renderable.borrow().get_object_type() == ObjectType::HandGun && renderable2.get_object_type() == ObjectType::Wall {
                             let renderable1_aabb_cuboid2 = create_aabb_cuboid2(&renderable.borrow().get_renderable_object());
                             let renderable2_aabb_cuboid2 = create_aabb_cuboid2(&renderable2.get_renderable_object());
                             

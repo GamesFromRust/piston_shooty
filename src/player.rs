@@ -12,9 +12,10 @@ use world::WorldReq;
 use std::rc::Rc;
 use std::cell::RefCell;
 use piston_window::G2dTexture;
-use gun::Gun;
+use hand_gun::HandGun;
 use ears::*;
 use world::WorldRequestType;
+use gun::Gun;
 
 const PROJECTILE_VELOCITY_MAGNITUDE: f64 = 75.0;
 const GUN_SCALE: f64 = 0.5;
@@ -115,7 +116,7 @@ impl Player {
         }
 
         let rotation = match self.guns.last() {
-            Some(projectile) => projectile.borrow().renderable_object.rotation,
+            Some(gun) => gun.borrow().get_renderable_object().rotation,
             None => self.renderable_object.rotation,
         };
 
@@ -131,11 +132,11 @@ impl Player {
         };
 
         let position = match self.guns.last() {
-            Some(projectile) => projectile.borrow().renderable_object.position + ( velocity / PROJECTILE_VELOCITY_MAGNITUDE) * 30.0,
+            Some(gun) => gun.borrow().get_renderable_object().position + ( velocity / PROJECTILE_VELOCITY_MAGNITUDE) * 30.0,
             None => self.renderable_object.position,
         };
 
-        let projectile = Gun {
+        let projectile = HandGun {
             renderable_object: RenderableObject {
                 position: position,
                 texture: self.gun_texture.clone(),

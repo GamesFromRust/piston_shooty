@@ -21,6 +21,8 @@ mod victory_screen;
 mod game_state_utils;
 mod menu_screen;
 mod colors;
+mod collidable;
+mod hand_gun;
 
 extern crate piston;
 extern crate glutin_window;
