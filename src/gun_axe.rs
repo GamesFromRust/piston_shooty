@@ -8,10 +8,8 @@ use piston_window::Key;
 use piston_window::MouseButton;
 use piston_window::UpdateArgs;
 use std::collections::HashMap;
-use world::WorldRequestType;
 use world::WorldReq;
 use std::rc::Rc;
-use std::cell::RefCell;
 use collidable::Collidable;
 use bullet::Bullet;
 use piston_window::G2dTexture;
@@ -22,12 +20,8 @@ use gun::Gun;
 use collidable_object::CollidableObject;
 use game_object::GameObject;
 use piston_window::ImageSize;
-use ears::*;
 
-pub const PROJECTILE_VELOCITY_MAGNITUDE: f64 = 75.0;
-pub const GUN_SCALE: f64 = 0.5;
-
-pub struct HandGun {
+pub struct GunAxe {
     pub position: Vector2,
     pub rotation: f64,
     pub scale: f64,
@@ -35,11 +29,9 @@ pub struct HandGun {
     pub collidable_object: CollidableObject,
     pub velocity: Vector2,
     pub should_delete: bool,
-    pub gun_texture: Rc<G2dTexture>,
-    pub gun_sound: Rc<RefCell<Sound>>,
 }
 
-impl GameObject for HandGun {
+impl GameObject for GunAxe {
     fn get_position(&self) -> &Vector2 {
         &self.position
     }
@@ -61,17 +53,17 @@ impl GameObject for HandGun {
     }
     
     fn get_object_type(&self) -> ObjectType {
-        ObjectType::HandGun
+        ObjectType::GunAxe
     }
 }
 
-impl Renderable for HandGun {
+impl Renderable for GunAxe {
     fn get_renderable_object(&self) -> &RenderableObject {
         &self.renderable_object
     }
 }
 
-impl Updatable for HandGun {
+impl Updatable for GunAxe {
     #[allow(unused_variables)]
     fn update(&mut self,
                 key_states: &HashMap<Key, input::ButtonState>,
@@ -84,7 +76,7 @@ impl Updatable for HandGun {
     }
 }
 
-impl Collidable for HandGun {
+impl Collidable for GunAxe {
     fn get_collidable_object(&self) -> &CollidableObject {
         &self.collidable_object
     }
@@ -99,7 +91,7 @@ impl Collidable for HandGun {
     }
 }
 
-impl Gun for HandGun {
+impl Gun for GunAxe {
     fn shoot_bullet(&self, bullet_texture: &Rc<G2dTexture>) -> Bullet {
         let velocity = Vector2 {
             x: self.rotation.cos(),
@@ -120,42 +112,5 @@ impl Gun for HandGun {
                 height: bullet_texture.get_size().1 as f64,
             },
         }
-    }
-
-    fn shoot_gun(&self) -> Rc<RefCell<Gun>> {
-        let rotation = self.get_rotation();
-
-        let vel = Vector2 {
-            x: rotation.cos(),
-            y: rotation.sin(),
-        };
-        let velocity = vel * PROJECTILE_VELOCITY_MAGNITUDE;
-
-        let position = *self.get_position() + (velocity / PROJECTILE_VELOCITY_MAGNITUDE) * 30.0;
-        
-        let hand_gun = HandGun {
-            position: position,
-            rotation: rotation,
-            scale: GUN_SCALE,
-            renderable_object: RenderableObject {
-                texture: self.gun_texture.clone(),
-            },
-            velocity: velocity,
-            should_delete: false,
-            collidable_object: CollidableObject {
-                width: self.gun_texture.get_size().0 as f64,
-                height: self.gun_texture.get_size().1 as f64,
-            },
-            gun_sound: self.gun_sound,
-            gun_texture: self.gun_texture,
-        };
-
-        self.gun_sound.borrow_mut().play();
-
-        Rc::new(RefCell::new(hand_gun));
-    }
-
-    fn as_renderable(&self) -> &Renderable {
-        self
     }
 }

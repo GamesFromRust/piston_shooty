@@ -9,13 +9,11 @@ use ncollide_geometry::bounding_volume;
 use ncollide_geometry::bounding_volume::BoundingVolume;
 use std::sync::mpsc::Receiver;
 use input;
-use renderable_object::RenderableObject;
 use nalgebra;
 use renderable::Renderable;
 use object_type::ObjectType;
 use updatable::Updatable;
 use player::Player;
-use std::cmp;
 use font_manager::FontManager;
 use std::ops::Deref;
 use game_state::GameState;
@@ -28,8 +26,6 @@ use render_utils;
 use game_state_utils;
 use colors;
 use collidable::Collidable;
-use collidable_object::CollidableObject;
-use game_object::GameObject;
 
 const ENEMY_LAYER: usize = 1;
 const PROJECTILE_LAYER: usize = 2;
@@ -91,7 +87,7 @@ impl World {
     }
 
     fn was_defeated(&self) -> bool {
-        if !self.player.borrow().has_shot {
+        if !self.player.borrow().has_shot_bullet {
             return false;
         }
         
@@ -126,32 +122,9 @@ impl World {
                     continue;
                 }
 
-                if collidable1.borrow().get_object_type() == ObjectType::HandGun && collidable2.borrow().get_object_type() == ObjectType::Wall {
-                    let collidable1_aabb_cuboid2 = create_aabb_cuboid2(collidable1.borrow().deref());
-                    let collidable2_aabb_cuboid2 = create_aabb_cuboid2(collidable2.borrow().deref());
-                    
-                    if collidable1_aabb_cuboid2.intersects(&collidable2_aabb_cuboid2) {
-                        collidable1.borrow_mut().set_should_delete(true);
-                    }
-                }
-
-                if collidable1.borrow().get_object_type() == ObjectType::Bullet && collidable2.borrow().get_object_type() == ObjectType::Wall {
-                    let collidable1_aabb_cuboid2 = create_aabb_cuboid2(collidable1.borrow().deref());
-                    let collidable2_aabb_cuboid2 = create_aabb_cuboid2(collidable2.borrow().deref());
-                    
-                    if collidable1_aabb_cuboid2.intersects(&collidable2_aabb_cuboid2) {
-                        collidable1.borrow_mut().set_should_delete(true);
-                    }
-                }
-                
-                if collidable1.borrow().get_object_type() == ObjectType::Bullet && collidable2.borrow().get_object_type() == ObjectType::Enemy {
-                    let collidable1_aabb_cuboid2 = create_aabb_cuboid2(collidable1.borrow().deref());
-                    let collidable2_aabb_cuboid2 = create_aabb_cuboid2(collidable2.borrow().deref());
-                    
-                    if collidable1_aabb_cuboid2.intersects(&collidable2_aabb_cuboid2) {
-                        collidable1.borrow_mut().set_should_delete(true);
-                        collidable2.borrow_mut().set_should_delete(true);
-                    }
+                if collides(collidable1.borrow().deref(), collidable2.borrow().deref()) {
+                    collidable1.borrow_mut().collide(collidable2.borrow().get_object_type());
+                    collidable2.borrow_mut().collide(collidable1.borrow().get_object_type());
                 }
             }
         }
@@ -256,6 +229,12 @@ impl GameState for World {
     fn get_type(&self) -> GameStateType {
         return GameStateType::World;        
     }
+}
+
+fn collides(collidable1: &Collidable, collidable2: &Collidable) -> bool {
+    let collidable1_aabb_cuboid2 = create_aabb_cuboid2(collidable1);
+    let collidable2_aabb_cuboid2 = create_aabb_cuboid2(collidable2);
+    collidable1_aabb_cuboid2.intersects(&collidable2_aabb_cuboid2)
 }
 
 fn create_aabb_cuboid2(collidable: &Collidable) -> ncollide_geometry::bounding_volume::AABB<nalgebra::PointBase<f64, nalgebra::U2, nalgebra::MatrixArray<f64, nalgebra::U2, nalgebra::U1>>> {

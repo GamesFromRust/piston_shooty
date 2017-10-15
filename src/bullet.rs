@@ -72,7 +72,15 @@ impl Collidable for Bullet {
         &self.collidable_object
     }
 
-    fn collide(&self, other_object_type: ObjectType) {
-        
+    fn collide(&mut self, other_object_type: ObjectType) {
+        match other_object_type {
+            ObjectType::Wall => {
+                self.set_should_delete(true);
+            },
+            ObjectType::Enemy => {
+                self.set_should_delete(true);
+            },
+            _ => {},
+        }
     }
 }

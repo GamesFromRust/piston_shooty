@@ -16,12 +16,11 @@ use hand_gun::HandGun;
 use ears::*;
 use world::WorldRequestType;
 use gun::Gun;
+use hand_gun::PROJECTILE_VELOCITY_MAGNITUDE;
+use hand_gun::GUN_SCALE;
 use game_object::GameObject;
 use collidable_object::CollidableObject;
 use piston_window::ImageSize;
-
-const PROJECTILE_VELOCITY_MAGNITUDE: f64 = 75.0;
-const GUN_SCALE: f64 = 0.5;
 
 pub struct Player {
     pub position: Vector2,
@@ -33,7 +32,7 @@ pub struct Player {
     pub gun_sound: Rc<RefCell<Sound>>,
     pub bullet_texture: Rc<G2dTexture>,
     pub bullet_sound: Rc<RefCell<Sound>>,
-    pub has_shot: bool,
+    pub has_shot_bullet: bool,
 }
 
 impl GameObject for Player {
@@ -89,7 +88,7 @@ impl Updatable for Player {
 
 impl Player {
     fn shoot_bullets(&mut self) -> Vec<WorldReq> {
-        if self.has_shot {
+        if self.has_shot_bullet {
             return Vec::new();
         }
 
@@ -117,37 +116,18 @@ impl Player {
         }
 
         if !world_reqs.is_empty() {
-            self.has_shot = true;
+            self.has_shot_bullet = true;
         }
 
         world_reqs
     }
 
-    fn shoot_gun(&mut self, mouse_pos: &Vector2) -> Vec<WorldReq>  {
-        if self.has_shot {
-            return Vec::new()
-        }
+    fn shoot_gun_from_player(&mut self, mouse_pos: &Vector2) -> Rc<RefCell<HandGun>> {
+        let rotation = self.rotation;
 
-        let rotation = match self.guns.last() {
-            Some(gun) => gun.borrow().get_rotation(),
-            None => self.rotation,
-        };
+        let velocity =(*mouse_pos - self.position).normalized() * PROJECTILE_VELOCITY_MAGNITUDE;
 
-        let velocity = match self.guns.last() {
-            Some(_) => {
-                let vel = Vector2 {
-                    x: rotation.cos(),
-                    y: rotation.sin(),
-                };
-                vel * PROJECTILE_VELOCITY_MAGNITUDE
-            },
-            None => (*mouse_pos - self.position).normalized() * PROJECTILE_VELOCITY_MAGNITUDE,
-        };
-
-        let position = match self.guns.last() {
-            Some(gun) => *gun.borrow().get_position() + (velocity / PROJECTILE_VELOCITY_MAGNITUDE) * 30.0,
-            None => self.position,
-        };
+        let position = self.position;
 
         let projectile = HandGun {
             position: position,
@@ -161,31 +141,76 @@ impl Player {
             collidable_object: CollidableObject {
                 width: self.gun_texture.get_size().0 as f64,
                 height: self.gun_texture.get_size().1 as f64,
-            }
+            },
+            gun_sound: self.gun_sound,
+            gun_texture: self.gun_texture,
         };
 
         self.gun_sound.borrow_mut().play();
 
-        let projectile = Rc::new(RefCell::new(projectile));
-        self.guns.push(projectile.clone());
+        Rc::new(RefCell::new(projectile))
 
-        let mut world_reqs: Vec<WorldReq> = Vec::new();
+        // let mut world_reqs: Vec<WorldReq> = Vec::new();
         
+        // let world_req: WorldReq = WorldReq {
+        //     renderable: Some(projectile.clone()),
+        //     updatable: None,
+        //     collidable: Some(projectile.clone()),
+        //     req_type: WorldRequestType::AddDynamicRenderable,
+        // };
+        // world_reqs.push(world_req);
+
+        // let world_req: WorldReq = WorldReq {
+        //     renderable: None,
+        //     updatable: Some(projectile.clone()),
+        //     collidable: None,
+        //     req_type: WorldRequestType::AddUpdatable,
+        // };
+        // world_reqs.push(world_req);
+
+        // world_reqs
+    }
+
+    fn world_requests_from(&self, gun: Rc<RefCell<Gun>>) -> Vec<WorldReq> {
+        let world_reqs: Vec<WorldReq> = vec![];
         let world_req: WorldReq = WorldReq {
-            renderable: Some(projectile.clone()),
+            renderable: Some(gun.clone().as_renderable()),
             updatable: None,
-            collidable: Some(projectile.clone()),
+            collidable: Some(gun.clone()),
             req_type: WorldRequestType::AddDynamicRenderable,
         };
         world_reqs.push(world_req);
-
         let world_req: WorldReq = WorldReq {
             renderable: None,
-            updatable: Some(projectile.clone()),
+            updatable: Some(gun.clone()),
             collidable: None,
             req_type: WorldRequestType::AddUpdatable,
         };
         world_reqs.push(world_req);
+        world_reqs
+    }
+
+    fn shoot_gun(&mut self, mouse_pos: &Vector2) -> Vec<WorldReq>  {
+        if self.has_shot_bullet {
+            return Vec::new()
+        }
+
+        let mut world_reqs: Vec<WorldReq> = vec![];
+        let mut flag = false;
+        {
+            let optional_gun: Option<&Rc<RefCell<Gun>>> = self.guns.last();
+            if let Some(gun) = optional_gun {
+                let hand_gun = gun.borrow().shoot_gun();
+                self.guns.push(hand_gun.clone());
+                world_reqs.append(self.world_requests_from(hand_gun));
+                flag = true;
+            }
+        }
+        if !flag {
+            let hand_gun = self.shoot_gun_from_player(&mouse_pos);
+            self.guns.push(hand_gun.clone());
+            world_reqs.append(self.world_requests_from(hand_gun));
+        }
 
         world_reqs
     }

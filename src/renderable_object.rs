@@ -1,4 +1,3 @@
-use vector2::*;
 use piston_window::*;
 use std::rc::Rc;
 

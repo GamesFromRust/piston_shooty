@@ -52,7 +52,7 @@ impl Collidable for Wall {
         &self.collidable_object
     }
 
-    fn collide(&self, other_object_type: ObjectType) {
+    fn collide(&mut self, other_object_type: ObjectType) {
         
     }
 }

@@ -233,7 +233,7 @@ fn load_level(texture_manager:&mut TextureManager, sound_manager:&mut SoundManag
         gun_sound: sound_manager.get("sounds\\boom.ogg"),
         bullet_texture: bullet.clone(),
         bullet_sound: sound_manager.get("sounds\\boop.ogg"),
-        has_shot: false,
+        has_shot_bullet: false,
     };
     
     let player = Rc::new(RefCell::new(player));

@@ -52,7 +52,15 @@ impl Collidable for Enemy {
         &self.collidable_object
     }
 
-    fn collide(&self, other_object_type: ObjectType) {
-        
+    fn collide(&mut self, other_object_type: ObjectType) {
+        match other_object_type {
+            ObjectType::Bullet => {
+                self.set_should_delete(true);
+            },
+            ObjectType::GunAxe => {
+                self.set_should_delete(true);
+            },
+            _ => {},
+        }
     }
 }
