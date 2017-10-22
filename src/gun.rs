@@ -14,10 +14,4 @@ pub const GUN_ROTATIONAL_VELOCITY: f64 = 4.0;
 pub trait Gun: Renderable + Updatable + Collidable {
     fn shoot_bullet(&self, bullet_texture: &Rc<G2dTexture>) -> Bullet;
     fn shoot_gun(&self) -> Rc<RefCell<Gun>>;
-    fn as_renderable(&self) -> &Renderable;
 }
-// impl<T: Renderable> Gun for T {
-//     fn as_renderable(&self) -> &Renderable {
-//         self
-//     }
-// }

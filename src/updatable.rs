@@ -6,7 +6,16 @@ use piston_window::UpdateArgs;
 use std::collections::HashMap;
 use world::WorldReq; // circular dependency?
 use game_object::GameObject;
+use std::cell::RefCell;
+use std::rc::Rc;
+use std::mem;
 
 pub trait Updatable: GameObject {
     fn update(&mut self, key_states: &HashMap<Key, input::ButtonState>, mouse_states: &HashMap<MouseButton, input::ButtonState>, mouse_pos: &Vector2, args: &UpdateArgs) -> Vec<WorldReq>;
 }
+
+// pub fn as_updatable<T: Updatable + ?Sized>(updatable: &Rc<RefCell<T>>) -> Rc<RefCell<Updatable>> {
+//     unsafe {
+//         mem::transmute(updatable.clone())
+//     }
+// }

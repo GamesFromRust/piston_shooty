@@ -21,6 +21,11 @@ use hand_gun::GUN_SCALE;
 use game_object::GameObject;
 use collidable_object::CollidableObject;
 use piston_window::ImageSize;
+// use renderable::as_renderable;
+// use collidable::as_collidable;
+// use updatable::as_updatable;
+use collidable::Collidable;
+use std::mem;
 
 pub struct Player {
     pub position: Vector2,
@@ -142,8 +147,8 @@ impl Player {
                 width: self.gun_texture.get_size().0 as f64,
                 height: self.gun_texture.get_size().1 as f64,
             },
-            gun_sound: self.gun_sound,
-            gun_texture: self.gun_texture,
+            gun_sound: self.gun_sound.clone(),
+            gun_texture: self.gun_texture.clone(),
         };
 
         self.gun_sound.borrow_mut().play();
@@ -172,48 +177,92 @@ impl Player {
     }
 
     fn world_requests_from(&self, gun: Rc<RefCell<Gun>>) -> Vec<WorldReq> {
-        let world_reqs: Vec<WorldReq> = vec![];
-        let world_req: WorldReq = WorldReq {
-            renderable: Some(gun.clone().as_renderable()),
-            updatable: None,
-            collidable: Some(gun.clone()),
-            req_type: WorldRequestType::AddDynamicRenderable,
-        };
-        world_reqs.push(world_req);
-        let world_req: WorldReq = WorldReq {
-            renderable: None,
-            updatable: Some(gun.clone()),
-            collidable: None,
-            req_type: WorldRequestType::AddUpdatable,
-        };
-        world_reqs.push(world_req);
-        world_reqs
+        // TODO: https://stackoverflow.com/questions/28632968/why-doesnt-rust-support-trait-object-upcasting
+        
+        unsafe {
+            let mut world_reqs: Vec<WorldReq> = vec![];
+            println!("before crash");
+            let renderable: Rc<RefCell<Renderable>> = mem::transmute(gun.clone());
+            let collidable: Rc<RefCell<Collidable>> = mem::transmute(gun.clone());
+            let updatable: Rc<RefCell<Updatable>> = mem::transmute(gun.clone());
+            println!("after crash");
+
+            // let renderable = as_renderable(&gun);
+            // let collidable = as_collidable(&gun);
+            // let updatable = as_updatable(&gun);
+
+            let world_req: WorldReq = WorldReq {
+                renderable: Some(renderable),
+                updatable: None,
+                collidable: Some(collidable),
+                req_type: WorldRequestType::AddDynamicRenderable,
+            };
+            world_reqs.push(world_req);
+            let world_req: WorldReq = WorldReq {
+                renderable: None,
+                updatable: Some(updatable),
+                collidable: None,
+                req_type: WorldRequestType::AddUpdatable,
+            };
+            world_reqs.push(world_req);
+            world_reqs
+        }
     }
 
     fn shoot_gun(&mut self, mouse_pos: &Vector2) -> Vec<WorldReq>  {
         if self.has_shot_bullet {
             return Vec::new()
         }
-
-        let mut world_reqs: Vec<WorldReq> = vec![];
-        let mut flag = false;
-        {
-            let optional_gun: Option<&Rc<RefCell<Gun>>> = self.guns.last();
-            if let Some(gun) = optional_gun {
-                let hand_gun = gun.borrow().shoot_gun();
-                self.guns.push(hand_gun.clone());
-                world_reqs.append(self.world_requests_from(hand_gun));
-                flag = true;
-            }
+        println!("before shoot");
+        let mut hand_gun: Rc<RefCell<Gun>> = self.shoot_gun_from_player(&mouse_pos);
+        if let Some(gun) = self.guns.last() {
+            hand_gun = gun.borrow().shoot_gun();
         }
-        if !flag {
-            let hand_gun = self.shoot_gun_from_player(&mouse_pos);
-            self.guns.push(hand_gun.clone());
-            world_reqs.append(self.world_requests_from(hand_gun));
-        }
+        println!("after shoot");
 
-        world_reqs
+        self.guns.push(hand_gun.clone());
+        self.world_requests_from(hand_gun)
+
+        // let optional_gun = self.guns.last();
+        // if let Some(gun) = optional_gun {
+        //     let hand_gun = gun.borrow().shoot_gun();
+        //     self.guns.push(hand_gun.clone());
+        //     self.world_requests_from(hand_gun)
+        // } else {
+        //     let hand_gun = self.shoot_gun_from_player(&mouse_pos);
+        //     self.guns.push(hand_gun.clone());
+        //     self.world_requests_from(hand_gun)
+        // }
     }
+    
+    // fn shoot_gun(&mut self, mouse_pos: &Vector2) -> Vec<WorldReq>  {
+    //     if self.has_shot_bullet {
+    //         return Vec::new()
+    //     }
+
+    //     let mut world_reqs: Vec<WorldReq> = vec![];
+    //     let mut shot_from_last_gun = false;
+    //     let mut guns = &mut self.guns;
+    //     let mut optional_gun: Option<&Rc<RefCell<Gun>>> = None;
+    //     {
+    //         optional_gun = guns.last();
+    //     }
+    //     {
+    //         if let Some(gun) = optional_gun {
+    //             let hand_gun = gun.borrow().shoot_gun();
+    //             guns.push(hand_gun.clone());
+    //             world_reqs.append(&mut self.world_requests_from(hand_gun));
+    //             shot_from_last_gun = true;
+    //         }
+    //     }
+    //     if !shot_from_last_gun {
+    //         let hand_gun = self.shoot_gun_from_player(&mouse_pos);
+    //         self.guns.push(hand_gun.clone());
+    //         world_reqs.append(&mut self.world_requests_from(hand_gun));
+    //     }
+
+    //     world_reqs
+    // }
 
     #[allow(unused_variables)]
     fn apply_input(&mut self, key_states: &HashMap<Key, input::ButtonState>, mouse_states: &HashMap<MouseButton, input::ButtonState>, mouse_pos: &Vector2, dt: f64) -> Vec<WorldReq> {

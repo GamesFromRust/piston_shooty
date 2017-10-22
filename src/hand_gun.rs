@@ -146,16 +146,12 @@ impl Gun for HandGun {
                 width: self.gun_texture.get_size().0 as f64,
                 height: self.gun_texture.get_size().1 as f64,
             },
-            gun_sound: self.gun_sound,
-            gun_texture: self.gun_texture,
+            gun_sound: self.gun_sound.clone(),
+            gun_texture: self.gun_texture.clone(),
         };
 
         self.gun_sound.borrow_mut().play();
 
-        Rc::new(RefCell::new(hand_gun));
-    }
-
-    fn as_renderable(&self) -> &Renderable {
-        self
+        Rc::new(RefCell::new(hand_gun))
     }
 }
