@@ -15,10 +15,6 @@ use std::cell::RefCell;
 use collidable::Collidable;
 use bullet::Bullet;
 use piston_window::G2dTexture;
-use gun::GUN_ROTATIONAL_VELOCITY;
-use gun::BULLET_VELOCITY_MAGNITUDE;
-use gun::BULLET_SCALE;
-use gun::Gun;
 use collidable_object::CollidableObject;
 use game_object::GameObject;
 use piston_window::ImageSize;
@@ -26,6 +22,10 @@ use ears::*;
 
 pub const PROJECTILE_VELOCITY_MAGNITUDE: f64 = 75.0;
 pub const GUN_SCALE: f64 = 0.5;
+
+pub const BULLET_VELOCITY_MAGNITUDE: f64 = 200.0;
+pub const BULLET_SCALE:f64 = 0.03125;
+pub const GUN_ROTATIONAL_VELOCITY: f64 = 4.0;
 
 pub struct HandGun {
     pub position: Vector2,
@@ -99,8 +99,8 @@ impl Collidable for HandGun {
     }
 }
 
-impl Gun for HandGun {
-    fn shoot_bullet(&self, bullet_texture: &Rc<G2dTexture>) -> Bullet {
+impl HandGun {
+    pub fn shoot_bullet(&self, bullet_texture: &Rc<G2dTexture>) -> Bullet {
         let velocity = Vector2 {
             x: self.rotation.cos(),
             y: self.rotation.sin(),
@@ -122,7 +122,7 @@ impl Gun for HandGun {
         }
     }
 
-    fn shoot_gun(&self) -> Rc<RefCell<Gun>> {
+    pub fn shoot_gun(&self) -> Rc<RefCell<HandGun>> {
         let rotation = self.get_rotation();
 
         let vel = Vector2 {

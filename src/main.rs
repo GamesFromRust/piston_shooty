@@ -12,7 +12,6 @@ mod updatable;
 mod ground;
 mod wall;
 mod enemy;
-mod gun;
 mod bullet;
 mod player;
 mod game_state;

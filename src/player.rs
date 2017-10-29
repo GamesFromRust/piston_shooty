@@ -15,7 +15,6 @@ use piston_window::G2dTexture;
 use hand_gun::HandGun;
 use ears::*;
 use world::WorldRequestType;
-use gun::Gun;
 use hand_gun::PROJECTILE_VELOCITY_MAGNITUDE;
 use hand_gun::GUN_SCALE;
 use game_object::GameObject;
@@ -32,7 +31,7 @@ pub struct Player {
     pub rotation: f64,
     pub scale: f64,
     pub renderable_object: RenderableObject,
-    pub guns: Vec<Rc<RefCell<Gun>>>,
+    pub guns: Vec<Rc<RefCell<HandGun>>>,
     pub gun_texture: Rc<G2dTexture>,
     pub gun_sound: Rc<RefCell<Sound>>,
     pub bullet_texture: Rc<G2dTexture>,
@@ -176,31 +175,23 @@ impl Player {
         // world_reqs
     }
 
-    fn world_requests_from(&self, gun: Rc<RefCell<Gun>>) -> Vec<WorldReq> {
+    fn world_requests_from(&self, gun: Rc<RefCell<HandGun>>) -> Vec<WorldReq> {
         // TODO: https://stackoverflow.com/questions/28632968/why-doesnt-rust-support-trait-object-upcasting
         
         unsafe {
             let mut world_reqs: Vec<WorldReq> = vec![];
-            println!("before crash");
-            let renderable: Rc<RefCell<Renderable>> = mem::transmute(gun.clone());
-            let collidable: Rc<RefCell<Collidable>> = mem::transmute(gun.clone());
-            let updatable: Rc<RefCell<Updatable>> = mem::transmute(gun.clone());
-            println!("after crash");
-
-            // let renderable = as_renderable(&gun);
-            // let collidable = as_collidable(&gun);
-            // let updatable = as_updatable(&gun);
+            
 
             let world_req: WorldReq = WorldReq {
-                renderable: Some(renderable),
+                renderable: Some(gun.clone()),
                 updatable: None,
-                collidable: Some(collidable),
+                collidable: Some(gun.clone()),
                 req_type: WorldRequestType::AddDynamicRenderable,
             };
             world_reqs.push(world_req);
             let world_req: WorldReq = WorldReq {
                 renderable: None,
-                updatable: Some(updatable),
+                updatable: Some(gun.clone()),
                 collidable: None,
                 req_type: WorldRequestType::AddUpdatable,
             };
@@ -214,7 +205,7 @@ impl Player {
             return Vec::new()
         }
         println!("before shoot");
-        let mut hand_gun: Rc<RefCell<Gun>> = self.shoot_gun_from_player(&mouse_pos);
+        let mut hand_gun: Rc<RefCell<HandGun>> = self.shoot_gun_from_player(&mouse_pos);
         if let Some(gun) = self.guns.last() {
             hand_gun = gun.borrow().shoot_gun();
         }
@@ -243,7 +234,7 @@ impl Player {
     //     let mut world_reqs: Vec<WorldReq> = vec![];
     //     let mut shot_from_last_gun = false;
     //     let mut guns = &mut self.guns;
-    //     let mut optional_gun: Option<&Rc<RefCell<Gun>>> = None;
+    //     let mut optional_gun: Option<&Rc<RefCell<HandGun>>> = None;
     //     {
     //         optional_gun = guns.last();
     //     }
