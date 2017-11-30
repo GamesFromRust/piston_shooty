@@ -21,6 +21,7 @@ use piston_window::ImageSize;
 use ears::*;
 use hand_gun::HandGun;
 use gun_strategy::GunStrategy;
+use gun_axe::GunAxe;
 
 pub const PROJECTILE_VELOCITY_MAGNITUDE: f64 = 75.0;
 pub const GUN_SCALE: f64 = 0.5;
@@ -63,7 +64,7 @@ impl GameObject for Gun {
     }
     
     fn get_object_type(&self) -> ObjectType {
-        ObjectType::Gun
+        self.gun_strategy.get_object_type()
     }
 }
 
@@ -144,7 +145,7 @@ impl Gun {
             },
             gun_sound: self.gun_sound.clone(),
             gun_texture: self.gun_texture.clone(),
-            gun_strategy: Box::new(HandGun {
+            gun_strategy: Box::new(GunAxe {
                 should_delete: false,
             })
         };

@@ -23,6 +23,7 @@ use piston_window::ImageSize;
 use collidable::Collidable;
 use std::mem;
 use hand_gun::HandGun;
+use gun_axe::GunAxe;
 
 pub struct Player {
     pub position: Vector2,
@@ -145,7 +146,7 @@ impl Player {
             },
             gun_sound: self.gun_sound.clone(),
             gun_texture: self.gun_texture.clone(),
-            gun_strategy: Box::new(HandGun {
+            gun_strategy: Box::new(GunAxe {
                 should_delete: false,
             })
         };

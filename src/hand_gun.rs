@@ -15,6 +15,10 @@ impl GunStrategy for HandGun {
     fn set_should_delete(&mut self, should_delete: bool) {
         self.should_delete = should_delete
     }
+    
+    fn get_object_type(&self) -> ObjectType {
+        ObjectType::HandGun
+    }
 
     fn collide(&mut self, other_object_type: ObjectType) {
         match other_object_type {
