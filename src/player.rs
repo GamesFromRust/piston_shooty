@@ -24,6 +24,7 @@ use collidable::Collidable;
 use std::mem;
 use hand_gun::HandGun;
 use gun_axe::GunAxe;
+use gun_strategy::GunStrategy;
 
 pub struct Player {
     pub position: Vector2,
@@ -36,6 +37,8 @@ pub struct Player {
     pub bullet_texture: Rc<G2dTexture>,
     pub bullet_sound: Rc<RefCell<Sound>>,
     pub has_shot_bullet: bool,
+    pub gun_strategy: Rc<GunStrategy>,
+    pub gun_strategies: Vec<Rc<GunStrategy>>,
 }
 
 impl GameObject for Player {
@@ -146,9 +149,7 @@ impl Player {
             },
             gun_sound: self.gun_sound.clone(),
             gun_texture: self.gun_texture.clone(),
-            gun_strategy: Box::new(GunAxe {
-                should_delete: false,
-            })
+            gun_strategy: self.gun_strategy.new_gun_strategy()
         };
 
         self.gun_sound.borrow_mut().play();

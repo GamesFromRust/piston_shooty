@@ -6,4 +6,5 @@ pub trait GunStrategy {
     fn set_should_delete(&mut self, should_delete: bool);
     fn get_object_type(&self) -> ObjectType;
     fn collide(&mut self, other_object_type: ObjectType);
+    fn new_gun_strategy(&self) -> Box<GunStrategy>;
 }

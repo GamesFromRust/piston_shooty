@@ -145,9 +145,7 @@ impl Gun {
             },
             gun_sound: self.gun_sound.clone(),
             gun_texture: self.gun_texture.clone(),
-            gun_strategy: Box::new(GunAxe {
-                should_delete: false,
-            })
+            gun_strategy: self.gun_strategy.new_gun_strategy(),
         };
 
         self.gun_sound.borrow_mut().play();

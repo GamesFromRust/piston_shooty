@@ -28,4 +28,10 @@ impl GunStrategy for GunAxe {
             _ => {},
         }
     }
+
+    fn new_gun_strategy(&self) -> Box<GunStrategy> {
+        Box::new(GunAxe {
+            should_delete: false
+        })
+    }
 }

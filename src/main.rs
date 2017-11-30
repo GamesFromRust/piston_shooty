@@ -71,6 +71,9 @@ use game_state::UpdateResultType;
 use victory_screen::VictoryScreen;
 use menu_screen::MenuScreen;
 use collidable_object::CollidableObject;
+use gun_axe::GunAxe;
+use hand_gun::HandGun;
+use gun_strategy::GunStrategy;
 
 const WIDTH: u32 = 1280;
 const HEIGHT: u32 = 720;
@@ -220,6 +223,17 @@ fn load_level(texture_manager:&mut TextureManager, sound_manager:&mut SoundManag
     let enemy = texture_manager.get("textures\\enemy.png");
     let ground = texture_manager.get("textures\\ground.png");
 
+    let hand_gun_strategy: Rc<GunStrategy> = Rc::new(HandGun {
+        should_delete: false
+    });
+
+    let gun_strategies: Vec<Rc<GunStrategy>> = vec![
+        hand_gun_strategy.clone(),
+        Rc::new(GunAxe {
+            should_delete: false
+        }),
+    ];
+
     let player: Player = Player {
         position: Vector2 {
             x: 0.0,
@@ -236,6 +250,8 @@ fn load_level(texture_manager:&mut TextureManager, sound_manager:&mut SoundManag
         bullet_texture: bullet.clone(),
         bullet_sound: sound_manager.get("sounds\\boop.ogg"),
         has_shot_bullet: false,
+        gun_strategy: hand_gun_strategy.clone(),
+        gun_strategies: gun_strategies,
     };
     
     let player = Rc::new(RefCell::new(player));
