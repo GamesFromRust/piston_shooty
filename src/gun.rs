@@ -152,4 +152,8 @@ impl Gun {
 
         Rc::new(RefCell::new(hand_gun))
     }
+
+    pub fn new_gun_strategy(&self) -> Box<GunStrategy> {
+        self.gun_strategy.new_gun_strategy()
+    }
 }

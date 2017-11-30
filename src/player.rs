@@ -32,13 +32,12 @@ pub struct Player {
     pub scale: f64,
     pub renderable_object: RenderableObject,
     pub guns: Vec<Rc<RefCell<Gun>>>,
-    pub gun_texture: Rc<G2dTexture>,
-    pub gun_sound: Rc<RefCell<Sound>>,
     pub bullet_texture: Rc<G2dTexture>,
     pub bullet_sound: Rc<RefCell<Sound>>,
     pub has_shot_bullet: bool,
-    pub gun_strategy: Rc<GunStrategy>,
-    pub gun_strategies: Vec<Rc<GunStrategy>>,
+    pub gun_template: Rc<Gun>,
+    pub gun_templates: Vec<Rc<Gun>>,
+    pub current_gun_template_index: usize,
 }
 
 impl GameObject for Player {
@@ -140,19 +139,19 @@ impl Player {
             rotation: rotation,
             scale: GUN_SCALE,
             renderable_object: RenderableObject {
-                texture: self.gun_texture.clone(),
+                texture: self.gun_template.gun_texture.clone(),
             },
             velocity: velocity,
             collidable_object: CollidableObject {
-                width: self.gun_texture.get_size().0 as f64,
-                height: self.gun_texture.get_size().1 as f64,
+                width: self.gun_template.gun_texture.get_size().0 as f64,
+                height: self.gun_template.gun_texture.get_size().1 as f64,
             },
-            gun_sound: self.gun_sound.clone(),
-            gun_texture: self.gun_texture.clone(),
-            gun_strategy: self.gun_strategy.new_gun_strategy()
+            gun_sound: self.gun_template.gun_sound.clone(),
+            gun_texture: self.gun_template.gun_texture.clone(),
+            gun_strategy: self.gun_template.new_gun_strategy()
         };
 
-        self.gun_sound.borrow_mut().play();
+        self.gun_template.gun_sound.borrow_mut().play();
 
         Rc::new(RefCell::new(projectile))
     }
@@ -206,6 +205,32 @@ impl Player {
                 MouseButton::Right => {
                     if value.pressed {
                         world_reqs.append(&mut self.shoot_bullets());
+                    }
+                }
+                _ => {}
+            }
+        }
+
+        for (key, value) in key_states {
+            match *key {
+                Key::Q => {
+                    if value.pressed {
+                        if self.current_gun_template_index == self.gun_templates.len() - 1 {
+                            self.current_gun_template_index = 0;
+                        } else {
+                            self.current_gun_template_index += 1;
+                        }
+                        self.gun_template = self.gun_templates[self.current_gun_template_index].clone();
+                    }
+                },
+                Key::E => {
+                    if value.pressed {
+                        if self.current_gun_template_index == 0 {
+                            self.current_gun_template_index = self.gun_templates.len();
+                        } else {
+                            self.current_gun_template_index -= 1;
+                        }
+                        self.gun_template = self.gun_templates[self.current_gun_template_index].clone();
                     }
                 }
                 _ => {}

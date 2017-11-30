@@ -74,6 +74,7 @@ use collidable_object::CollidableObject;
 use gun_axe::GunAxe;
 use hand_gun::HandGun;
 use gun_strategy::GunStrategy;
+use gun::Gun;
 
 const WIDTH: u32 = 1280;
 const HEIGHT: u32 = 720;
@@ -216,22 +217,69 @@ impl<'a> App<'a> {
 }
 
 fn load_level(texture_manager:&mut TextureManager, sound_manager:&mut SoundManager, level_name:&str) -> World {
-    let hand_gun = texture_manager.get("textures\\hand-gun_square.png");
+    let hand_gun_texture = texture_manager.get("textures\\hand-gun_square.png");
+    let axe_gun_texture = texture_manager.get("textures\\GunaxeV1.png");
     let gun_gun = texture_manager.get("textures\\GunGunV1.png");
     let bullet = texture_manager.get("textures\\bullet.png");
     let wall = texture_manager.get("textures\\brick_square.png");
     let enemy = texture_manager.get("textures\\enemy.png");
     let ground = texture_manager.get("textures\\ground.png");
+    
+    let gun_sound = sound_manager.get("sounds\\boom.ogg");
 
-    let hand_gun_strategy: Rc<GunStrategy> = Rc::new(HandGun {
-        should_delete: false
+    let hand_gun: Rc<Gun> = Rc::new( Gun {
+        position: Vector2 {
+            x: 0.0,
+            y: 0.0,
+        },
+        rotation: 0.0,
+        scale: 1.0,
+        renderable_object: RenderableObject {
+            texture: gun_gun.clone(),
+        },
+        velocity: Vector2 {
+            x: 0.0,
+            y: 0.0,
+        },
+        collidable_object: CollidableObject {
+            width: gun_gun.get_size().0 as f64,
+            height: gun_gun.get_size().1 as f64,
+        },
+        gun_sound: gun_sound.clone(),
+        gun_texture: gun_gun.clone(),
+        gun_strategy: Box::new(HandGun {
+            should_delete: false
+        })
     });
 
-    let gun_strategies: Vec<Rc<GunStrategy>> = vec![
-        hand_gun_strategy.clone(),
-        Rc::new(GunAxe {
+    let gun_axe: Rc<Gun> = Rc::new( Gun {
+        position: Vector2 {
+            x: 0.0,
+            y: 0.0,
+        },
+        rotation: 0.0,
+        scale: 1.0,
+        renderable_object: RenderableObject {
+            texture: axe_gun_texture.clone(),
+        },
+        velocity: Vector2 {
+            x: 0.0,
+            y: 0.0,
+        },
+        collidable_object: CollidableObject {
+            width: axe_gun_texture.get_size().0 as f64,
+            height: axe_gun_texture.get_size().1 as f64,
+        },
+        gun_sound: gun_sound.clone(),
+        gun_texture: axe_gun_texture.clone(),
+        gun_strategy: Box::new(GunAxe {
             should_delete: false
-        }),
+        })
+    });
+
+    let guns: Vec<Rc<Gun>> = vec![
+        hand_gun.clone(),
+        gun_axe.clone(),
     ];
 
     let player: Player = Player {
@@ -242,16 +290,15 @@ fn load_level(texture_manager:&mut TextureManager, sound_manager:&mut SoundManag
         rotation: 0.0,
         scale: PLAYER_SCALE,
         renderable_object: RenderableObject {
-            texture: hand_gun.clone(),
+            texture: hand_gun_texture.clone(),
         },
         guns: Vec::new(),
-        gun_texture: gun_gun.clone(),
-        gun_sound: sound_manager.get("sounds\\boom.ogg"),
         bullet_texture: bullet.clone(),
         bullet_sound: sound_manager.get("sounds\\boop.ogg"),
         has_shot_bullet: false,
-        gun_strategy: hand_gun_strategy.clone(),
-        gun_strategies: gun_strategies,
+        gun_template: hand_gun.clone(),
+        gun_templates: guns,
+        current_gun_template_index: 0,
     };
     
     let player = Rc::new(RefCell::new(player));
