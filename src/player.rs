@@ -12,23 +12,24 @@ use world::WorldReq;
 use std::rc::Rc;
 use std::cell::RefCell;
 use piston_window::G2dTexture;
-use hand_gun::HandGun;
+use gun::Gun;
 use ears::*;
 use world::WorldRequestType;
-use hand_gun::PROJECTILE_VELOCITY_MAGNITUDE;
-use hand_gun::GUN_SCALE;
+use gun::PROJECTILE_VELOCITY_MAGNITUDE;
+use gun::GUN_SCALE;
 use game_object::GameObject;
 use collidable_object::CollidableObject;
 use piston_window::ImageSize;
 use collidable::Collidable;
 use std::mem;
+use hand_gun::HandGun;
 
 pub struct Player {
     pub position: Vector2,
     pub rotation: f64,
     pub scale: f64,
     pub renderable_object: RenderableObject,
-    pub guns: Vec<Rc<RefCell<HandGun>>>,
+    pub guns: Vec<Rc<RefCell<Gun>>>,
     pub gun_texture: Rc<G2dTexture>,
     pub gun_sound: Rc<RefCell<Sound>>,
     pub bullet_texture: Rc<G2dTexture>,
@@ -123,14 +124,14 @@ impl Player {
         world_reqs
     }
 
-    fn shoot_gun_from_player(&mut self, mouse_pos: &Vector2) -> Rc<RefCell<HandGun>> {
+    fn shoot_gun_from_player(&mut self, mouse_pos: &Vector2) -> Rc<RefCell<Gun>> {
         let rotation = self.rotation;
 
         let velocity =(*mouse_pos - self.position).normalized() * PROJECTILE_VELOCITY_MAGNITUDE;
 
         let position = self.position;
 
-        let projectile = HandGun {
+        let projectile = Gun {
             position: position,
             rotation: rotation,
             scale: GUN_SCALE,
@@ -138,13 +139,15 @@ impl Player {
                 texture: self.gun_texture.clone(),
             },
             velocity: velocity,
-            should_delete: false,
             collidable_object: CollidableObject {
                 width: self.gun_texture.get_size().0 as f64,
                 height: self.gun_texture.get_size().1 as f64,
             },
             gun_sound: self.gun_sound.clone(),
             gun_texture: self.gun_texture.clone(),
+            gun_strategy: Box::new(HandGun {
+                should_delete: false,
+            })
         };
 
         self.gun_sound.borrow_mut().play();
@@ -152,7 +155,7 @@ impl Player {
         Rc::new(RefCell::new(projectile))
     }
 
-    fn world_requests_from(&self, gun: Rc<RefCell<HandGun>>) -> Vec<WorldReq> {
+    fn world_requests_from(&self, gun: Rc<RefCell<Gun>>) -> Vec<WorldReq> {
         // TODO: https://stackoverflow.com/questions/28632968/why-doesnt-rust-support-trait-object-upcasting
         
         let mut world_reqs: Vec<WorldReq> = vec![];
@@ -178,7 +181,7 @@ impl Player {
         if self.has_shot_bullet {
             return Vec::new()
         }
-        let mut hand_gun: Rc<RefCell<HandGun>> = self.shoot_gun_from_player(&mouse_pos);
+        let mut hand_gun: Rc<RefCell<Gun>> = self.shoot_gun_from_player(&mouse_pos);
         if let Some(gun) = self.guns.last() {
             hand_gun = gun.borrow().shoot_gun();
         }

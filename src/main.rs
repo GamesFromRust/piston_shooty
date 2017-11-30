@@ -24,6 +24,8 @@ mod collidable;
 mod hand_gun;
 mod collidable_object;
 mod game_object;
+mod gun_strategy;
+mod gun;
 
 extern crate piston;
 extern crate glutin_window;
