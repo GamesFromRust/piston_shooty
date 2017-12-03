@@ -33,6 +33,7 @@ pub struct Player {
     pub gun_template: Rc<Gun>,
     pub gun_templates: Vec<Rc<Gun>>,
     pub current_gun_template_index: usize,
+    pub shots_taken: usize, // drinks all around
 }
 
 impl GameObject for Player {
@@ -178,7 +179,7 @@ impl Player {
             return false;
         }
 
-        if self.gun_template.has_gun_depth() && self.guns.len() >= self.gun_template.get_gun_depth() {
+        if self.gun_template.has_gun_depth() && self.shots_taken >= self.gun_template.get_gun_depth() {
             return false;
         }
 
@@ -196,6 +197,7 @@ impl Player {
         }
 
         self.guns.push(new_gun.clone());
+        self.shots_taken += 1;
         self.world_requests_from(new_gun)
     }
     

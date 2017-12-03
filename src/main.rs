@@ -298,6 +298,7 @@ fn load_level(texture_manager:&mut TextureManager, sound_manager:&mut SoundManag
         gun_template: hand_gun.clone(),
         gun_templates: guns,
         current_gun_template_index: 0,
+        shots_taken: 0,
     };
     
     let player = Rc::new(RefCell::new(player));
