@@ -89,7 +89,7 @@ impl Updatable for Player {
 
 impl Player {
     fn shoot_bullets(&mut self) -> Vec<WorldReq> {
-        if self.has_shot_bullet {
+        if !self.can_shoot_bullet() {
             return Vec::new();
         }
 
@@ -116,9 +116,7 @@ impl Player {
             world_reqs.push(world_req);
         }
 
-        if !world_reqs.is_empty() {
-            self.has_shot_bullet = true;
-        }
+        self.has_shot_bullet = true;
 
         world_reqs
     }
@@ -173,8 +171,20 @@ impl Player {
         world_reqs.push(world_req);
         world_reqs
     }
+    
+    pub fn can_shoot_bullet(&self) -> bool {
+        if self.has_shot_bullet {
+            return false;
+        }
 
-    fn can_shoot(&self) -> bool {
+        if self.guns.is_empty() {
+            return false;
+        }
+
+        true
+    }
+
+    pub fn can_shoot_gun(&self) -> bool {
         if self.has_shot_bullet {
             return false;
         }
@@ -187,7 +197,7 @@ impl Player {
     }
 
     fn shoot_gun(&mut self, mouse_pos: &Vector2) -> Vec<WorldReq>  {
-        if !self.can_shoot() {
+        if !self.can_shoot_gun() {
             return Vec::new();
         }
 

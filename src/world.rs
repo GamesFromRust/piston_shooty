@@ -86,14 +86,20 @@ impl World {
         true
     }
 
+    fn can_take_action(&self) -> bool {
+        let mut can_take_action = self.player.borrow().can_shoot_gun();
+        can_take_action = can_take_action || self.player.borrow().can_shoot_bullet();
+        can_take_action
+    }
+
     fn was_defeated(&self) -> bool {
-        if !self.player.borrow().has_shot_bullet {
+        if self.can_take_action() {
             return false;
         }
         
         for renderable_layer in &self.renderables {
             for renderable in renderable_layer {
-                if renderable.borrow().get_object_type() == ObjectType::Bullet {
+                if renderable.borrow().get_object_type() == ObjectType::Bullet || renderable.borrow().get_object_type() == ObjectType::GunAxe {
                     return false;
                 }
             }
