@@ -20,11 +20,6 @@ use gun::GUN_SCALE;
 use game_object::GameObject;
 use collidable_object::CollidableObject;
 use piston_window::ImageSize;
-use collidable::Collidable;
-use std::mem;
-use hand_gun::HandGun;
-use gun_axe::GunAxe;
-use gun_strategy::GunStrategy;
 
 pub struct Player {
     pub position: Vector2,
@@ -178,17 +173,30 @@ impl Player {
         world_reqs
     }
 
-    fn shoot_gun(&mut self, mouse_pos: &Vector2) -> Vec<WorldReq>  {
+    fn can_shoot(&self) -> bool {
         if self.has_shot_bullet {
-            return Vec::new()
-        }
-        let mut hand_gun: Rc<RefCell<Gun>> = self.shoot_gun_from_player(&mouse_pos);
-        if let Some(gun) = self.guns.last() {
-            hand_gun = gun.borrow().shoot_gun();
+            return false;
         }
 
-        self.guns.push(hand_gun.clone());
-        self.world_requests_from(hand_gun)
+        if self.gun_template.has_gun_depth() && self.guns.len() >= self.gun_template.get_gun_depth() {
+            return false;
+        }
+
+        return true;
+    }
+
+    fn shoot_gun(&mut self, mouse_pos: &Vector2) -> Vec<WorldReq>  {
+        if !self.can_shoot() {
+            return Vec::new();
+        }
+
+        let mut new_gun = self.shoot_gun_from_player(&mouse_pos);
+        if let Some(gun) = self.guns.last() {
+             new_gun = gun.borrow().shoot_gun();
+        }
+
+        self.guns.push(new_gun.clone());
+        self.world_requests_from(new_gun)
     }
     
     #[allow(unused_variables)]

@@ -1,7 +1,5 @@
 use object_type::ObjectType;
 use gun_strategy::GunStrategy;
-use gun::Gun;
-use game_object::GameObject;
 
 pub struct GunAxe {
     pub should_delete: bool
@@ -33,5 +31,13 @@ impl GunStrategy for GunAxe {
         Box::new(GunAxe {
             should_delete: false
         })
+    }
+
+    fn has_gun_depth(&self) -> bool {
+        true
+    }
+
+    fn get_gun_depth(&self) -> usize {
+        2
     }
 }

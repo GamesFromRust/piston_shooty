@@ -8,7 +8,6 @@ use piston_window::Key;
 use piston_window::MouseButton;
 use piston_window::UpdateArgs;
 use std::collections::HashMap;
-use world::WorldRequestType;
 use world::WorldReq;
 use std::rc::Rc;
 use std::cell::RefCell;
@@ -19,9 +18,7 @@ use collidable_object::CollidableObject;
 use game_object::GameObject;
 use piston_window::ImageSize;
 use ears::*;
-use hand_gun::HandGun;
 use gun_strategy::GunStrategy;
-use gun_axe::GunAxe;
 
 pub const PROJECTILE_VELOCITY_MAGNITUDE: f64 = 75.0;
 pub const GUN_SCALE: f64 = 0.5;
@@ -131,7 +128,7 @@ impl Gun {
 
         let position = *self.get_position() + (velocity / PROJECTILE_VELOCITY_MAGNITUDE) * 30.0;
         
-        let hand_gun = Gun {
+        let gun = Gun {
             position: position,
             rotation: rotation,
             scale: GUN_SCALE,
@@ -150,7 +147,15 @@ impl Gun {
 
         self.gun_sound.borrow_mut().play();
 
-        Rc::new(RefCell::new(hand_gun))
+        Rc::new(RefCell::new(gun))
+    }
+
+    pub fn has_gun_depth(&self) -> bool {
+        self.gun_strategy.has_gun_depth()
+    }
+
+    pub fn get_gun_depth(&self) -> usize {
+        self.gun_strategy.get_gun_depth()
     }
 
     pub fn new_gun_strategy(&self) -> Box<GunStrategy> {

@@ -51,8 +51,7 @@ impl Collidable for Wall {
     fn get_collidable_object(&self) -> &CollidableObject {
         &self.collidable_object
     }
-
-    fn collide(&mut self, other_object_type: ObjectType) {
-        
+    
+    fn collide(&mut self, _other_object_type: ObjectType) {
     }
 }

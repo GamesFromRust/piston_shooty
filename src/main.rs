@@ -73,7 +73,6 @@ use menu_screen::MenuScreen;
 use collidable_object::CollidableObject;
 use gun_axe::GunAxe;
 use hand_gun::HandGun;
-use gun_strategy::GunStrategy;
 use gun::Gun;
 
 const WIDTH: u32 = 1280;
@@ -143,7 +142,7 @@ impl<'a> App<'a> {
         // let game_ended_state = &self.world.game_ended_state;
         let game_state = &self.game_state;
 
-        self.window.draw_2d(event, |c: Context, mut gl: &mut G2d| {
+        self.window.draw_2d(event, |c: Context, gl: &mut G2d| {
             // Clear the screen.
             clear(GREEN, gl);
 
