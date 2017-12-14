@@ -9,18 +9,9 @@ use piston_window::MouseButton;
 use piston_window::UpdateArgs;
 use std::collections::HashMap;
 use world::WorldReq;
-use std::rc::Rc;
 use std::cell::RefCell;
-use piston_window::G2dTexture;
-use gun::Gun;
-use ears::*;
-use world::WorldRequestType;
-use gun::GUN_SCALE;
 use game_object::GameObject;
-use collidable_object::CollidableObject;
-use piston_window::ImageSize;
 use meta_gun::MetaGun;
-use std::cell::Ref;
 use std::cell::RefMut;
 
 pub struct Player {
@@ -82,10 +73,6 @@ impl Updatable for Player {
 }
 
 impl Player {
-    fn meta_gun(&self) -> Ref<MetaGun> {
-        return self.gun_templates[self.current_gun_template_index].borrow()
-    }
-
     fn meta_gun_mut(&self) -> RefMut<MetaGun> {
         return self.gun_templates[self.current_gun_template_index].borrow_mut()
     }
@@ -95,21 +82,15 @@ impl Player {
     }
     
     pub fn can_shoot_bullet(&self) -> bool {
-        for gun_template in &self.gun_templates {
-            if gun_template.borrow().can_shoot_bullet() {
-                return true;
-            }
-        }
-        return false;
+        return self.gun_templates.iter()
+            .find(|&gun_template| gun_template.borrow().can_shoot_bullet())
+            .is_some();
     }
 
     pub fn can_shoot_gun(&self) -> bool {
-        for gun_template in &self.gun_templates {
-            if gun_template.borrow().can_shoot_gun() {
-                return true;
-            }
-        }
-        return false;
+        return self.gun_templates.iter()
+            .find(|&gun_template| gun_template.borrow().can_shoot_gun())
+            .is_some();
     }
 
     fn shoot_gun(&mut self, mouse_pos: &Vector2) -> Vec<WorldReq>  {
