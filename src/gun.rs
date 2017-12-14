@@ -149,16 +149,4 @@ impl Gun {
 
         Rc::new(RefCell::new(gun))
     }
-
-    pub fn has_gun_depth(&self) -> bool {
-        self.gun_strategy.has_gun_depth()
-    }
-
-    pub fn get_gun_depth(&self) -> usize {
-        self.gun_strategy.get_gun_depth()
-    }
-
-    pub fn new_gun_strategy(&self) -> Box<GunStrategy> {
-        self.gun_strategy.new_gun_strategy()
-    }
 }
