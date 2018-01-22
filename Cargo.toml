@@ -11,12 +11,12 @@ authors = [
 name = "piston_shooty"
 
 [dependencies]
-piston = "0.27.0"
-piston2d-graphics = "0.19.0"
-pistoncore-glutin_window = "0.33.0"
+piston = "*"
+piston2d-graphics = "*"
+pistoncore-glutin_window = "*"
 piston_window = "*"
 gfx_device_gl = "*"
-time = "0.1.0"
+time = "*"
 find_folder = "*"
 ears = "*"
 ncollide = "*"
@@ -24,3 +24,4 @@ ncollide_geometry = "*"
 ncollide_math = "*"
 nalgebra = "*"
 csv = "*"
+conrod = { version = "*", features = ["piston"] }

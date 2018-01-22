@@ -15,7 +15,7 @@ pub struct ButtonState {
     pub released: bool,
 }
 
-pub fn gather_input(input: &Input,
+pub fn gather_input(input: &Event,
                     key_states: &mut HashMap<Key, ButtonState>,
                     mouse_states: &mut HashMap<MouseButton, ButtonState>,
                     mouse_pos: &mut Vector2) {

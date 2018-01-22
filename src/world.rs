@@ -243,7 +243,7 @@ fn collides(collidable1: &Collidable, collidable2: &Collidable) -> bool {
     collidable1_aabb_cuboid2.intersects(&collidable2_aabb_cuboid2)
 }
 
-fn create_aabb_cuboid2(collidable: &Collidable) -> ncollide_geometry::bounding_volume::AABB<nalgebra::PointBase<f64, nalgebra::U2, nalgebra::MatrixArray<f64, nalgebra::U2, nalgebra::U1>>> {
+fn create_aabb_cuboid2(collidable: &Collidable) -> ncollide_geometry::bounding_volume::AABB<nalgebra::geometry::Point<f64, nalgebra::U2>> {
     let half_extents: nalgebra::core::Vector2<f64> = nalgebra::core::Vector2::new(
         collidable.get_collidable_object().width as f64 * 0.5 * collidable.get_scale(),
         collidable.get_collidable_object().height as f64 * 0.5 * collidable.get_scale());

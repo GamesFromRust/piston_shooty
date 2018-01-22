@@ -42,6 +42,7 @@ extern crate ncollide_geometry;
 extern crate ncollide_math;
 extern crate nalgebra;
 extern crate csv;
+#[macro_use] extern crate conrod;
 
 use std::collections::HashMap;
 use piston_window::*;
@@ -75,6 +76,8 @@ use collidable_object::CollidableObject;
 use gun_axe::GunAxe;
 use hand_gun::HandGun;
 use meta_gun::MetaGun;
+use piston::input::generic_event::*;
+use conrod::backend::piston::draw::Context;
 
 const WIDTH: u32 = 1280;
 const HEIGHT: u32 = 720;
@@ -110,11 +113,15 @@ pub struct App<'a> {
     texture_manager: TextureManager,
     sound_manager: SoundManager,
     level_index: usize,
-    world_list: Rc<Vec<&'a str>>
+    world_list: Rc<Vec<&'a str>>,
+    ui: conrod::Ui,
+    glyph_cache: conrod::text::GlyphCache<'a>, // todo: make it green development at work! (why is 'a required halp)
+    text_texture_cache: G2dTexture,
+    image_map: conrod::image::Map<G2dTexture>,
 }
 
 impl<'a> App<'a> {
-    fn render(&mut self, event: &Input) {
+    fn render(&mut self, event: &Event) {
         // TODO: Read a book on how to do a fps counter.
         let curr_frame_time: u64 = time::precise_time_ns();
 
@@ -143,7 +150,7 @@ impl<'a> App<'a> {
         // let game_ended_state = &self.world.game_ended_state;
         let game_state = &self.game_state;
 
-        self.window.draw_2d(event, |c: Context, gl: &mut G2d| {
+        self.window.draw_2d(event, |c/*: Context*/, gl/*: &mut G2d*/| {
             // Clear the screen.
             clear(GREEN, gl);
 
@@ -153,6 +160,40 @@ impl<'a> App<'a> {
             let fps_transform = c.transform.trans(10.0, 10.0);
             let cache_rc = font_manager.get("Roboto-Regular.ttf");
             text(WHITE, 14, &fps_text, cache_rc.borrow_mut().deref_mut(), fps_transform, gl);
+
+            // todo: move this into a func
+            let mut text_vertex_data = Vec::new();
+            if let Some(primitives) = self.ui.draw_if_changed() {
+                // A function used for caching glyphs to the texture cache.
+                let cache_queued_glyphs = |graphics: &mut G2d,
+                                            cache: &mut G2dTexture,
+                                            rect: conrod::text::rt::Rect<u32>,
+                                            data: &[u8]|
+                {
+                    let offset = [rect.min.x, rect.min.y];
+                    let size = [rect.width(), rect.height()];
+                    let format = piston_window::texture::Format::Rgba8;
+                    let encoder = &mut graphics.encoder;
+                    text_vertex_data.clear();
+                    text_vertex_data.extend(data.iter().flat_map(|&b| vec![255, 255, 255, b]));
+                    piston_window::texture::UpdateTexture::update(cache, encoder, format, &text_vertex_data[..], offset, size)
+                        .expect("failed to update texture")
+                };
+
+                // Specify how to get the drawable texture from the image. In this case, the image
+                // *is* the texture.
+                fn texture_from_image<T>(img: &T) -> &T { img }
+
+                // Draw the conrod `render::Primitives`.
+                conrod::backend::piston::draw::primitives(primitives,
+                                                            c,
+                                                            gl,
+                                                            &mut self.text_texture_cache,
+                                                            &mut self.glyph_cache,
+                                                            &self.image_map,
+                                                            cache_queued_glyphs,
+                                                            texture_from_image);
+            }
         });
     }
 
@@ -423,6 +464,54 @@ fn load_level(texture_manager:&mut TextureManager, sound_manager:&mut SoundManag
     world
 }
 
+// Generate a unique `WidgetId` for each widget.
+widget_ids! {
+    pub struct Ids {
+
+        // The scrollable canvas.
+        canvas,
+
+        // The title and introduction widgets.
+        title,
+        introduction,
+
+        // Shapes.
+        shapes_canvas,
+        rounded_rectangle,
+        shapes_left_col,
+        shapes_right_col,
+        shapes_title,
+        line,
+        point_path,
+        rectangle_fill,
+        rectangle_outline,
+        trapezoid,
+        oval_fill,
+        oval_outline,
+        circle,
+
+        // Image.
+        image_title,
+        rust_logo,
+
+        // Button, XyPad, Toggle.
+        button_title,
+        button,
+        xy_pad,
+        toggle,
+        ball,
+
+        // NumberDialer, PlotPath
+        dialer_title,
+        number_dialer,
+        plot_path,
+
+        // Scrollbar
+        canvas_scrollbar,
+
+    }
+}
+
 fn main() {
     let window_settings = WindowSettings::new("piston_shooty", [WIDTH, HEIGHT]);
 
@@ -430,7 +519,7 @@ fn main() {
         .for_folder("assets")
         .unwrap();
 
-    let window: piston_window::PistonWindow = window_settings.exit_on_esc(true)
+    let mut window: piston_window::PistonWindow = window_settings.exit_on_esc(true)
         .build()
         .unwrap();
 
@@ -463,6 +552,47 @@ fn main() {
         world_list: world_list.clone(),
         selected_world_index: 0,
     };
+
+    let mut key_states: HashMap<Key, input::ButtonState> = HashMap::new();
+    let mut mouse_states: HashMap<MouseButton, input::ButtonState> = HashMap::new();
+    let mut mouse_pos = Vector2::default();
+    
+    // todo: dupes
+    let assets_path: std::path::PathBuf = find_folder::Search::ParentsThenKids(3, 3)
+        .for_folder("assets")
+        .unwrap();
+
+    let mut ui = conrod::UiBuilder::new([WIDTH as f64, HEIGHT as f64])
+        .build();
+
+    let font_path = assets_path.join("Roboto-Regular.ttf");
+    ui.fonts.insert_from_file(font_path).unwrap();
+
+    let (mut glyph_cache, mut text_texture_cache) = {
+        const SCALE_TOLERANCE: f32 = 0.1;
+        const POSITION_TOLERANCE: f32 = 0.1;
+        let cache = conrod::text::GlyphCache::new(WIDTH, HEIGHT, SCALE_TOLERANCE, POSITION_TOLERANCE);
+
+        let buffer_len = WIDTH as usize * HEIGHT as usize;
+        let init = vec![128; buffer_len];
+        let settings = TextureSettings::new();
+        let factory = &mut window.factory;
+        let texture = G2dTexture::from_memory_alpha(factory, &init, WIDTH, HEIGHT, &settings).unwrap();
+        
+        (cache, texture)
+    };
+
+    let ids = Ids::new(ui.widget_id_generator());
+
+    let logo: G2dTexture = {
+        let path = assets_path.join("textures/GunGunV1.png");
+        let factory = &mut window.factory;
+        let settings = TextureSettings::new();
+        Texture::from_path(factory, &path, Flip::None, &settings).unwrap()
+    };
+
+    let mut image_map = conrod::image::Map::new();
+    let logo = image_map.insert(logo);
     
     let mut app = App {
         window: window,
@@ -476,27 +606,40 @@ fn main() {
         texture_manager: texture_manager,
         sound_manager: sound_manager,
         level_index: 0,
-        world_list: world_list
+        world_list: world_list,
+        ui: ui,
+        glyph_cache: glyph_cache,
+        text_texture_cache: text_texture_cache,
+        image_map: image_map,
     };
     app.window.set_max_fps(u64::max_value());
 
-    let mut key_states: HashMap<Key, input::ButtonState> = HashMap::new();
-    let mut mouse_states: HashMap<MouseButton, input::ButtonState> = HashMap::new();
-    let mut mouse_pos = Vector2::default();
-
     // TODO: Why is args.dt locked to 120fps for UpdateArgs?
-    while let Some(e) = app.window.next() {
+    while let Some(event) = app.window.next() {
+        // Convert the piston event to a conrod event.
+        let size = app.window.size();
+        let (win_w, win_h) = (size.width as conrod::Scalar, size.height as conrod::Scalar);
+        if let Some(conrod_event) = conrod::backend::piston::event::convert(event.clone(), win_w, win_h) {
+            app.ui.handle_event(conrod_event);
+        }
+
+        event.update(|_| {
+            let mut ui = app.ui.set_widgets();
+            conrod::widget::Canvas::new().pad(30.0).scroll_kids_vertically().set(ids.canvas, ui);
+            conrod::widget::Text::new("HELLO WORLD!!!").font_size(42).mid_top_of(ids.canvas).set(ids.title, ui);
+        });
+
         // Input.
-        input::gather_input(&e, &mut key_states, &mut mouse_states, &mut mouse_pos);
+        input::gather_input(&event, &mut key_states, &mut mouse_states, &mut mouse_pos);
         
-        if let Some(u) = e.update_args() {
+        if let Some(u) = event.update_args() {
             app.update(&key_states, &mouse_states, &mouse_pos, &u);
             input::update_input(&mut key_states, &mut mouse_states);
         }
 
         // Render.
-        if e.render_args().is_some() {
-            app.render(&e);
+        if event.render_args().is_some() {
+            app.render(&event);
         }
     }
 }

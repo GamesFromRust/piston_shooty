@@ -20,7 +20,7 @@ impl AssetLoader {
     }
 
     pub fn load_font(&self, relative_path: &str) -> Glyphs  {
-        Glyphs::new(self.assets_path.join(relative_path), self.factory.clone()).unwrap()
+        Glyphs::new(self.assets_path.join(relative_path), self.factory.clone(), TextureSettings::new()).unwrap()
     }
 
     pub fn load_sound(&self, relative_path: &str) -> Sound {

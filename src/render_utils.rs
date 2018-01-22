@@ -19,7 +19,14 @@ pub fn draw_text_overlay(font_manager: &mut FontManager, c: &Context, gl: &mut G
 fn text_width<C>(text: &str, font_size: FontSize, cache: &mut C) -> f64 where C: CharacterCache {
     let mut width = 0.0;
     for character in text.chars() {
-        width += cache.character(font_size, character).width();
+        let cached_character_result = cache.character(font_size, character);
+        let cached_character = match cached_character_result {
+            Ok(result) => result,
+            Err(error) => {
+                panic!("Cached character not found.");
+            },
+        };
+        width += cached_character.width();
     }
     return width;
 }
