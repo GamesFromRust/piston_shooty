@@ -78,6 +78,8 @@ use hand_gun::HandGun;
 use meta_gun::MetaGun;
 use piston::input::generic_event::*;
 use conrod::backend::piston::draw::Context;
+use conrod::Widget;
+use conrod::Positionable;
 
 const WIDTH: u32 = 1280;
 const HEIGHT: u32 = 720;
@@ -149,8 +151,12 @@ impl<'a> App<'a> {
         let window_height = self.window_height;
         // let game_ended_state = &self.world.game_ended_state;
         let game_state = &self.game_state;
+        let ui = &mut self.ui;
+        let text_texture_cache = &mut self.text_texture_cache;
+        let glyph_cache = &mut self.glyph_cache;
+        let image_map = &self.image_map;
 
-        self.window.draw_2d(event, |c/*: Context*/, gl/*: &mut G2d*/| {
+        self.window.draw_2d(event, |c: graphics::Context, gl/*: &mut G2d*/| {
             // Clear the screen.
             clear(GREEN, gl);
 
@@ -163,7 +169,7 @@ impl<'a> App<'a> {
 
             // todo: move this into a func
             let mut text_vertex_data = Vec::new();
-            if let Some(primitives) = self.ui.draw_if_changed() {
+            if let Some(primitives) = ui.draw_if_changed() {
                 // A function used for caching glyphs to the texture cache.
                 let cache_queued_glyphs = |graphics: &mut G2d,
                                             cache: &mut G2dTexture,
@@ -188,9 +194,9 @@ impl<'a> App<'a> {
                 conrod::backend::piston::draw::primitives(primitives,
                                                             c,
                                                             gl,
-                                                            &mut self.text_texture_cache,
-                                                            &mut self.glyph_cache,
-                                                            &self.image_map,
+                                                            text_texture_cache,
+                                                            glyph_cache,
+                                                            image_map,
                                                             cache_queued_glyphs,
                                                             texture_from_image);
             }
@@ -625,8 +631,8 @@ fn main() {
 
         event.update(|_| {
             let mut ui = app.ui.set_widgets();
-            conrod::widget::Canvas::new().pad(30.0).scroll_kids_vertically().set(ids.canvas, ui);
-            conrod::widget::Text::new("HELLO WORLD!!!").font_size(42).mid_top_of(ids.canvas).set(ids.title, ui);
+            conrod::widget::Canvas::new().pad(30.0).scroll_kids_vertically().set(ids.canvas, &mut ui);
+            conrod::widget::Text::new("HELLO WORLD!!!").font_size(42).mid_top_of(ids.canvas).set(ids.title, &mut ui);
         });
 
         // Input.
