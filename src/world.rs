@@ -26,6 +26,7 @@ use render_utils;
 use game_state_utils;
 use colors;
 use collidable::Collidable;
+use ui_bundle::UiBundle;
 
 const ENEMY_LAYER: usize = 1;
 const PROJECTILE_LAYER: usize = 2;
@@ -197,7 +198,7 @@ impl World {
 }
 
 impl GameState for World {
-    fn render(&self, c: Context, mut gl: &mut G2d, mut font_manager: &mut FontManager, window_width: f64, window_height: f64) {
+    fn render(&self, c: Context, mut gl: &mut G2d, mut font_manager: &mut FontManager, window_width: f64, window_height: f64, ui_bundle: &mut UiBundle) {
         for i in 0..self.renderables.len() {
             for renderable in &self.renderables[i] {
                 render_renderable(&c, &mut gl, renderable.borrow().deref());

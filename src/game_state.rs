@@ -7,6 +7,7 @@ use piston_window::UpdateArgs;
 use std::collections::HashMap;
 use input;
 use vector2::Vector2;
+use ui_bundle::UiBundle;
 
 pub struct UpdateResult {
     pub result_type: UpdateResultType,
@@ -48,7 +49,8 @@ pub trait GameState {
         gl: &mut G2d,
         font_manager: &mut FontManager, 
         window_width: f64,
-        window_height: f64);
+        window_height: f64,
+        ui_bundle: &mut UiBundle);
 
     fn update(
         &mut self, 

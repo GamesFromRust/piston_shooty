@@ -15,6 +15,7 @@ use input;
 use vector2::Vector2;
 use game_state_utils;
 use colors;
+use ui_bundle::UiBundle;
 
 pub struct VictoryScreen {
 
@@ -27,7 +28,8 @@ impl GameState for VictoryScreen {
         mut gl: &mut G2d,
         mut font_manager: &mut FontManager, 
         window_width: f64, 
-        window_height: f64) {
+        window_height: f64,
+        ui_bundle: &mut UiBundle) {
         
         render_utils::draw_text_overlay(
             &mut font_manager, 

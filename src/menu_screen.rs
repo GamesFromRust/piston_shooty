@@ -5,17 +5,17 @@ use game_state::UpdateResult;
 use game_state::UpdateResultType;
 use game_state::UPDATE_RESULT_RUNNING;
 use font_manager::FontManager;
-use piston_window::Context;
-use piston_window::G2d;
-use piston_window::Key;
-use piston_window::MouseButton;
-use piston_window::UpdateArgs;
+use piston_window;
+use piston_window::*;
 use std::collections::HashMap;
 use input;
 use vector2::Vector2;
 use game_state_utils;
 use std::rc::Rc;
 use colors;
+use ui_bundle::UiBundle;
+use conrod;
+
 
 pub struct MenuScreen<'a> {
     pub world_list: Rc<Vec<&'a str>>,
@@ -29,7 +29,8 @@ impl<'a> GameState for MenuScreen<'a> {
         mut gl: &mut G2d,
         mut font_manager: &mut FontManager, 
         window_width: f64, 
-        window_height: f64) {
+        window_height: f64,
+        ui_bundle: &mut UiBundle) {
         
         for i in 0..self.world_list.len() {
             let mut color = colors::WHITE;
@@ -58,6 +59,39 @@ impl<'a> GameState for MenuScreen<'a> {
             0.5, 
             "WELCOME TO GUNGUN WARRIORS",
             colors::WHITE);
+
+        // todo: move this into a func
+        let mut text_vertex_data = Vec::new();
+        let primitives = ui_bundle.conrod_ui.draw();
+        // A function used for caching glyphs to the texture cache.
+        let cache_queued_glyphs = |graphics: &mut G2d,
+                                    cache: &mut G2dTexture,
+                                    rect: conrod::text::rt::Rect<u32>,
+                                    data: &[u8]|
+        {
+            let offset = [rect.min.x, rect.min.y];
+            let size = [rect.width(), rect.height()];
+            let format = piston_window::texture::Format::Rgba8;
+            let encoder = &mut graphics.encoder;
+            text_vertex_data.clear();
+            text_vertex_data.extend(data.iter().flat_map(|&b| vec![255, 255, 255, b]));
+            piston_window::texture::UpdateTexture::update(cache, encoder, format, &text_vertex_data[..], offset, size)
+                .expect("failed to update texture")
+        };
+
+        // Specify how to get the drawable texture from the image. In this case, the image
+        // *is* the texture.
+        fn texture_from_image<T>(img: &T) -> &T { img }
+
+        // Draw the conrod `render::Primitives`.
+        conrod::backend::piston::draw::primitives(primitives,
+                                                    c,
+                                                    gl,
+                                                    &mut ui_bundle.text_texture_cache,
+                                                    &mut ui_bundle.glyph_cache,
+                                                    &ui_bundle.image_map,
+                                                    cache_queued_glyphs,
+                                                    texture_from_image);
     }
 
     #[allow(unused_variables)]

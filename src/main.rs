@@ -28,6 +28,7 @@ mod gun_strategy;
 mod gun;
 mod gun_axe;
 mod meta_gun;
+mod ui_bundle;
 
 extern crate piston;
 extern crate glutin_window;
@@ -79,6 +80,8 @@ use meta_gun::MetaGun;
 use conrod::Widget;
 use conrod::Positionable;
 use conrod::Colorable;
+use conrod::Sizeable;
+use ui_bundle::UiBundle;
 
 const WIDTH: u32 = 1280;
 const HEIGHT: u32 = 720;
@@ -115,10 +118,7 @@ pub struct App<'a> {
     sound_manager: SoundManager,
     level_index: usize,
     world_list: Rc<Vec<&'a str>>,
-    ui: conrod::Ui,
-    glyph_cache: conrod::text::GlyphCache<'a>, // todo: make it green development at work! (why is 'a required halp)
-    text_texture_cache: G2dTexture,
-    image_map: conrod::image::Map<G2dTexture>,
+    ui_bundle: UiBundle<'a>,
 }
 
 impl<'a> App<'a> {
@@ -150,16 +150,13 @@ impl<'a> App<'a> {
         let window_height = self.window_height;
         // let game_ended_state = &self.world.game_ended_state;
         let game_state = &self.game_state;
-        let ui = &mut self.ui;
-        let text_texture_cache = &mut self.text_texture_cache;
-        let glyph_cache = &mut self.glyph_cache;
-        let image_map = &self.image_map;
+        let ui_bundle = &mut self.ui_bundle;
 
         self.window.draw_2d(event, |c: graphics::Context, gl/*: &mut G2d*/| {
             // Clear the screen.
             clear(GREEN, gl);
 
-            game_state.render(c, gl, font_manager, window_width, window_height);
+            game_state.render(c, gl, font_manager, window_width, window_height, ui_bundle);
 
             // Draw our fps.
             let fps_transform = c.transform.trans(10.0, 10.0);
@@ -169,39 +166,6 @@ impl<'a> App<'a> {
                 Ok(_result) => {},
                 Err(_error) => {println!("Error drawing FPS counter")}
             }
-
-            // todo: move this into a func
-            let mut text_vertex_data = Vec::new();
-            let primitives = ui.draw();
-            // A function used for caching glyphs to the texture cache.
-            let cache_queued_glyphs = |graphics: &mut G2d,
-                                        cache: &mut G2dTexture,
-                                        rect: conrod::text::rt::Rect<u32>,
-                                        data: &[u8]|
-            {
-                let offset = [rect.min.x, rect.min.y];
-                let size = [rect.width(), rect.height()];
-                let format = piston_window::texture::Format::Rgba8;
-                let encoder = &mut graphics.encoder;
-                text_vertex_data.clear();
-                text_vertex_data.extend(data.iter().flat_map(|&b| vec![255, 255, 255, b]));
-                piston_window::texture::UpdateTexture::update(cache, encoder, format, &text_vertex_data[..], offset, size)
-                    .expect("failed to update texture")
-            };
-
-            // Specify how to get the drawable texture from the image. In this case, the image
-            // *is* the texture.
-            fn texture_from_image<T>(img: &T) -> &T { img }
-
-            // Draw the conrod `render::Primitives`.
-            conrod::backend::piston::draw::primitives(primitives,
-                                                        c,
-                                                        gl,
-                                                        text_texture_cache,
-                                                        glyph_cache,
-                                                        image_map,
-                                                        cache_queued_glyphs,
-                                                        texture_from_image);
         });
     }
 
@@ -602,6 +566,13 @@ fn main() {
     let mut image_map = conrod::image::Map::new();
     let logo = image_map.insert(logo);
     
+    let mut ui_bundle: UiBundle = UiBundle {
+        conrod_ui: ui,
+        glyph_cache: glyph_cache,
+        text_texture_cache: text_texture_cache,
+        image_map: image_map,
+    };
+
     let mut app = App {
         window: window,
         last_batch_start_time: time::precise_time_ns(),
@@ -615,10 +586,7 @@ fn main() {
         sound_manager: sound_manager,
         level_index: 0,
         world_list: world_list,
-        ui: ui,
-        glyph_cache: glyph_cache,
-        text_texture_cache: text_texture_cache,
-        image_map: image_map,
+        ui_bundle: ui_bundle,
     };
     app.window.set_max_fps(u64::max_value());
 
@@ -628,13 +596,14 @@ fn main() {
         let size = app.window.size();
         let (win_w, win_h) = (size.width as conrod::Scalar, size.height as conrod::Scalar);
         if let Some(conrod_event) = conrod::backend::piston::event::convert(event.clone(), win_w, win_h) {
-            app.ui.handle_event(conrod_event);
+            app.ui_bundle.conrod_ui.handle_event(conrod_event);
         }
 
         event.update(|_| {
-            let mut ui = app.ui.set_widgets();
+            let mut ui = app.ui_bundle.conrod_ui.set_widgets();
             conrod::widget::Canvas::new().pad(30.0).color(conrod::color::TRANSPARENT).scroll_kids_vertically().set(ids.canvas, &mut ui);
             conrod::widget::Text::new("HELLO WORLD!!!\nHELLO WORLD!!!\nHELLO WORLD!!!HELLO WORLD!!!\nHELLO WORLD!!!HELLO WORLD!!!\nHELLO WORLD!!!HELLO WORLD!!!\n").font_size(42).color(conrod::color::WHITE).mid_top_of(ids.canvas).set(ids.title, &mut ui);
+            conrod::widget::Image::new(logo).w_h(app.window_width * 0.25, app.window_width * 0.25).down(60.0).align_middle_x_of(ids.canvas).set(ids.rust_logo, &mut ui);
         });
 
         // Input.
