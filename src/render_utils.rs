@@ -13,7 +13,11 @@ pub fn draw_text_overlay(font_manager: &mut FontManager, c: &Context, gl: &mut G
     let cache_rc = font_manager.get("Roboto-Regular.ttf");
     let string_width = text_width(string, font_size, cache_rc.borrow_mut().deref_mut());
     let transform = c.transform.trans((window_width * x) - (string_width / 2.0), window_height * y);
-    text(color, font_size, string, cache_rc.borrow_mut().deref_mut(), transform, gl);
+    let result = text(color, font_size, string, cache_rc.borrow_mut().deref_mut(), transform, gl);
+    match result {
+        Ok(_result) => {},
+        Err(_error) => {println!("There was an error drawing text overlay")}
+    }
 }
 
 fn text_width<C>(text: &str, font_size: FontSize, cache: &mut C) -> f64 where C: CharacterCache {
@@ -22,7 +26,7 @@ fn text_width<C>(text: &str, font_size: FontSize, cache: &mut C) -> f64 where C:
         let cached_character_result = cache.character(font_size, character);
         let cached_character = match cached_character_result {
             Ok(result) => result,
-            Err(error) => {
+            Err(_error) => {
                 panic!("Cached character not found.");
             },
         };
