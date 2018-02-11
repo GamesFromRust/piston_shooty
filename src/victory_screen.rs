@@ -23,7 +23,7 @@ pub struct VictoryScreen {
 
 impl GameState for VictoryScreen {
     fn render(
-        &self, 
+        &mut self, 
         c: Context, 
         mut gl: &mut G2d,
         mut font_manager: &mut FontManager, 

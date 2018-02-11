@@ -44,7 +44,7 @@ pub enum GameStateType {
 
 pub trait GameState {
     fn render(
-        &self, 
+        &mut self, 
         c: Context, 
         gl: &mut G2d,
         font_manager: &mut FontManager, 

@@ -27,6 +27,10 @@ use game_state_utils;
 use colors;
 use collidable::Collidable;
 use ui_bundle::UiBundle;
+use conrod;
+use conrod::Colorable;
+use conrod::Widget;
+use fps_counter::FpsCounter;
 
 const ENEMY_LAYER: usize = 1;
 const PROJECTILE_LAYER: usize = 2;
@@ -59,6 +63,8 @@ pub struct World {
     pub receiver: Receiver<u64>,
     pub should_display_level_name: bool,
     pub name: String,
+    pub fps_counter: FpsCounter,
+    pub image_map: conrod::image::Map<G2dTexture>,
 }
 
 impl World {
@@ -195,10 +201,19 @@ impl World {
             return UPDATE_RESULT_RUNNING;
         }
     }
+
+    fn update_ui(&self, ui_bundle: &mut UiBundle) {
+        let mut ui_cell = ui_bundle.conrod_ui.set_widgets();
+        conrod::widget::Canvas::new().pad(30.0).color(conrod::color::TRANSPARENT).scroll_kids_vertically().set(ui_bundle.ids.canvas, &mut ui_cell);
+
+        self.fps_counter.update_ui(&mut ui_cell, &ui_bundle.ids);
+    }
 }
 
 impl GameState for World {
-    fn render(&self, c: Context, mut gl: &mut G2d, mut font_manager: &mut FontManager, window_width: f64, window_height: f64, ui_bundle: &mut UiBundle) {
+    fn render(&mut self, c: Context, mut gl: &mut G2d, mut font_manager: &mut FontManager, window_width: f64, window_height: f64, ui_bundle: &mut UiBundle) {
+        self.fps_counter.calculate_fps();
+        
         for i in 0..self.renderables.len() {
             for renderable in &self.renderables[i] {
                 render_renderable(&c, &mut gl, renderable.borrow().deref());
@@ -214,6 +229,8 @@ impl GameState for World {
         } else if self.should_display_level_name {
             render_utils::draw_text_overlay(&mut font_manager, &c, &mut gl, window_width, window_height, 0.5, 0.5, self.name.as_str(), colors::WHITE);
         }
+
+        ui_bundle.render_ui(c, gl, &self.image_map);
     }
 
     fn update(
@@ -223,6 +240,9 @@ impl GameState for World {
             mouse_pos: &Vector2, 
             ui_bundle: &mut UiBundle,
             args: &UpdateArgs) -> UpdateResult {
+
+        self.update_ui(ui_bundle);
+
         if self.game_ended_state.game_ended == false && self.game_ended_state.won == false {
             return self.update_game_running(&key_states, &mouse_states, &mouse_pos, &args);
         }

@@ -48,5 +48,9 @@ widget_ids! {
 
         // Main Menu World List
         world_list[],
+
+        // FPS Counter
+        fps_text,
+        average_frame_time_text,
     }
 }

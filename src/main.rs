@@ -30,6 +30,7 @@ mod gun_axe;
 mod meta_gun;
 mod ui_bundle;
 mod ui_widget_ids;
+mod fps_counter;
 
 extern crate piston;
 extern crate glutin_window;
@@ -84,6 +85,7 @@ use conrod::Colorable;
 use conrod::Sizeable;
 use ui_bundle::UiBundle;
 use ui_widget_ids::Ids;
+use fps_counter::FpsCounter;
 
 const WIDTH: u32 = 1280;
 const HEIGHT: u32 = 720;
@@ -92,7 +94,6 @@ const GREEN: [f32; 4] = [0.0, 1.0, 0.0, 1.0];
 // const RED:      [f32; 4] = [1.0, 0.0, 0.0, 1.0];
 // const BLUE:     [f32; 4] = [0.0, 0.0, 1.0, 1.0];
 const WHITE: [f32; 4] = [1.0, 1.0, 1.0, 1.0];
-const NSEC_PER_SEC: u64 = 1_000_000_000;
 const GRID_WIDTH: u32 = 32;
 const GRID_HEIGHT: u32 = 18;
 const CELL_WIDTH: u32 = WIDTH / GRID_WIDTH;
@@ -109,9 +110,6 @@ const PLAYER_LAYER: usize = 1;
 
 pub struct App<'a> {
     window: piston_window::PistonWindow,
-    last_batch_start_time: u64,
-    num_frames_in_batch: u64,
-    average_frame_time: u64,
     font_manager: FontManager,
     window_height: f64,
     window_width: f64,
@@ -125,49 +123,16 @@ pub struct App<'a> {
 
 impl<'a> App<'a> {
     fn render(&mut self, event: &Event) {
-        // TODO: Read a book on how to do a fps counter.
-        let curr_frame_time: u64 = time::precise_time_ns();
-
-        self.num_frames_in_batch += 1;
-
-        if curr_frame_time >= self.last_batch_start_time + NSEC_PER_SEC {
-            self.average_frame_time = (curr_frame_time - self.last_batch_start_time) /
-                                      self.num_frames_in_batch;
-            self.last_batch_start_time = curr_frame_time;
-            self.num_frames_in_batch = 0;
-        }
-
-        let fps = NSEC_PER_SEC / self.average_frame_time;
-        let fps_text =
-            "FPS: ".to_string() + &fps.to_string() + &"\naverage_frame_time: ".to_string() +
-            &self.average_frame_time.to_string() +
-            &"\nnum_frames_in_batch: ".to_string() +
-            &self.num_frames_in_batch.to_string() +
-            &"\nlast_batch_start_time: ".to_string() +
-            &self.last_batch_start_time.to_string() +
-            &"\ncurr_frame_time: ".to_string() + &curr_frame_time.to_string();
-
         let font_manager = &mut self.font_manager;
         let window_width = self.window_width;
         let window_height = self.window_height;
-        // let game_ended_state = &self.world.game_ended_state;
-        let game_state = &self.game_state;
+        let game_state = &mut self.game_state;
         let ui_bundle = &mut self.ui_bundle;
 
         self.window.draw_2d(event, |c: graphics::Context, gl/*: &mut G2d*/| {
-            // Clear the screen.
             clear(GREEN, gl);
 
             game_state.render(c, gl, font_manager, window_width, window_height, ui_bundle);
-
-            // Draw our fps.
-            let fps_transform = c.transform.trans(10.0, 10.0);
-            let cache_rc = font_manager.get("Roboto-Regular.ttf");
-            let result = text(WHITE, 14, &fps_text, cache_rc.borrow_mut().deref_mut(), fps_transform, gl);
-            match result {
-                Ok(_result) => {},
-                Err(_error) => {println!("Error drawing FPS counter")}
-            }
         });
     }
 
@@ -303,6 +268,8 @@ fn load_level(texture_manager:&mut TextureManager, sound_manager:&mut SoundManag
         receiver: receiver,
         should_display_level_name: true,
         name: String::from(level_name),
+        fps_counter: FpsCounter::default(),
+        image_map: conrod::image::Map::new(),
     };
 
     let new_csv_rdr = || csv::Reader::from_file(format!("assets\\Levels\\{}.csv", level_name)).unwrap().has_headers(false);
@@ -447,6 +414,7 @@ fn make_menu_screen<'a>(world_list: Rc<Vec<&'a str>>, asset_loader: &AssetLoader
     MenuScreen {
         world_list: world_list,
         selected_world_index: 0,
+        fps_counter: FpsCounter::default(),
         image_map: image_map,
         logo_image_id: logo_image_id,
     }
@@ -530,9 +498,6 @@ fn main() {
 
     let mut app = App {
         window: window,
-        last_batch_start_time: time::precise_time_ns(),
-        num_frames_in_batch: 0,
-        average_frame_time: 1,
         font_manager: font_manager,
         window_height: HEIGHT as f64,
         window_width: WIDTH as f64,

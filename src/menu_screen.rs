@@ -20,17 +20,19 @@ use conrod::Sizeable;
 use conrod::Widget;
 use conrod::Positionable;
 use conrod::image::Id;
+use fps_counter::FpsCounter;
 
 pub struct MenuScreen<'a> {
     pub world_list: Rc<Vec<&'a str>>,
     pub selected_world_index: usize,
+    pub fps_counter: FpsCounter,
     pub image_map: conrod::image::Map<G2dTexture>,
-    pub logo_image_id: Id,
+    pub logo_image_id: Id, // todo: remove
 }
 
 impl<'a> GameState for MenuScreen<'a> {
     fn render(
-        &self, 
+        &mut self, 
         c: Context, 
         mut gl: &mut G2d,
         mut font_manager: &mut FontManager, 
@@ -38,38 +40,9 @@ impl<'a> GameState for MenuScreen<'a> {
         window_height: f64,
         ui_bundle: &mut UiBundle) {
 
-        // todo: move this into a func
-        let mut text_vertex_data = Vec::new();
-        let primitives = ui_bundle.conrod_ui.draw();
-        // A function used for caching glyphs to the texture cache.
-        let cache_queued_glyphs = |graphics: &mut G2d,
-                                    cache: &mut G2dTexture,
-                                    rect: conrod::text::rt::Rect<u32>,
-                                    data: &[u8]|
-        {
-            let offset = [rect.min.x, rect.min.y];
-            let size = [rect.width(), rect.height()];
-            let format = piston_window::texture::Format::Rgba8;
-            let encoder = &mut graphics.encoder;
-            text_vertex_data.clear();
-            text_vertex_data.extend(data.iter().flat_map(|&b| vec![255, 255, 255, b]));
-            piston_window::texture::UpdateTexture::update(cache, encoder, format, &text_vertex_data[..], offset, size)
-                .expect("failed to update texture")
-        };
+        self.fps_counter.calculate_fps();
 
-        // Specify how to get the drawable texture from the image. In this case, the image
-        // *is* the texture.
-        fn texture_from_image<T>(img: &T) -> &T { img }
-
-        // Draw the conrod `render::Primitives`.
-        conrod::backend::piston::draw::primitives(primitives,
-                                                    c,
-                                                    gl,
-                                                    &mut ui_bundle.text_texture_cache,
-                                                    &mut ui_bundle.glyph_cache,
-                                                    &self.image_map,
-                                                    cache_queued_glyphs,
-                                                    texture_from_image);
+        ui_bundle.render_ui(c, gl, &self.image_map);
     }
 
     #[allow(unused_variables)]
@@ -121,6 +94,7 @@ impl<'a> MenuScreen<'a> {
         ui_bundle.ids.world_list.resize(self.world_list.len(), &mut ui_bundle.conrod_ui.widget_id_generator());
 
         let mut ui_cell = ui_bundle.conrod_ui.set_widgets();
+
         conrod::widget::Canvas::new().pad(30.0).color(conrod::color::TRANSPARENT).scroll_kids_vertically().set(ui_bundle.ids.canvas, &mut ui_cell);
         conrod::widget::Text::new("WELCOME TO GUNGUN WARRIORS").font_size(36).color(conrod::color::WHITE).mid_top_of(ui_bundle.ids.canvas).set(ui_bundle.ids.title, &mut ui_cell);
         
@@ -134,7 +108,7 @@ impl<'a> MenuScreen<'a> {
             conrod::widget::Text::new(self.world_list[i]).font_size(36).color(color).down_from(id_widget_above, 5.0).align_middle_x_of(ui_bundle.ids.canvas).set(ui_bundle.ids.world_list[i], &mut ui_cell);
             id_widget_above = ui_bundle.ids.world_list[i];
         }
-        
-        //conrod::widget::Image::new(self.logo_image_id).w_h(1280.0 * 0.25, 1280.0 * 0.25).down(60.0).align_middle_x_of(ui_bundle.ids.canvas).set(ui_bundle.ids.rust_logo, &mut ui_cell);
+
+        self.fps_counter.update_ui(&mut ui_cell, &ui_bundle.ids);
     }
 }
