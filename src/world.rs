@@ -216,7 +216,13 @@ impl GameState for World {
         }
     }
 
-    fn update(&mut self, key_states: &HashMap<Key, input::ButtonState>, mouse_states: &HashMap<MouseButton, input::ButtonState>, mouse_pos: &Vector2, args: &UpdateArgs) -> UpdateResult {
+    fn update(
+            &mut self, 
+            key_states: &HashMap<Key, input::ButtonState>, 
+            mouse_states: &HashMap<MouseButton, input::ButtonState>, 
+            mouse_pos: &Vector2, 
+            ui_bundle: &mut UiBundle,
+            args: &UpdateArgs) -> UpdateResult {
         if self.game_ended_state.game_ended == false && self.game_ended_state.won == false {
             return self.update_game_running(&key_states, &mouse_states, &mouse_pos, &args);
         }

@@ -29,6 +29,7 @@ mod gun;
 mod gun_axe;
 mod meta_gun;
 mod ui_bundle;
+mod ui_widget_ids;
 
 extern crate piston;
 extern crate glutin_window;
@@ -82,6 +83,7 @@ use conrod::Positionable;
 use conrod::Colorable;
 use conrod::Sizeable;
 use ui_bundle::UiBundle;
+use ui_widget_ids::Ids;
 
 const WIDTH: u32 = 1280;
 const HEIGHT: u32 = 720;
@@ -170,7 +172,7 @@ impl<'a> App<'a> {
     }
 
     fn update(&mut self, key_states: &HashMap<Key, input::ButtonState>, mouse_states: &HashMap<MouseButton, input::ButtonState>, mouse_pos: &Vector2, args: &UpdateArgs) {
-        let update_result = self.game_state.update(&key_states, &mouse_states, &mouse_pos, &args);
+        let update_result = self.game_state.update(&key_states, &mouse_states, &mouse_pos, &mut self.ui_bundle, &args);
         self.advance_game_state(update_result);
     }
 
@@ -436,51 +438,17 @@ fn load_level(texture_manager:&mut TextureManager, sound_manager:&mut SoundManag
     world
 }
 
-// Generate a unique `WidgetId` for each widget.
-widget_ids! {
-    pub struct Ids {
+fn make_menu_screen<'a>(world_list: Rc<Vec<&'a str>>, asset_loader: &AssetLoader ) -> MenuScreen<'a> {
+    let mut image_map = conrod::image::Map::new();
 
-        // The scrollable canvas.
-        canvas,
+    let logo_texture: G2dTexture = asset_loader.load_texture("textures/GunGunV1.png");
+    let logo_image_id = image_map.insert(logo_texture);
 
-        // The title and introduction widgets.
-        title,
-        introduction,
-
-        // Shapes.
-        shapes_canvas,
-        rounded_rectangle,
-        shapes_left_col,
-        shapes_right_col,
-        shapes_title,
-        line,
-        point_path,
-        rectangle_fill,
-        rectangle_outline,
-        trapezoid,
-        oval_fill,
-        oval_outline,
-        circle,
-
-        // Image.
-        image_title,
-        rust_logo,
-
-        // Button, XyPad, Toggle.
-        button_title,
-        button,
-        xy_pad,
-        toggle,
-        ball,
-
-        // NumberDialer, PlotPath
-        dialer_title,
-        number_dialer,
-        plot_path,
-
-        // Scrollbar
-        canvas_scrollbar,
-
+    MenuScreen {
+        world_list: world_list,
+        selected_world_index: 0,
+        image_map: image_map,
+        logo_image_id: logo_image_id,
     }
 }
 
@@ -520,10 +488,7 @@ fn main() {
     
     let world_list = Rc::new(vec!["Sunday-Gunday", "Multi-Level Mark-hitting"]);
 
-    let menu_screen = MenuScreen {
-        world_list: world_list.clone(),
-        selected_world_index: 0,
-    };
+    let menu_screen = make_menu_screen(world_list.clone(), &asset_loader);
 
     let mut key_states: HashMap<Key, input::ButtonState> = HashMap::new();
     let mut mouse_states: HashMap<MouseButton, input::ButtonState> = HashMap::new();
@@ -555,22 +520,12 @@ fn main() {
     };
 
     let ids = Ids::new(ui.widget_id_generator());
-
-    let logo: G2dTexture = {
-        let path = assets_path.join("textures/GunGunV1.png");
-        let factory = &mut window.factory;
-        let settings = TextureSettings::new();
-        Texture::from_path(factory, &path, Flip::None, &settings).unwrap()
-    };
-
-    let mut image_map = conrod::image::Map::new();
-    let logo = image_map.insert(logo);
     
     let mut ui_bundle: UiBundle = UiBundle {
         conrod_ui: ui,
         glyph_cache: glyph_cache,
         text_texture_cache: text_texture_cache,
-        image_map: image_map,
+        ids: ids,
     };
 
     let mut app = App {
@@ -598,13 +553,6 @@ fn main() {
         if let Some(conrod_event) = conrod::backend::piston::event::convert(event.clone(), win_w, win_h) {
             app.ui_bundle.conrod_ui.handle_event(conrod_event);
         }
-
-        event.update(|_| {
-            let mut ui = app.ui_bundle.conrod_ui.set_widgets();
-            conrod::widget::Canvas::new().pad(30.0).color(conrod::color::TRANSPARENT).scroll_kids_vertically().set(ids.canvas, &mut ui);
-            conrod::widget::Text::new("HELLO WORLD!!!\nHELLO WORLD!!!\nHELLO WORLD!!!HELLO WORLD!!!\nHELLO WORLD!!!HELLO WORLD!!!\nHELLO WORLD!!!HELLO WORLD!!!\n").font_size(42).color(conrod::color::WHITE).mid_top_of(ids.canvas).set(ids.title, &mut ui);
-            conrod::widget::Image::new(logo).w_h(app.window_width * 0.25, app.window_width * 0.25).down(60.0).align_middle_x_of(ids.canvas).set(ids.rust_logo, &mut ui);
-        });
 
         // Input.
         input::gather_input(&event, &mut key_states, &mut mouse_states, &mut mouse_pos);

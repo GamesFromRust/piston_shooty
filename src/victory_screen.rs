@@ -50,6 +50,7 @@ impl GameState for VictoryScreen {
         mouse_states: &HashMap<MouseButton, 
         input::ButtonState>, 
         mouse_pos: &Vector2, 
+        ui_bundle: &mut UiBundle,
         args: &UpdateArgs) -> UpdateResult {
 
         if game_state_utils::did_click(&mouse_states) {

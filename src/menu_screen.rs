@@ -15,11 +15,17 @@ use std::rc::Rc;
 use colors;
 use ui_bundle::UiBundle;
 use conrod;
-
+use conrod::Colorable;
+use conrod::Sizeable;
+use conrod::Widget;
+use conrod::Positionable;
+use conrod::image::Id;
 
 pub struct MenuScreen<'a> {
     pub world_list: Rc<Vec<&'a str>>,
     pub selected_world_index: usize,
+    pub image_map: conrod::image::Map<G2dTexture>,
+    pub logo_image_id: Id,
 }
 
 impl<'a> GameState for MenuScreen<'a> {
@@ -89,7 +95,7 @@ impl<'a> GameState for MenuScreen<'a> {
                                                     gl,
                                                     &mut ui_bundle.text_texture_cache,
                                                     &mut ui_bundle.glyph_cache,
-                                                    &ui_bundle.image_map,
+                                                    &self.image_map,
                                                     cache_queued_glyphs,
                                                     texture_from_image);
     }
@@ -98,9 +104,9 @@ impl<'a> GameState for MenuScreen<'a> {
     fn update(
         &mut self, 
         key_states: &HashMap<Key, input::ButtonState>, 
-        mouse_states: &HashMap<MouseButton, 
-        input::ButtonState>, 
+        mouse_states: &HashMap<MouseButton, input::ButtonState>, 
         mouse_pos: &Vector2, 
+        ui_bundle: &mut UiBundle,
         args: &UpdateArgs) -> UpdateResult {
 
         if game_state_utils::did_press_key(&key_states, Key::Up) {
@@ -121,6 +127,8 @@ impl<'a> GameState for MenuScreen<'a> {
             }
         }
 
+        self.update_ui(ui_bundle);
+
         if game_state_utils::did_click(&mouse_states) || game_state_utils::did_press_key(&key_states, Key::Return) {
             return UpdateResult {
                 result_type: UpdateResultType::Success,
@@ -133,5 +141,14 @@ impl<'a> GameState for MenuScreen<'a> {
 
     fn get_type(&self) -> GameStateType {
         return GameStateType::WorldSelect;        
+    }
+}
+
+impl<'a> MenuScreen<'a> {
+    fn update_ui(&self, ui_bundle: &mut UiBundle) {
+        let mut ui = ui_bundle.conrod_ui.set_widgets();
+        conrod::widget::Canvas::new().pad(30.0).color(conrod::color::TRANSPARENT).scroll_kids_vertically().set(ui_bundle.ids.canvas, &mut ui);
+        conrod::widget::Text::new("HELLO WORLD!!!\nHELLO WORLD!!!\nHELLO WORLD!!!HELLO WORLD!!!\nHELLO WORLD!!!HELLO WORLD!!!\nHELLO WORLD!!!HELLO WORLD!!!\n").font_size(42).color(conrod::color::WHITE).mid_top_of(ui_bundle.ids.canvas).set(ui_bundle.ids.title, &mut ui);
+        conrod::widget::Image::new(self.logo_image_id).w_h(1280.0 * 0.25, 1280.0 * 0.25).down(60.0).align_middle_x_of(ui_bundle.ids.canvas).set(ui_bundle.ids.rust_logo, &mut ui);
     }
 }

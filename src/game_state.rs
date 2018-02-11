@@ -57,6 +57,7 @@ pub trait GameState {
         key_states: &HashMap<Key, input::ButtonState>, 
         mouse_states: &HashMap<MouseButton, input::ButtonState>, 
         mouse_pos: &Vector2, 
+        ui_bundle: &mut UiBundle,
         args: &UpdateArgs) -> UpdateResult;
 
     fn get_type(&self) -> GameStateType;
