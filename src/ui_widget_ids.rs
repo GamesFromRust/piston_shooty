@@ -46,5 +46,7 @@ widget_ids! {
         // Scrollbar
         canvas_scrollbar,
 
+        // Main Menu World List
+        world_list[],
     }
 }

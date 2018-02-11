@@ -37,34 +37,6 @@ impl<'a> GameState for MenuScreen<'a> {
         window_width: f64, 
         window_height: f64,
         ui_bundle: &mut UiBundle) {
-        
-        for i in 0..self.world_list.len() {
-            let mut color = colors::WHITE;
-            if i == self.selected_world_index {
-                color = colors::BLUE;
-            }
-            render_utils::draw_text_overlay(
-                &mut font_manager, 
-                &c, 
-                &mut gl,
-                window_width, 
-                window_height,
-                0.5,
-                0.5 + (0.05 * ((i+1) as f64)),
-                self.world_list[i], 
-                color);
-        }
-
-        render_utils::draw_text_overlay(
-            &mut font_manager, 
-            &c, 
-            &mut gl,
-            window_width, 
-            window_height,
-            0.5,
-            0.5, 
-            "WELCOME TO GUNGUN WARRIORS",
-            colors::WHITE);
 
         // todo: move this into a func
         let mut text_vertex_data = Vec::new();
@@ -146,9 +118,23 @@ impl<'a> GameState for MenuScreen<'a> {
 
 impl<'a> MenuScreen<'a> {
     fn update_ui(&self, ui_bundle: &mut UiBundle) {
-        let mut ui = ui_bundle.conrod_ui.set_widgets();
-        conrod::widget::Canvas::new().pad(30.0).color(conrod::color::TRANSPARENT).scroll_kids_vertically().set(ui_bundle.ids.canvas, &mut ui);
-        conrod::widget::Text::new("HELLO WORLD!!!\nHELLO WORLD!!!\nHELLO WORLD!!!HELLO WORLD!!!\nHELLO WORLD!!!HELLO WORLD!!!\nHELLO WORLD!!!HELLO WORLD!!!\n").font_size(42).color(conrod::color::WHITE).mid_top_of(ui_bundle.ids.canvas).set(ui_bundle.ids.title, &mut ui);
-        conrod::widget::Image::new(self.logo_image_id).w_h(1280.0 * 0.25, 1280.0 * 0.25).down(60.0).align_middle_x_of(ui_bundle.ids.canvas).set(ui_bundle.ids.rust_logo, &mut ui);
+        ui_bundle.ids.world_list.resize(self.world_list.len(), &mut ui_bundle.conrod_ui.widget_id_generator());
+
+        let mut ui_cell = ui_bundle.conrod_ui.set_widgets();
+        conrod::widget::Canvas::new().pad(30.0).color(conrod::color::TRANSPARENT).scroll_kids_vertically().set(ui_bundle.ids.canvas, &mut ui_cell);
+        conrod::widget::Text::new("WELCOME TO GUNGUN WARRIORS").font_size(36).color(conrod::color::WHITE).mid_top_of(ui_bundle.ids.canvas).set(ui_bundle.ids.title, &mut ui_cell);
+        
+        let mut id_widget_above = ui_bundle.ids.title;
+        for i in 0..self.world_list.len() {
+            let mut color = conrod::color::WHITE;
+            if i == self.selected_world_index {
+                color = conrod::color::BLUE;
+            }
+
+            conrod::widget::Text::new(self.world_list[i]).font_size(36).color(color).down_from(id_widget_above, 5.0).align_middle_x_of(ui_bundle.ids.canvas).set(ui_bundle.ids.world_list[i], &mut ui_cell);
+            id_widget_above = ui_bundle.ids.world_list[i];
+        }
+        
+        //conrod::widget::Image::new(self.logo_image_id).w_h(1280.0 * 0.25, 1280.0 * 0.25).down(60.0).align_middle_x_of(ui_bundle.ids.canvas).set(ui_bundle.ids.rust_logo, &mut ui_cell);
     }
 }
