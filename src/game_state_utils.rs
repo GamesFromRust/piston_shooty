@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use input;
+use crate::input;
 use piston_window::MouseButton;
 use piston_window::Key;
 

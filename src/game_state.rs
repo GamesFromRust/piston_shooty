@@ -1,13 +1,13 @@
-use font_manager::FontManager;
+use crate::font_manager::FontManager;
 use piston_window::Context;
 use piston_window::G2d;
 use piston_window::Key;
 use piston_window::MouseButton;
 use piston_window::UpdateArgs;
 use std::collections::HashMap;
-use input;
-use vector2::Vector2;
-use ui_bundle::UiBundle;
+use crate::input;
+use crate::vector2::Vector2;
+use crate::ui_bundle::UiBundle;
 
 pub struct UpdateResult {
     pub result_type: UpdateResultType,

@@ -1,20 +1,20 @@
-use gun_strategy::GunStrategy;
+use crate::gun_strategy::GunStrategy;
 use std::rc::Rc;
 use std::cell::RefCell;
 use ears::Sound;
 use piston_window::G2dTexture;
-use gun::PROJECTILE_VELOCITY_MAGNITUDE;
-use vector2::Vector2;
-use world::WorldRequestType;
-use world::WorldReq;
-use bullet::Bullet;
-use gun::Gun;
-use renderable_object::RenderableObject;
-use collidable_object::CollidableObject;
-use gun::GUN_SCALE;
+use crate::gun::PROJECTILE_VELOCITY_MAGNITUDE;
+use crate::vector2::Vector2;
+use crate::world::WorldRequestType;
+use crate::world::WorldReq;
+use crate::bullet::Bullet;
+use crate::gun::Gun;
+use crate::renderable_object::RenderableObject;
+use crate::collidable_object::CollidableObject;
+use crate::gun::GUN_SCALE;
 use ears::AudioController;
 use piston_window::ImageSize;
-use game_object::GameObject;
+use crate::game_object::GameObject;
 
 pub struct MetaGun {
     pub gun_texture: Rc<G2dTexture>,

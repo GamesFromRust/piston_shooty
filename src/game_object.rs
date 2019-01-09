@@ -1,5 +1,5 @@
-use object_type::ObjectType;
-use vector2::Vector2;
+use crate::object_type::ObjectType;
+use crate::vector2::Vector2;
 
 pub trait GameObject {
     fn get_position(&self) -> &Vector2;

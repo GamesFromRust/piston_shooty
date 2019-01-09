@@ -1,6 +1,6 @@
 use conrod;
 use piston_window::G2dTexture;
-use ui_widget_ids::Ids;
+use crate::ui_widget_ids::Ids;
 use piston_window;
 use piston_window::*;
 
@@ -14,7 +14,7 @@ pub struct UiBundle<'a> {
 impl<'a> UiBundle<'a> {
     pub fn render_ui(&mut self, 
         c: Context, 
-        mut gl: &mut G2d,
+        gl: &mut G2d,
         image_map: &conrod::image::Map<G2dTexture>) {
             
         let mut text_vertex_data = Vec::new();

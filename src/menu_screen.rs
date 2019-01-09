@@ -1,26 +1,26 @@
-use render_utils;
-use game_state::GameState;
-use game_state::GameStateType;
-use game_state::UpdateResult;
-use game_state::UpdateResultType;
-use game_state::UPDATE_RESULT_RUNNING;
-use font_manager::FontManager;
+use crate::render_utils;
+use crate::game_state::GameState;
+use crate::game_state::GameStateType;
+use crate::game_state::UpdateResult;
+use crate::game_state::UpdateResultType;
+use crate::game_state::UPDATE_RESULT_RUNNING;
+use crate::font_manager::FontManager;
 use piston_window;
 use piston_window::*;
 use std::collections::HashMap;
-use input;
-use vector2::Vector2;
-use game_state_utils;
+use crate::input;
+use crate::vector2::Vector2;
+use crate::game_state_utils;
 use std::rc::Rc;
-use colors;
-use ui_bundle::UiBundle;
+use crate::colors;
+use crate::ui_bundle::UiBundle;
 use conrod;
 use conrod::Colorable;
 use conrod::Sizeable;
 use conrod::Widget;
 use conrod::Positionable;
 use conrod::image::Id;
-use fps_counter::FpsCounter;
+use crate::fps_counter::FpsCounter;
 
 pub struct MenuScreen<'a> {
     pub world_list: Rc<Vec<&'a str>>,
@@ -34,10 +34,10 @@ impl<'a> GameState for MenuScreen<'a> {
     fn render(
         &mut self, 
         c: Context, 
-        mut gl: &mut G2d,
-        mut font_manager: &mut FontManager, 
-        window_width: f64, 
-        window_height: f64,
+        gl: &mut G2d,
+        _font_manager: &mut FontManager, 
+        _window_width: f64, 
+        _window_height: f64,
         ui_bundle: &mut UiBundle) {
 
         self.fps_counter.calculate_fps();

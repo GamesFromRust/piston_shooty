@@ -1,10 +1,10 @@
-use renderable_object::RenderableObject;
-use renderable::Renderable;
-use object_type::ObjectType;
-use collidable_object::CollidableObject;
-use collidable::Collidable;
-use vector2::Vector2;
-use game_object::GameObject;
+use crate::renderable_object::RenderableObject;
+use crate::renderable::Renderable;
+use crate::object_type::ObjectType;
+use crate::collidable_object::CollidableObject;
+use crate::collidable::Collidable;
+use crate::vector2::Vector2;
+use crate::game_object::GameObject;
 
 pub struct Enemy {
     pub position: Vector2,

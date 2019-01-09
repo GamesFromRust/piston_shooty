@@ -1,4 +1,4 @@
-use asset_loader::AssetLoader;
+use crate::asset_loader::AssetLoader;
 use std::collections::HashMap;
 use std::rc::Rc;
 use piston_window::*;

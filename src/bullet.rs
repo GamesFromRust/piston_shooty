@@ -1,17 +1,17 @@
-use renderable_object::RenderableObject;
-use renderable::Renderable;
-use object_type::ObjectType;
-use vector2::Vector2;
-use updatable::Updatable;
-use input;
+use crate::renderable_object::RenderableObject;
+use crate::renderable::Renderable;
+use crate::object_type::ObjectType;
+use crate::vector2::Vector2;
+use crate::updatable::Updatable;
+use crate::input;
 use piston_window::Key;
 use piston_window::MouseButton;
 use piston_window::UpdateArgs;
 use std::collections::HashMap;
-use world::WorldReq;
-use collidable_object::CollidableObject;
-use collidable::Collidable;
-use game_object::GameObject;
+use crate::world::WorldReq;
+use crate::collidable_object::CollidableObject;
+use crate::collidable::Collidable;
+use crate::game_object::GameObject;
 
 pub struct Bullet {
     pub position: Vector2,

@@ -1,4 +1,4 @@
-use object_type::ObjectType;
+use crate::object_type::ObjectType;
 
 pub trait GunStrategy {
     fn get_should_delete(&self) -> bool;

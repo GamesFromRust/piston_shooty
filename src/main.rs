@@ -49,43 +49,43 @@ extern crate csv;
 
 use std::collections::HashMap;
 use piston_window::*;
-use vector2::*;
-use asset_loader::AssetLoader;
+use crate::vector2::*;
+use crate::asset_loader::AssetLoader;
 use std::rc::Rc;
 use std::cell::RefCell;
-use texture_manager::TextureManager;
-use sound_manager::SoundManager;
-use font_manager::FontManager;
+use crate::texture_manager::TextureManager;
+use crate::sound_manager::SoundManager;
+use crate::font_manager::FontManager;
 use std::ops::DerefMut;
 use std::io::{self, Write};
 use csv::index::{Indexed, create_index};
 use std::sync::mpsc::channel;
 use std::thread;
 use std::time::Duration;
-use world::World;
-use player::Player;
-use wall::Wall;
-use ground::Ground;
-use enemy::Enemy;
-use world::GameEndedState;
-use renderable_object::RenderableObject;
-use game_state::GameState;
-use game_state::GameStateType;
-use game_state::UpdateResult;
-use game_state::UpdateResultType;
-use victory_screen::VictoryScreen;
-use menu_screen::MenuScreen;
-use collidable_object::CollidableObject;
-use gun_axe::GunAxe;
-use hand_gun::HandGun;
-use meta_gun::MetaGun;
+use crate::world::World;
+use crate::player::Player;
+use crate::wall::Wall;
+use crate::ground::Ground;
+use crate::enemy::Enemy;
+use crate::world::GameEndedState;
+use crate::renderable_object::RenderableObject;
+use crate::game_state::GameState;
+use crate::game_state::GameStateType;
+use crate::game_state::UpdateResult;
+use crate::game_state::UpdateResultType;
+use crate::victory_screen::VictoryScreen;
+use crate::menu_screen::MenuScreen;
+use crate::collidable_object::CollidableObject;
+use crate::gun_axe::GunAxe;
+use crate::hand_gun::HandGun;
+use crate::meta_gun::MetaGun;
 use conrod::Widget;
 use conrod::Positionable;
 use conrod::Colorable;
 use conrod::Sizeable;
-use ui_bundle::UiBundle;
-use ui_widget_ids::Ids;
-use fps_counter::FpsCounter;
+use crate::ui_bundle::UiBundle;
+use crate::ui_widget_ids::Ids;
+use crate::fps_counter::FpsCounter;
 
 const WIDTH: u32 = 1280;
 const HEIGHT: u32 = 720;
@@ -473,7 +473,7 @@ fn main() {
     let font_path = assets_path.join("Roboto-Regular.ttf");
     ui.fonts.insert_from_file(font_path).unwrap();
 
-    let (glyph_cache, mut text_texture_cache) = {
+    let (glyph_cache, text_texture_cache) = {
         const SCALE_TOLERANCE: f32 = 0.1;
         const POSITION_TOLERANCE: f32 = 0.1;
         let cache = conrod::text::GlyphCache::new(WIDTH, HEIGHT, SCALE_TOLERANCE, POSITION_TOLERANCE);
@@ -489,7 +489,7 @@ fn main() {
 
     let ids = Ids::new(ui.widget_id_generator());
     
-    let mut ui_bundle: UiBundle = UiBundle {
+    let ui_bundle: UiBundle = UiBundle {
         conrod_ui: ui,
         glyph_cache: glyph_cache,
         text_texture_cache: text_texture_cache,

@@ -1,4 +1,4 @@
-use font_manager::FontManager;
+use crate::font_manager::FontManager;
 use piston_window::Context;
 use piston_window::G2d;
 use piston_window::text; // piston2d-graphics
@@ -6,7 +6,7 @@ use piston_window::Transformed;
 use piston_window::types::FontSize;
 use piston_window::character::CharacterCache;
 use std::ops::DerefMut;
-use colors::Color;
+use crate::colors::Color;
 
 pub fn draw_text_overlay(font_manager: &mut FontManager, c: &Context, gl: &mut G2d, window_width: f64, window_height: f64, x:f64, y:f64, string: &str, color: Color) {
     let font_size = 36;

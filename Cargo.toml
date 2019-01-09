@@ -6,6 +6,7 @@ authors = [
     "Andre Duvoisin <anduv13@gmail.com>",
     "Dru Erridge <druerridge@gmail.com>"
 ]
+edition = "2018"
 
 [[bin]]
 name = "piston_shooty"

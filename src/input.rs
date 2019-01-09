@@ -1,7 +1,7 @@
 use piston_window::*;
 use std::collections::HashMap;
 
-use vector2::*;
+use crate::vector2::*;
 
 // TODO: Make singleton.
 

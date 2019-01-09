@@ -1,5 +1,5 @@
-use object_type::ObjectType;
-use gun_strategy::GunStrategy;
+use crate::object_type::ObjectType;
+use crate::gun_strategy::GunStrategy;
 
 pub struct HandGun {
     pub should_delete: bool
