@@ -40,9 +40,7 @@ extern crate gfx_device_gl;
 extern crate graphics;
 extern crate find_folder;
 extern crate ears;
-extern crate ncollide;
-extern crate ncollide_geometry;
-extern crate ncollide_math;
+extern crate ncollide2d;
 extern crate nalgebra;
 extern crate csv;
 //#[macro_use] extern crate conrod;
@@ -274,26 +272,27 @@ fn load_level(texture_manager:&mut TextureManager, sound_manager:&mut SoundManag
     };
 
     let file_name = format!("assets\\Levels\\{}.csv", level_name);
-    let mut file_result = File::open(file_name);
+    let mut file_result = File::open(file_name.clone());
 
     let mut file = match file_result {
         Ok(f) => f,
         Err(err) => {panic!("Couldn't read file from {}, err: {}", file_name, err);}
     };
-    let mut csv_rdr = csv::Reader::from_reader(file);
+//    let mut csv_rdr = csv::Reader::from_reader(file);
+    let mut csv_rdr = csv::ReaderBuilder::new().has_headers(false).from_reader(file);
 
     // Make sure it's the right size.
-    let mut i = 0;
-    for record_result in csv_rdr.records() {
-        let mut record = match record_result {
-            Ok(r) => r,
-            Err(err) => { panic!("Couldn't read line {} from {}", i, file_name); }
-        };
-
-        assert!(record.len() as u32 == GRID_WIDTH);
-        i += 1;
-    }
-    assert!(i == GRID_HEIGHT);
+//    let mut i = 0;
+//    for record_result in csv_rdr.records() {
+//        let mut record = match record_result {
+//            Ok(r) => r,
+//            Err(err) => { panic!("Couldn't read line {} from {}", i, file_name); }
+//        };
+//
+//        assert!(record.len() as u32 == GRID_WIDTH);
+//        i += 1;
+//    }
+//    assert!(i == GRID_HEIGHT);
 
 //    let new_csv_rdr = || csv::Reader::from_file(format!("assets\\Levels\\{}.csv", level_name)).unwrap().has_headers(false);
 //    let mut index_data = io::Cursor::new(Vec::new());

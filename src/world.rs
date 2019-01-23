@@ -3,13 +3,13 @@ use piston_window::*;
 use crate::vector2::*;
 use std::rc::Rc;
 use std::cell::RefCell;
-use ncollide_geometry;
-use ncollide_geometry::shape::Cuboid2;
-use ncollide_geometry::bounding_volume;
-use ncollide_geometry::bounding_volume::BoundingVolume;
 use std::sync::mpsc::Receiver;
+use ncollide2d::bounding_volume::BoundingVolume;
+use ncollide2d::bounding_volume;
+use ncollide2d::shape::Cuboid;
 use crate::input;
 use nalgebra;
+use ncollide2d;
 use crate::renderable::Renderable;
 use crate::object_type::ObjectType;
 use crate::updatable::Updatable;
@@ -270,11 +270,11 @@ fn collides(collidable1: &Collidable, collidable2: &Collidable) -> bool {
     collidable1_aabb_cuboid2.intersects(&collidable2_aabb_cuboid2)
 }
 
-fn create_aabb_cuboid2(collidable: &Collidable) -> ncollide_geometry::bounding_volume::AABB<nalgebra::geometry::Point<f64, nalgebra::U2>> {
+fn create_aabb_cuboid2(collidable: &Collidable) -> ncollide2d::bounding_volume::aabb::AABB<f64> {
     let half_extents: nalgebra::core::Vector2<f64> = nalgebra::core::Vector2::new(
         collidable.get_collidable_object().width as f64 * 0.5 * collidable.get_scale(),
         collidable.get_collidable_object().height as f64 * 0.5 * collidable.get_scale());
-    let cuboid2 = Cuboid2::new(half_extents);
+    let cuboid2 = Cuboid::new(half_extents);
     let cuboid2_pos = nalgebra::geometry::Isometry2::new(
         nalgebra::core::Vector2::new(
             collidable.get_position().x, 
