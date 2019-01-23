@@ -14,19 +14,18 @@ use crate::game_state_utils;
 use std::rc::Rc;
 use crate::colors;
 use crate::ui_bundle::UiBundle;
-use conrod;
-use conrod::Colorable;
-use conrod::Sizeable;
-use conrod::Widget;
-use conrod::Positionable;
-use conrod::image::Id;
+use conrod_core::color::Colorable;
+use conrod_core::Sizeable;
+use conrod_core::Widget;
+use conrod_core::Positionable;
+use conrod_core::image::Id;
 use crate::fps_counter::FpsCounter;
 
 pub struct MenuScreen<'a> {
     pub world_list: Rc<Vec<&'a str>>,
     pub selected_world_index: usize,
     pub fps_counter: FpsCounter,
-    pub image_map: conrod::image::Map<G2dTexture>,
+    pub image_map: conrod_core::image::Map<G2dTexture>,
     pub logo_image_id: Id, // todo: remove
 }
 
@@ -95,17 +94,17 @@ impl<'a> MenuScreen<'a> {
 
         let mut ui_cell = ui_bundle.conrod_ui.set_widgets();
 
-        conrod::widget::Canvas::new().pad(30.0).color(conrod::color::TRANSPARENT).scroll_kids_vertically().set(ui_bundle.ids.canvas, &mut ui_cell);
-        conrod::widget::Text::new("WELCOME TO GUNGUN WARRIORS").font_size(36).color(conrod::color::WHITE).mid_top_of(ui_bundle.ids.canvas).set(ui_bundle.ids.title, &mut ui_cell);
+        conrod_core::widget::Canvas::new().pad(30.0).color(conrod_core::color::TRANSPARENT).scroll_kids_vertically().set(ui_bundle.ids.canvas, &mut ui_cell);
+        conrod_core::widget::Text::new("WELCOME TO GUNGUN WARRIORS").font_size(36).color(conrod_core::color::WHITE).mid_top_of(ui_bundle.ids.canvas).set(ui_bundle.ids.title, &mut ui_cell);
         
         let mut id_widget_above = ui_bundle.ids.title;
         for i in 0..self.world_list.len() {
-            let mut color = conrod::color::WHITE;
+            let mut color = conrod_core::color::WHITE;
             if i == self.selected_world_index {
-                color = conrod::color::BLUE;
+                color = conrod_core::color::BLUE;
             }
 
-            conrod::widget::Text::new(self.world_list[i]).font_size(36).color(color).down_from(id_widget_above, 5.0).align_middle_x_of(ui_bundle.ids.canvas).set(ui_bundle.ids.world_list[i], &mut ui_cell);
+            conrod_core::widget::Text::new(self.world_list[i]).font_size(36).color(color).down_from(id_widget_above, 5.0).align_middle_x_of(ui_bundle.ids.canvas).set(ui_bundle.ids.world_list[i], &mut ui_cell);
             id_widget_above = ui_bundle.ids.world_list[i];
         }
 

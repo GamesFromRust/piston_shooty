@@ -1,12 +1,12 @@
-use conrod;
+use conrod_core;
 use piston_window::G2dTexture;
 use crate::ui_widget_ids::Ids;
 use piston_window;
 use piston_window::*;
 
 pub struct UiBundle<'a> {
-    pub conrod_ui: conrod::Ui,
-    pub glyph_cache: conrod::text::GlyphCache<'a>, // todo: make it green development at work! (why is 'a required halp)
+    pub conrod_ui: conrod_core::Ui,
+    pub glyph_cache: conrod_core::text::GlyphCache<'a>, // todo: make it green development at work! (why is 'a required halp)
     pub text_texture_cache: G2dTexture,
     pub ids: Ids,
 }
@@ -15,7 +15,7 @@ impl<'a> UiBundle<'a> {
     pub fn render_ui(&mut self, 
         c: Context, 
         gl: &mut G2d,
-        image_map: &conrod::image::Map<G2dTexture>) {
+        image_map: &conrod_core::image::Map<G2dTexture>) {
             
         let mut text_vertex_data = Vec::new();
         let primitives = self.conrod_ui.draw();
@@ -23,7 +23,7 @@ impl<'a> UiBundle<'a> {
         // A function used for caching glyphs to the texture cache.
         let cache_queued_glyphs = |graphics: &mut G2d,
                                     cache: &mut G2dTexture,
-                                    rect: conrod::text::rt::Rect<u32>,
+                                    rect: conrod_core::text::rt::Rect<u32>,
                                     data: &[u8]|
         {
             let offset = [rect.min.x, rect.min.y];
@@ -41,7 +41,7 @@ impl<'a> UiBundle<'a> {
         fn texture_from_image<T>(img: &T) -> &T { img }
 
         // Draw the conrod `render::Primitives`.
-        conrod::backend::piston::draw::primitives(
+        conrod_piston::draw::primitives(
             primitives,
             c,
             gl,

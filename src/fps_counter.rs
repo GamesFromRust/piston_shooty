@@ -1,7 +1,7 @@
-use conrod;
-use conrod::Colorable;
-use conrod::Positionable;
-use conrod::Widget;
+use conrod_core;
+use conrod_core::Colorable;
+use conrod_core::Positionable;
+use conrod_core::Widget;
 use time;
 use crate::ui_bundle::UiBundle;
 use crate::ui_widget_ids;
@@ -43,11 +43,11 @@ impl FpsCounter {
         self.fps = NSEC_PER_SEC / self.average_frame_time;
     }
 
-    pub fn update_ui(&self, ui_cell: &mut conrod::UiCell, ids: &ui_widget_ids::Ids) {
+    pub fn update_ui(&self, ui_cell: &mut conrod_core::UiCell, ids: &ui_widget_ids::Ids) {
         let fps_text = "FPS: ".to_string() + &self.fps.to_string();
         let average_frame_time_text = "Average Frame Time: ".to_string() + &(self.average_frame_time as f64 / NSEC_PER_SEC as f64).to_string();
 
-        conrod::widget::Text::new(&fps_text).font_size(14).color(conrod::color::WHITE).top_left_of(ids.canvas).set(ids.fps_text, ui_cell);
-        conrod::widget::Text::new(&average_frame_time_text).font_size(14).color(conrod::color::WHITE).down_from(ids.fps_text, 2.0).set(ids.average_frame_time_text, ui_cell);
+        conrod_core::widget::Text::new(&fps_text).font_size(14).color(conrod_core::color::WHITE).top_left_of(ids.canvas).set(ids.fps_text, ui_cell);
+        conrod_core::widget::Text::new(&average_frame_time_text).font_size(14).color(conrod_core::color::WHITE).down_from(ids.fps_text, 2.0).set(ids.average_frame_time_text, ui_cell);
     }
 }

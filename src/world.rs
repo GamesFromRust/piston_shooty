@@ -27,9 +27,9 @@ use crate::game_state_utils;
 use crate::colors;
 use crate::collidable::Collidable;
 use crate::ui_bundle::UiBundle;
-use conrod;
-use conrod::Colorable;
-use conrod::Widget;
+use conrod_core;
+use conrod_core::color::Colorable;
+use conrod_core::widget::Widget;
 use crate::fps_counter::FpsCounter;
 
 const ENEMY_LAYER: usize = 1;
@@ -64,7 +64,7 @@ pub struct World {
     pub should_display_level_name: bool,
     pub name: String,
     pub fps_counter: FpsCounter,
-    pub image_map: conrod::image::Map<G2dTexture>,
+    pub image_map: conrod_core::image::Map<G2dTexture>,
 }
 
 impl World {
@@ -204,7 +204,7 @@ impl World {
 
     fn update_ui(&self, ui_bundle: &mut UiBundle) {
         let mut ui_cell = ui_bundle.conrod_ui.set_widgets();
-        conrod::widget::Canvas::new().pad(30.0).color(conrod::color::TRANSPARENT).scroll_kids_vertically().set(ui_bundle.ids.canvas, &mut ui_cell);
+        conrod_core::widget::Canvas::new().pad(30.0).color(conrod_core::color::TRANSPARENT).scroll_kids_vertically().set(ui_bundle.ids.canvas, &mut ui_cell);
 
         self.fps_counter.update_ui(&mut ui_cell, &ui_bundle.ids);
     }

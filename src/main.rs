@@ -45,7 +45,9 @@ extern crate ncollide_geometry;
 extern crate ncollide_math;
 extern crate nalgebra;
 extern crate csv;
-#[macro_use] extern crate conrod;
+//#[macro_use] extern crate conrod;
+#[macro_use] extern crate conrod_core;
+extern crate conrod_piston;
 
 use std::collections::HashMap;
 use piston_window::*;
@@ -57,8 +59,7 @@ use crate::texture_manager::TextureManager;
 use crate::sound_manager::SoundManager;
 use crate::font_manager::FontManager;
 use std::ops::DerefMut;
-use std::io::{self, Write};
-use csv::index::{Indexed, create_index};
+use std::fs::File;
 use std::sync::mpsc::channel;
 use std::thread;
 use std::time::Duration;
@@ -79,10 +80,10 @@ use crate::collidable_object::CollidableObject;
 use crate::gun_axe::GunAxe;
 use crate::hand_gun::HandGun;
 use crate::meta_gun::MetaGun;
-use conrod::Widget;
-use conrod::Positionable;
-use conrod::Colorable;
-use conrod::Sizeable;
+use conrod_core::Widget;
+use conrod_core::Positionable;
+use conrod_core::Colorable;
+use conrod_core::Sizeable;
 use crate::ui_bundle::UiBundle;
 use crate::ui_widget_ids::Ids;
 use crate::fps_counter::FpsCounter;
@@ -269,36 +270,45 @@ fn load_level(texture_manager:&mut TextureManager, sound_manager:&mut SoundManag
         should_display_level_name: true,
         name: String::from(level_name),
         fps_counter: FpsCounter::default(),
-        image_map: conrod::image::Map::new(),
+        image_map: conrod_core::image::Map::new(),
     };
 
-    let new_csv_rdr = || csv::Reader::from_file(format!("assets\\Levels\\{}.csv", level_name)).unwrap().has_headers(false);
-    let mut index_data = io::Cursor::new(Vec::new());
-    create_index(new_csv_rdr(), index_data.by_ref()).unwrap();
-    let mut index = Indexed::open(new_csv_rdr(), index_data).unwrap();
+    let file_name = format!("assets\\Levels\\{}.csv", level_name);
+    let mut file_result = File::open(file_name);
 
-    let mut level: Vec<Vec<String>> = Vec::new();
-    for row in index.records() {
-        let row = row.unwrap();
-        
-        // for item in &row {
-        //     print!("{},", item);
-        // }
-        // println!("");
+    let mut file = match file_result {
+        Ok(f) => f,
+        Err(err) => {panic!("Couldn't read file from {}, err: {}", file_name, err);}
+    };
+    let mut csv_rdr = csv::Reader::from_reader(file);
 
-        level.push(row);
+    // Make sure it's the right size.
+    let mut i = 0;
+    for record_result in csv_rdr.records() {
+        let mut record = match record_result {
+            Ok(r) => r,
+            Err(err) => { panic!("Couldn't read line {} from {}", i, file_name); }
+        };
+
+        assert!(record.len() as u32 == GRID_WIDTH);
+        i += 1;
     }
+    assert!(i == GRID_HEIGHT);
 
-    assert!(level.len() as u32 == GRID_HEIGHT);
-    for row in &level {
-        assert!(row.len() as u32 == GRID_WIDTH);
-    }
+//    let new_csv_rdr = || csv::Reader::from_file(format!("assets\\Levels\\{}.csv", level_name)).unwrap().has_headers(false);
+//    let mut index_data = io::Cursor::new(Vec::new());
+//    create_index(new_csv_rdr(), index_data.by_ref()).unwrap();
+//    let mut index = Indexed::open(new_csv_rdr(), index_data).unwrap();
 
     // Read in a level.
     let mut line_num = 0;
-    for line in &level {
+    for record_result in csv_rdr.records() {
+        let mut line = match record_result {
+            Ok(r) => r,
+            Err(err) => {panic!("Couldn't read line {} from {}", line_num, file_name);}
+        };
         let mut item_num = 0;
-        for item in line {
+        for item in line.iter() {
             if item == "W" {
                 let wall = Wall {
                     position: Vector2 {
@@ -406,7 +416,7 @@ fn load_level(texture_manager:&mut TextureManager, sound_manager:&mut SoundManag
 }
 
 fn make_menu_screen<'a>(world_list: Rc<Vec<&'a str>>, asset_loader: &AssetLoader ) -> MenuScreen<'a> {
-    let mut image_map = conrod::image::Map::new();
+    let mut image_map = conrod_core::image::Map::new();
 
     let logo_texture: G2dTexture = asset_loader.load_texture("textures/GunGunV1.png");
     let logo_image_id = image_map.insert(logo_texture);
@@ -467,7 +477,7 @@ fn main() {
         .for_folder("assets")
         .unwrap();
 
-    let mut ui = conrod::UiBuilder::new([WIDTH as f64, HEIGHT as f64])
+    let mut ui = conrod_core::UiBuilder::new([WIDTH as f64, HEIGHT as f64])
         .build();
 
     let font_path = assets_path.join("Roboto-Regular.ttf");
@@ -476,7 +486,8 @@ fn main() {
     let (glyph_cache, text_texture_cache) = {
         const SCALE_TOLERANCE: f32 = 0.1;
         const POSITION_TOLERANCE: f32 = 0.1;
-        let cache = conrod::text::GlyphCache::new(WIDTH, HEIGHT, SCALE_TOLERANCE, POSITION_TOLERANCE);
+
+        let cache = conrod_core::text::GlyphCache::builder().dimensions(WIDTH, HEIGHT).scale_tolerance(SCALE_TOLERANCE).position_tolerance(POSITION_TOLERANCE).build();
 
         let buffer_len = WIDTH as usize * HEIGHT as usize;
         let init = vec![128; buffer_len];
@@ -514,8 +525,8 @@ fn main() {
     while let Some(event) = app.window.next() {
         // Convert the piston event to a conrod event.
         let size = app.window.size();
-        let (win_w, win_h) = (size.width as conrod::Scalar, size.height as conrod::Scalar);
-        if let Some(conrod_event) = conrod::backend::piston::event::convert(event.clone(), win_w, win_h) {
+        let (win_w, win_h) = (size.width as conrod_core::Scalar, size.height as conrod_core::Scalar);
+        if let Some(conrod_event) = conrod_piston::event::convert(event.clone(), win_w, win_h) {
             app.ui_bundle.conrod_ui.handle_event(conrod_event);
         }
 
