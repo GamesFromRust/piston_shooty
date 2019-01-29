@@ -43,7 +43,6 @@ extern crate ears;
 extern crate ncollide2d;
 extern crate nalgebra;
 extern crate csv;
-//#[macro_use] extern crate conrod;
 #[macro_use] extern crate conrod_core;
 extern crate conrod_piston;
 
