@@ -24,7 +24,6 @@ use crate::game_state::UPDATE_RESULT_RUNNING;
 use crate::game_state::UPDATE_RESULT_FAIL;
 use crate::render_utils;
 use crate::game_state_utils;
-use crate::colors;
 use crate::collidable::Collidable;
 use crate::ui_bundle::UiBundle;
 use conrod_core;
@@ -204,30 +203,34 @@ impl World {
 
     fn update_ui(&self, ui_bundle: &mut UiBundle) {
         let mut ui_cell = ui_bundle.conrod_ui.set_widgets();
-        conrod_core::widget::Canvas::new().pad(30.0).color(conrod_core::color::TRANSPARENT).scroll_kids_vertically().set(ui_bundle.ids.canvas, &mut ui_cell);
+        conrod_core::widget::Canvas::new()
+            .pad(30.0)
+            .color(conrod_core::color::TRANSPARENT)
+            .scroll_kids_vertically()
+            .set(ui_bundle.ids.canvas, &mut ui_cell);
+
+        if self.game_ended_state.game_ended {
+            if self.game_ended_state.won {
+                render_utils::draw_text_overlay("Success! Click to continue.", &mut ui_cell, &ui_bundle.ids);
+            } else {
+                render_utils::draw_text_overlay("Defeat! Click to retry.", &mut ui_cell, &ui_bundle.ids);
+            }
+        } else if self.should_display_level_name {
+            render_utils::draw_text_overlay(self.name.as_str(), &mut ui_cell, &ui_bundle.ids);
+        }
 
         self.fps_counter.update_ui(&mut ui_cell, &ui_bundle.ids);
     }
 }
 
 impl GameState for World {
-    fn render(&mut self, c: Context, mut gl: &mut G2d, mut font_manager: &mut FontManager, window_width: f64, window_height: f64, ui_bundle: &mut UiBundle) {
+    fn render(&mut self, c: Context, mut gl: &mut G2d, _font_manager: &mut FontManager, _window_width: f64, _window_height: f64, ui_bundle: &mut UiBundle) {
         self.fps_counter.calculate_fps();
         
         for i in 0..self.renderables.len() {
             for renderable in &self.renderables[i] {
                 render_renderable(&c, &mut gl, renderable.borrow().deref());
             }
-        }
-
-        if self.game_ended_state.game_ended {
-            if self.game_ended_state.won {
-                render_utils::draw_text_overlay(&mut font_manager, &c, &mut gl, window_width, window_height, 0.5, 0.5, "Success! Click to continue.", colors::WHITE);
-            } else {
-                render_utils::draw_text_overlay(&mut font_manager, &c, &mut gl, window_width, window_height, 0.5, 0.5, "Defeat! Click to retry.", colors::WHITE);
-            }
-        } else if self.should_display_level_name {
-            render_utils::draw_text_overlay(&mut font_manager, &c, &mut gl, window_width, window_height, 0.5, 0.5, self.name.as_str(), colors::WHITE);
         }
 
         ui_bundle.render_ui(c, gl, &self.image_map);

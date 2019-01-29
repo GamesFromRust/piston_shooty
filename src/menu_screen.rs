@@ -91,8 +91,16 @@ impl<'a> MenuScreen<'a> {
 
         let mut ui_cell = ui_bundle.conrod_ui.set_widgets();
 
-        conrod_core::widget::Canvas::new().pad(30.0).color(conrod_core::color::TRANSPARENT).scroll_kids_vertically().set(ui_bundle.ids.canvas, &mut ui_cell);
-        conrod_core::widget::Text::new("WELCOME TO GUNGUN WARRIORS").font_size(36).color(conrod_core::color::WHITE).mid_top_of(ui_bundle.ids.canvas).set(ui_bundle.ids.title, &mut ui_cell);
+        conrod_core::widget::Canvas::new()
+            .pad(30.0)
+            .color(conrod_core::color::TRANSPARENT)
+            .scroll_kids_vertically()
+            .set(ui_bundle.ids.canvas, &mut ui_cell);
+        conrod_core::widget::Text::new("WELCOME TO GUNGUN WARRIORS")
+            .font_size(36)
+            .color(conrod_core::color::WHITE)
+            .mid_top_of(ui_bundle.ids.canvas)
+            .set(ui_bundle.ids.title, &mut ui_cell);
         
         let mut id_widget_above = ui_bundle.ids.title;
         for i in 0..self.world_list.len() {
@@ -101,7 +109,12 @@ impl<'a> MenuScreen<'a> {
                 color = conrod_core::color::BLUE;
             }
 
-            conrod_core::widget::Text::new(self.world_list[i]).font_size(36).color(color).down_from(id_widget_above, 5.0).align_middle_x_of(ui_bundle.ids.canvas).set(ui_bundle.ids.world_list[i], &mut ui_cell);
+            conrod_core::widget::Text::new(self.world_list[i])
+                .font_size(36)
+                .color(color)
+                .down_from(id_widget_above, 5.0)
+                .align_middle_x_of(ui_bundle.ids.canvas)
+                .set(ui_bundle.ids.world_list[i], &mut ui_cell);
             id_widget_above = ui_bundle.ids.world_list[i];
         }
 

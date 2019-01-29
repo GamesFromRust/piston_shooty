@@ -46,7 +46,15 @@ impl FpsCounter {
         let fps_text = "FPS: ".to_string() + &self.fps.to_string();
         let average_frame_time_text = "Average Frame Time: ".to_string() + &(self.average_frame_time as f64 / NSEC_PER_SEC as f64).to_string();
 
-        conrod_core::widget::Text::new(&fps_text).font_size(14).color(conrod_core::color::WHITE).top_left_of(ids.canvas).set(ids.fps_text, ui_cell);
-        conrod_core::widget::Text::new(&average_frame_time_text).font_size(14).color(conrod_core::color::WHITE).down_from(ids.fps_text, 2.0).set(ids.average_frame_time_text, ui_cell);
+        conrod_core::widget::Text::new(&fps_text)
+            .font_size(14)
+            .color(conrod_core::color::WHITE)
+            .top_left_of(ids.canvas)
+            .set(ids.fps_text, ui_cell);
+        conrod_core::widget::Text::new(&average_frame_time_text)
+            .font_size(14)
+            .color(conrod_core::color::WHITE)
+            .down_from(ids.fps_text, 2.0)
+            .set(ids.average_frame_time_text, ui_cell);
     }
 }

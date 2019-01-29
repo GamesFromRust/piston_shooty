@@ -14,33 +14,26 @@ use std::collections::HashMap;
 use crate::input;
 use crate::vector2::Vector2;
 use crate::game_state_utils;
-use crate::colors;
 use crate::ui_bundle::UiBundle;
+use conrod_core::color::Colorable;
+use conrod_core::widget::Widget;
+use piston_window::G2dTexture;
 
 pub struct VictoryScreen {
-
+    pub image_map: conrod_core::image::Map<G2dTexture>,
 }
 
 impl GameState for VictoryScreen {
     fn render(
         &mut self, 
         c: Context, 
-        mut gl: &mut G2d,
-        mut font_manager: &mut FontManager, 
-        window_width: f64, 
-        window_height: f64,
-        _ui_bundle: &mut UiBundle) {
-        
-        render_utils::draw_text_overlay(
-            &mut font_manager, 
-            &c, 
-            &mut gl,
-            window_width, 
-            window_height,
-            0.5,
-            0.5,
-            "VICTORY! Click to continue.",
-            colors::WHITE);
+        gl: &mut G2d,
+        _font_manager: &mut FontManager,
+        _window_width: f64,
+        _window_height: f64,
+        ui_bundle: &mut UiBundle) {
+
+        ui_bundle.render_ui(c, gl, &self.image_map);
     }
 
     #[allow(unused_variables)]
@@ -52,6 +45,16 @@ impl GameState for VictoryScreen {
         mouse_pos: &Vector2, 
         ui_bundle: &mut UiBundle,
         args: &UpdateArgs) -> UpdateResult {
+
+        let mut ui_cell = ui_bundle.conrod_ui.set_widgets();
+
+        conrod_core::widget::Canvas::new()
+            .pad(30.0)
+            .color(conrod_core::color::TRANSPARENT)
+            .scroll_kids_vertically()
+            .set(ui_bundle.ids.canvas, &mut ui_cell);
+
+        render_utils::draw_text_overlay("VICTORY! Click to continue.", &mut ui_cell, &ui_bundle.ids);
 
         if game_state_utils::did_click(&mouse_states) {
             return UPDATE_RESULT_SUCCESS;

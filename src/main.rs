@@ -19,7 +19,6 @@ mod render_utils;
 mod victory_screen;
 mod game_state_utils;
 mod menu_screen;
-mod colors;
 mod collidable;
 mod hand_gun;
 mod collidable_object;
@@ -181,7 +180,9 @@ impl<'a> App<'a> {
             let world = load_level(&mut self.texture_manager, &mut self.sound_manager, self.world_list[self.level_index]);
             self.game_state = Box::new(world);
         } else if self.level_index == self.world_list.len() {
-            self.game_state = Box::new(VictoryScreen{});
+            self.game_state = Box::new(VictoryScreen{
+                image_map: conrod_core::image::Map::new()
+            });
         }
     }
 }
