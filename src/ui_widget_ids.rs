@@ -1,5 +1,3 @@
-use conrod_core;
-
 // TODO: clean out unused ids
 // Generate a unique `WidgetId` for each widget.
 widget_ids! {

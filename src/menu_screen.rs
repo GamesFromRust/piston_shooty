@@ -1,4 +1,3 @@
-use crate::render_utils;
 use crate::game_state::GameState;
 use crate::game_state::GameStateType;
 use crate::game_state::UpdateResult;
@@ -12,10 +11,8 @@ use crate::input;
 use crate::vector2::Vector2;
 use crate::game_state_utils;
 use std::rc::Rc;
-use crate::colors;
 use crate::ui_bundle::UiBundle;
 use conrod_core::color::Colorable;
-use conrod_core::Sizeable;
 use conrod_core::Widget;
 use conrod_core::Positionable;
 use conrod_core::image::Id;

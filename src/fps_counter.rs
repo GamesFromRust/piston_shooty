@@ -3,7 +3,6 @@ use conrod_core::Colorable;
 use conrod_core::Positionable;
 use conrod_core::Widget;
 use time;
-use crate::ui_bundle::UiBundle;
 use crate::ui_widget_ids;
 
 const NSEC_PER_SEC: u64 = 1_000_000_000;

@@ -55,7 +55,6 @@ use std::cell::RefCell;
 use crate::texture_manager::TextureManager;
 use crate::sound_manager::SoundManager;
 use crate::font_manager::FontManager;
-use std::ops::DerefMut;
 use std::fs::File;
 use std::sync::mpsc::channel;
 use std::thread;
@@ -77,10 +76,6 @@ use crate::collidable_object::CollidableObject;
 use crate::gun_axe::GunAxe;
 use crate::hand_gun::HandGun;
 use crate::meta_gun::MetaGun;
-use conrod_core::Widget;
-use conrod_core::Positionable;
-use conrod_core::Colorable;
-use conrod_core::Sizeable;
 use crate::ui_bundle::UiBundle;
 use crate::ui_widget_ids::Ids;
 use crate::fps_counter::FpsCounter;
@@ -89,9 +84,6 @@ const WIDTH: u32 = 1280;
 const HEIGHT: u32 = 720;
 
 const GREEN: [f32; 4] = [0.0, 1.0, 0.0, 1.0];
-// const RED:      [f32; 4] = [1.0, 0.0, 0.0, 1.0];
-// const BLUE:     [f32; 4] = [0.0, 0.0, 1.0, 1.0];
-const WHITE: [f32; 4] = [1.0, 1.0, 1.0, 1.0];
 const GRID_WIDTH: u32 = 32;
 const GRID_HEIGHT: u32 = 18;
 const CELL_WIDTH: u32 = WIDTH / GRID_WIDTH;
@@ -271,9 +263,9 @@ fn load_level(texture_manager:&mut TextureManager, sound_manager:&mut SoundManag
     };
 
     let file_name = format!("assets\\Levels\\{}.csv", level_name);
-    let mut file_result = File::open(file_name.clone());
+    let file_result = File::open(file_name.clone());
 
-    let mut file = match file_result {
+    let file = match file_result {
         Ok(f) => f,
         Err(err) => {panic!("Couldn't read file from {}, err: {}", file_name, err);}
     };
@@ -301,9 +293,9 @@ fn load_level(texture_manager:&mut TextureManager, sound_manager:&mut SoundManag
     // Read in a level.
     let mut line_num = 0;
     for record_result in csv_rdr.records() {
-        let mut line = match record_result {
+        let line = match record_result {
             Ok(r) => r,
-            Err(err) => {panic!("Couldn't read line {} from {}", line_num, file_name);}
+            Err(err) => {panic!("Couldn't read line {} from {}, err: {}", line_num, file_name, err);}
         };
         let mut item_num = 0;
         for item in line.iter() {
