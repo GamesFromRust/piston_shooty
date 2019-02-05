@@ -2,7 +2,6 @@ mod input;
 mod vector2;
 mod asset_loader;
 mod texture_manager;
-mod font_manager;
 mod sound_manager;
 mod world;
 mod renderable_object;
@@ -53,7 +52,6 @@ use std::rc::Rc;
 use std::cell::RefCell;
 use crate::texture_manager::TextureManager;
 use crate::sound_manager::SoundManager;
-use crate::font_manager::FontManager;
 use std::fs::File;
 use std::sync::mpsc::channel;
 use std::thread;
@@ -432,11 +430,6 @@ fn main() {
     };
     let asset_loader = Rc::new(asset_loader);
 
-    let mut font_manager = FontManager {
-        asset_loader: asset_loader.clone(),
-        fonts_by_filename: HashMap::new(),
-    };
-    
     let texture_manager = TextureManager {
         asset_loader: asset_loader.clone(),
         textures_by_filename: HashMap::new(),
@@ -447,8 +440,6 @@ fn main() {
         sounds_by_filename: HashMap::new(),
     };
 
-    font_manager.get("Roboto-Regular.ttf");
-    
     let world_list = Rc::new(vec!["Sunday-Gunday", "Multi-Level Mark-hitting"]);
 
     let menu_screen = make_menu_screen(world_list.clone(), &asset_loader);
