@@ -3,7 +3,6 @@ use crate::game_state::GameStateType;
 use crate::game_state::UpdateResult;
 use crate::game_state::UpdateResultType;
 use crate::game_state::UPDATE_RESULT_RUNNING;
-use crate::font_manager::FontManager;
 use piston_window;
 use piston_window::*;
 use std::collections::HashMap;
@@ -31,9 +30,6 @@ impl<'a> GameState for MenuScreen<'a> {
         &mut self, 
         c: Context, 
         gl: &mut G2d,
-        _font_manager: &mut FontManager, 
-        _window_width: f64, 
-        _window_height: f64,
         ui_bundle: &mut UiBundle) {
 
         self.fps_counter.calculate_fps();

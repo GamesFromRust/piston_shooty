@@ -14,7 +14,6 @@ use crate::renderable::Renderable;
 use crate::object_type::ObjectType;
 use crate::updatable::Updatable;
 use crate::player::Player;
-use crate::font_manager::FontManager;
 use std::ops::Deref;
 use crate::game_state::GameState;
 use crate::game_state::GameStateType;
@@ -211,12 +210,12 @@ impl World {
 
         if self.game_ended_state.game_ended {
             if self.game_ended_state.won {
-                render_utils::draw_text_overlay("Success! Click to continue.", &mut ui_cell, &ui_bundle.ids);
+                render_utils::draw_text_overlay("Success! Click to continue.", &mut ui_cell, &ui_bundle.ids, conrod_core::color::WHITE, 36);
             } else {
-                render_utils::draw_text_overlay("Defeat! Click to retry.", &mut ui_cell, &ui_bundle.ids);
+                render_utils::draw_text_overlay("Defeat! Click to retry.", &mut ui_cell, &ui_bundle.ids, conrod_core::color::WHITE, 36);
             }
         } else if self.should_display_level_name {
-            render_utils::draw_text_overlay(self.name.as_str(), &mut ui_cell, &ui_bundle.ids);
+            render_utils::draw_text_overlay(self.name.as_str(), &mut ui_cell, &ui_bundle.ids, conrod_core::color::WHITE, 36);
         }
 
         self.fps_counter.update_ui(&mut ui_cell, &ui_bundle.ids);
@@ -224,7 +223,7 @@ impl World {
 }
 
 impl GameState for World {
-    fn render(&mut self, c: Context, mut gl: &mut G2d, _font_manager: &mut FontManager, _window_width: f64, _window_height: f64, ui_bundle: &mut UiBundle) {
+    fn render(&mut self, c: Context, mut gl: &mut G2d, ui_bundle: &mut UiBundle) {
         self.fps_counter.calculate_fps();
         
         for i in 0..self.renderables.len() {

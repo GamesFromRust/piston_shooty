@@ -4,7 +4,6 @@ use crate::game_state::GameStateType;
 use crate::game_state::UpdateResult;
 use crate::game_state::UPDATE_RESULT_SUCCESS;
 use crate::game_state::UPDATE_RESULT_RUNNING;
-use crate::font_manager::FontManager;
 use piston_window::Context;
 use piston_window::G2d;
 use piston_window::Key;
@@ -28,9 +27,6 @@ impl GameState for VictoryScreen {
         &mut self, 
         c: Context, 
         gl: &mut G2d,
-        _font_manager: &mut FontManager,
-        _window_width: f64,
-        _window_height: f64,
         ui_bundle: &mut UiBundle) {
 
         ui_bundle.render_ui(c, gl, &self.image_map);
@@ -54,7 +50,7 @@ impl GameState for VictoryScreen {
             .scroll_kids_vertically()
             .set(ui_bundle.ids.canvas, &mut ui_cell);
 
-        render_utils::draw_text_overlay("VICTORY! Click to continue.", &mut ui_cell, &ui_bundle.ids);
+        render_utils::draw_text_overlay("VICTORY! Click to continue.", &mut ui_cell, &ui_bundle.ids, conrod_core::color::WHITE, 36);
 
         if game_state_utils::did_click(&mouse_states) {
             return UPDATE_RESULT_SUCCESS;

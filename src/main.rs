@@ -99,9 +99,6 @@ const PLAYER_LAYER: usize = 1;
 
 pub struct App<'a> {
     window: piston_window::PistonWindow,
-    font_manager: FontManager,
-    window_height: f64,
-    window_width: f64,
     game_state: Box<GameState>,
     texture_manager: TextureManager,
     sound_manager: SoundManager,
@@ -112,16 +109,13 @@ pub struct App<'a> {
 
 impl<'a> App<'a> {
     fn render(&mut self, event: &Event) {
-        let font_manager = &mut self.font_manager;
-        let window_width = self.window_width;
-        let window_height = self.window_height;
         let game_state = &mut self.game_state;
         let ui_bundle = &mut self.ui_bundle;
 
         self.window.draw_2d(event, |c: graphics::Context, gl/*: &mut G2d*/| {
             clear(GREEN, gl);
 
-            game_state.render(c, gl, font_manager, window_width, window_height, ui_bundle);
+            game_state.render(c, gl, ui_bundle);
         });
     }
 
@@ -500,9 +494,6 @@ fn main() {
 
     let mut app = App {
         window: window,
-        font_manager: font_manager,
-        window_height: HEIGHT as f64,
-        window_width: WIDTH as f64,
         game_state: Box::new(menu_screen),
         texture_manager: texture_manager,
         sound_manager: sound_manager,

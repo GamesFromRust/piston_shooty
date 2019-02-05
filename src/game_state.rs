@@ -1,4 +1,3 @@
-use crate::font_manager::FontManager;
 use piston_window::Context;
 use piston_window::G2d;
 use piston_window::Key;
@@ -47,9 +46,6 @@ pub trait GameState {
         &mut self, 
         c: Context, 
         gl: &mut G2d,
-        font_manager: &mut FontManager, 
-        window_width: f64,
-        window_height: f64,
         ui_bundle: &mut UiBundle);
 
     fn update(
