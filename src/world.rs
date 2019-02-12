@@ -210,7 +210,6 @@ impl World {
         conrod_core::widget::Canvas::new()
             .pad(30.0)
             .color(conrod_core::color::TRANSPARENT)
-//            .scroll_kids_vertically()
             .set(ui_bundle.ids.canvas, &mut ui_cell);
 
         if self.game_ended_state.game_ended {
