@@ -18,6 +18,7 @@ use crate::game_object::GameObject;
 
 pub struct MetaGun {
     pub gun_texture: Rc<G2dTexture>,
+    pub gun_image_id: conrod_core::image::Id,
     pub gun_sound: Rc<RefCell<Sound>>,
     pub bullet_texture: Rc<G2dTexture>,
     pub bullet_sound: Rc<RefCell<Sound>>,

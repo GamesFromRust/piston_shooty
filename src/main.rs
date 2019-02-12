@@ -103,6 +103,7 @@ pub struct App<'a> {
     level_index: usize,
     world_list: Rc<Vec<&'a str>>,
     ui_bundle: UiBundle<'a>,
+    asset_loader: Rc<AssetLoader>,
 }
 
 impl<'a> App<'a> {
@@ -129,7 +130,7 @@ impl<'a> App<'a> {
             },
             UpdateResultType::Success => {
                 self.level_index = update_result.result_code as usize;
-                let world = load_level(&mut self.texture_manager, &mut self.sound_manager, self.world_list[self.level_index]);
+                let world = load_level(&mut self.texture_manager, &mut self.sound_manager, self.world_list[self.level_index], self.asset_loader.clone());
                 self.game_state = Box::new(world);
             },
             UpdateResultType::Fail => {
@@ -169,7 +170,7 @@ impl<'a> App<'a> {
         }
 
         if self.level_index < self.world_list.len() {
-            let world = load_level(&mut self.texture_manager, &mut self.sound_manager, self.world_list[self.level_index]);
+            let world = load_level(&mut self.texture_manager, &mut self.sound_manager, self.world_list[self.level_index], self.asset_loader.clone());
             self.game_state = Box::new(world);
         } else if self.level_index == self.world_list.len() {
             self.game_state = Box::new(VictoryScreen{
@@ -179,7 +180,7 @@ impl<'a> App<'a> {
     }
 }
 
-fn load_level(texture_manager:&mut TextureManager, sound_manager:&mut SoundManager, level_name:&str) -> World {
+fn load_level(texture_manager:&mut TextureManager, sound_manager:&mut SoundManager, level_name:&str, asset_loader: Rc<AssetLoader>) -> World {
     let hand_gun_texture = texture_manager.get("textures\\hand-gun_square.png");
     let axe_gun_texture = texture_manager.get("textures\\GunaxeV1.png");
     let gun_gun = texture_manager.get("textures\\GunGunV1.png");
@@ -187,12 +188,16 @@ fn load_level(texture_manager:&mut TextureManager, sound_manager:&mut SoundManag
     let wall = texture_manager.get("textures\\brick_square.png");
     let enemy = texture_manager.get("textures\\enemy.png");
     let ground = texture_manager.get("textures\\ground.png");
-    
+    let mut image_map = conrod_core::image::Map::new();
+
     let gun_sound = sound_manager.get("sounds\\boom.ogg");
 
+    let hand_gun_image: G2dTexture = asset_loader.load_texture("textures/GunGunV1.png");
+    let hand_gun_image_id= image_map.insert(hand_gun_image);
     let hand_gun: RefCell<MetaGun> = RefCell::new( MetaGun {
         gun_sound: gun_sound.clone(),
         gun_texture: gun_gun.clone(),
+        gun_image_id: hand_gun_image_id,
         bullet_texture: bullet.clone(),
         bullet_sound: sound_manager.get("sounds\\boop.ogg"),
         gun_strategy: Box::new(HandGun {
@@ -203,9 +208,12 @@ fn load_level(texture_manager:&mut TextureManager, sound_manager:&mut SoundManag
         has_shot_bullet: false,
     });
 
+    let gun_axe_image: G2dTexture = asset_loader.load_texture("textures/GunaxeV1.png");
+    let gun_axe_image_id= image_map.insert(gun_axe_image);
     let gun_axe: RefCell<MetaGun> = RefCell::new( MetaGun {
         gun_sound: gun_sound.clone(),
         gun_texture: axe_gun_texture.clone(),
+        gun_image_id: gun_axe_image_id,
         bullet_texture: bullet.clone(),
         bullet_sound: sound_manager.get("sounds\\boop.ogg"),
         gun_strategy: Box::new(GunAxe {
@@ -252,7 +260,7 @@ fn load_level(texture_manager:&mut TextureManager, sound_manager:&mut SoundManag
         should_display_level_name: true,
         name: String::from(level_name),
         fps_counter: FpsCounter::default(),
-        image_map: conrod_core::image::Map::new(),
+        image_map: image_map,
     };
 
     let file_name = format!("assets\\Levels\\{}.csv", level_name);
@@ -491,6 +499,7 @@ fn main() {
         level_index: 0,
         world_list: world_list,
         ui_bundle: ui_bundle,
+        asset_loader: asset_loader,
     };
     app.window.set_max_fps(u64::max_value());
 

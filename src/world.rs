@@ -29,6 +29,8 @@ use conrod_core;
 use conrod_core::color::Colorable;
 use conrod_core::widget::Widget;
 use crate::fps_counter::FpsCounter;
+use conrod_core::position::Positionable;
+use conrod_core::position::Sizeable;
 
 const ENEMY_LAYER: usize = 1;
 const PROJECTILE_LAYER: usize = 2;
@@ -53,7 +55,8 @@ pub struct WorldReq {
 
 // TODO: Add self/guns/bullets to here.
 pub struct World {
-    pub renderables: Vec<Vec<Rc<RefCell<Renderable>>>>, // doesn't need to be a refcell but how do we make it not???????
+    pub renderables: Vec<Vec<Rc<RefCell<Renderable>>>>,
+    // doesn't need to be a refcell but how do we make it not???????
     pub collidables: Vec<Rc<RefCell<Collidable>>>,
     pub updatables: Vec<Rc<RefCell<Updatable>>>,
     pub game_ended_state: GameEndedState,
@@ -76,7 +79,7 @@ impl World {
     pub fn add_collidable(&mut self, collidable: Rc<RefCell<Collidable>>) {
         self.collidables.push(collidable);
     }
-    
+
     pub fn add_updatable(&mut self, updatable: Rc<RefCell<Updatable>>) {
         self.updatables.push(updatable);
     }
@@ -87,7 +90,7 @@ impl World {
                 return false;
             }
         }
-        
+
         true
     }
 
@@ -101,7 +104,7 @@ impl World {
         if self.can_take_action() {
             return false;
         }
-        
+
         for renderable_layer in &self.renderables {
             for renderable in renderable_layer {
                 if renderable.borrow().get_object_type() == ObjectType::Bullet || renderable.borrow().get_object_type() == ObjectType::GunAxe {
@@ -128,7 +131,6 @@ impl World {
 
         for collidable1 in &self.collidables {
             for collidable2 in &self.collidables {
-                
                 if Rc::ptr_eq(collidable1, collidable2) {
                     continue;
                 }
@@ -159,7 +161,7 @@ impl World {
             let current_world_reqs = &mut updatable.borrow_mut().update(&key_states, &mouse_states, &mouse_pos, &args);
             world_reqs.append(current_world_reqs);
         }
-        
+
         for world_req in world_reqs {
             match world_req.req_type {
                 WorldRequestType::AddDynamicRenderable => {
@@ -171,13 +173,13 @@ impl World {
                     if let Some(collidable) = world_req.collidable {
                         self.add_collidable(collidable);
                     }
-                },
+                }
                 WorldRequestType::AddUpdatable => {
                     assert!(world_req.updatable.is_some());
                     if let Some(updatable) = world_req.updatable {
                         self.add_updatable(updatable);
                     }
-                },
+                }
             }
         }
 
@@ -201,11 +203,14 @@ impl World {
     }
 
     fn update_ui(&self, ui_bundle: &mut UiBundle) {
+        let gun_templates = &self.player.borrow().gun_templates;
+        ui_bundle.ids.guns_hud.resize(gun_templates.len(), &mut ui_bundle.conrod_ui.widget_id_generator());
+
         let mut ui_cell = ui_bundle.conrod_ui.set_widgets();
         conrod_core::widget::Canvas::new()
             .pad(30.0)
             .color(conrod_core::color::TRANSPARENT)
-            .scroll_kids_vertically()
+//            .scroll_kids_vertically()
             .set(ui_bundle.ids.canvas, &mut ui_cell);
 
         if self.game_ended_state.game_ended {
@@ -215,7 +220,22 @@ impl World {
                 render_utils::draw_text_overlay("Defeat! Click to retry.", &mut ui_cell, &ui_bundle.ids, conrod_core::color::WHITE, 36);
             }
         } else if self.should_display_level_name {
+            println!("displaying level name!");
             render_utils::draw_text_overlay(self.name.as_str(), &mut ui_cell, &ui_bundle.ids, conrod_core::color::WHITE, 36);
+        }
+
+        let mut id_gun_right = ui_bundle.ids.canvas;
+        for i in 0..gun_templates.len() {
+            let mut image = conrod_core::widget::Image::new(self.player.borrow().gun_templates[i].borrow().gun_image_id)
+                .w_h(100.0, 100.0);
+
+            if id_gun_right == ui_bundle.ids.canvas {
+                image = image.top_right_of(id_gun_right);
+            } else {
+                image = image.left_from(id_gun_right, 125.0);
+            }
+            image.set(ui_bundle.ids.guns_hud[i], &mut ui_cell);
+            id_gun_right = ui_bundle.ids.guns_hud[i];
         }
 
         self.fps_counter.update_ui(&mut ui_cell, &ui_bundle.ids);
@@ -225,7 +245,7 @@ impl World {
 impl GameState for World {
     fn render(&mut self, c: Context, mut gl: &mut G2d, ui_bundle: &mut UiBundle) {
         self.fps_counter.calculate_fps();
-        
+
         for i in 0..self.renderables.len() {
             for renderable in &self.renderables[i] {
                 render_renderable(&c, &mut gl, renderable.borrow().deref());
@@ -236,13 +256,12 @@ impl GameState for World {
     }
 
     fn update(
-            &mut self, 
-            key_states: &HashMap<Key, input::ButtonState>, 
-            mouse_states: &HashMap<MouseButton, input::ButtonState>, 
-            mouse_pos: &Vector2, 
-            ui_bundle: &mut UiBundle,
-            args: &UpdateArgs) -> UpdateResult {
-
+        &mut self,
+        key_states: &HashMap<Key, input::ButtonState>,
+        mouse_states: &HashMap<MouseButton, input::ButtonState>,
+        mouse_pos: &Vector2,
+        ui_bundle: &mut UiBundle,
+        args: &UpdateArgs) -> UpdateResult {
         self.update_ui(ui_bundle);
 
         if self.game_ended_state.game_ended == false && self.game_ended_state.won == false {
@@ -256,13 +275,13 @@ impl GameState for World {
         if self.game_ended_state.game_ended == true && self.game_ended_state.won == true {
             return self.update_game_ended_won(&mouse_states);
         }
-        
+
         assert_eq!(false, true, "Invalid game ended state! Shouldn't have gotten here!");
         UPDATE_RESULT_RUNNING
     }
 
     fn get_type(&self) -> GameStateType {
-        return GameStateType::World;        
+        return GameStateType::World;
     }
 }
 
@@ -279,8 +298,8 @@ fn create_aabb_cuboid2(collidable: &Collidable) -> ncollide2d::bounding_volume::
     let cuboid2 = Cuboid::new(half_extents);
     let cuboid2_pos = nalgebra::geometry::Isometry2::new(
         nalgebra::core::Vector2::new(
-            collidable.get_position().x, 
-            collidable.get_position().y), 
+            collidable.get_position().x,
+            collidable.get_position().y),
         collidable.get_rotation());
     let aabb_cuboid2 = bounding_volume::aabb(&cuboid2, &cuboid2_pos);
     aabb_cuboid2
@@ -292,7 +311,7 @@ fn render_renderable(c: &Context, gl: &mut G2d, renderable: &Renderable) {
         .trans(renderable.get_position().x, renderable.get_position().y)
         .rot_rad(renderable.get_rotation())
         .trans((texture.get_size().0 as f64) * -0.5 * renderable.get_scale(),
-                (texture.get_size().1 as f64) * -0.5 * renderable.get_scale())
+               (texture.get_size().1 as f64) * -0.5 * renderable.get_scale())
         .scale(renderable.get_scale(), renderable.get_scale());
     image(texture.deref(), transform, gl);
 }
