@@ -220,22 +220,26 @@ impl World {
                 render_utils::draw_text_overlay("Defeat! Click to retry.", &mut ui_cell, &ui_bundle.ids, conrod_core::color::WHITE, 36);
             }
         } else if self.should_display_level_name {
-            println!("displaying level name!");
             render_utils::draw_text_overlay(self.name.as_str(), &mut ui_cell, &ui_bundle.ids, conrod_core::color::WHITE, 36);
         }
 
         let mut id_gun_right = ui_bundle.ids.canvas;
+        let mut width_gun_right = 0.0;
         for i in 0..gun_templates.len() {
-            let mut image = conrod_core::widget::Image::new(self.player.borrow().gun_templates[i].borrow().gun_image_id)
-                .w_h(100.0, 100.0);
+            let gun_image_id = self.player.borrow().gun_templates[i].borrow().gun_image_id;
+            let gun_texture = self.player.borrow().gun_templates[i].borrow().gun_texture.clone();
+            let mut image = conrod_core::widget::Image::new(gun_image_id)
+                .w_h(gun_texture.get_width() as f64, gun_texture.get_height() as f64);
 
             if id_gun_right == ui_bundle.ids.canvas {
                 image = image.top_right_of(id_gun_right);
             } else {
-                image = image.left_from(id_gun_right, 125.0);
+                image = image.left_from(id_gun_right, width_gun_right);
             }
             image.set(ui_bundle.ids.guns_hud[i], &mut ui_cell);
+
             id_gun_right = ui_bundle.ids.guns_hud[i];
+            width_gun_right = gun_texture.get_width() as f64;
         }
 
         self.fps_counter.update_ui(&mut ui_cell, &ui_bundle.ids);
