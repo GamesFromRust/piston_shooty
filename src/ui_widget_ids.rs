@@ -10,6 +10,7 @@ widget_ids! {
         title,
         rust_logo,
         guns_hud[],
+        shots_taken_hud[],
 
         // Main Menu World List
         world_list[],

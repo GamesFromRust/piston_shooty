@@ -202,9 +202,11 @@ impl World {
         }
     }
 
+    // todo: gif of ctrl+f of shots_taken in our codebase
     fn update_ui(&self, ui_bundle: &mut UiBundle) {
         let gun_templates = &self.player.borrow().gun_templates;
         ui_bundle.ids.guns_hud.resize(gun_templates.len(), &mut ui_bundle.conrod_ui.widget_id_generator());
+        ui_bundle.ids.shots_taken_hud.resize(gun_templates.len(), &mut ui_bundle.conrod_ui.widget_id_generator());
 
         let mut ui_cell = ui_bundle.conrod_ui.set_widgets();
         conrod_core::widget::Canvas::new()
@@ -233,6 +235,7 @@ impl World {
                 self.player.borrow().gun_templates[i].borrow().gun_image_id
             };
 
+            // note: gun_texture is only used for the width and height right now
             let gun_texture = if is_selected_gun {
                 self.player.borrow().gun_templates[i].borrow().selected_gun_texture.clone()
             } else {
@@ -248,6 +251,20 @@ impl World {
                 image = image.left_from(id_gun_right, width_gun_right);
             }
             image.set(ui_bundle.ids.guns_hud[i], &mut ui_cell);
+
+            let shots_taken_count = if self.player.borrow().gun_templates[i].borrow().has_gun_depth() {
+                let shots_taken = self.player.borrow().gun_templates[i].borrow().shots_taken;
+                let gun_depth = self.player.borrow().gun_templates[i].borrow().get_gun_depth();
+                format!("{}/{}", gun_depth - shots_taken, gun_depth)
+            } else {
+                "∞".to_string()
+            };
+
+            conrod_core::widget::Text::new(shots_taken_count.as_str())
+                .font_size(18)
+                .color(conrod_core::color::WHITE)
+                .mid_bottom_of(ui_bundle.ids.guns_hud[i])
+                .set(ui_bundle.ids.shots_taken_hud[i], &mut ui_cell);
 
             id_gun_right = ui_bundle.ids.guns_hud[i];
             width_gun_right = gun_texture.get_width() as f64;

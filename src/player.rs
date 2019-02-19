@@ -121,20 +121,14 @@ impl Player {
             match *key {
                 Key::Q => {
                     if value.pressed {
-                        if self.current_gun_template_index == self.gun_templates.len() - 1 {
-                            self.current_gun_template_index = 0;
-                        } else {
-                            self.current_gun_template_index += 1;
-                        }
+                        self.current_gun_template_index += 1;
+                        self.current_gun_template_index %= self.gun_templates.len();
                     }
                 },
                 Key::E => {
                     if value.pressed {
-                        if self.current_gun_template_index == 0 {
-                            self.current_gun_template_index = self.gun_templates.len();
-                        } else {
-                            self.current_gun_template_index -= 1;
-                        }
+                        self.current_gun_template_index -= 1;
+                        self.current_gun_template_index %= self.gun_templates.len();
                     }
                 }
                 _ => {}
