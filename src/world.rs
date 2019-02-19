@@ -225,8 +225,20 @@ impl World {
         let mut id_gun_right = ui_bundle.ids.canvas;
         let mut width_gun_right = 0.0;
         for i in 0..gun_templates.len() {
-            let gun_image_id = self.player.borrow().gun_templates[i].borrow().gun_image_id;
-            let gun_texture = self.player.borrow().gun_templates[i].borrow().gun_texture.clone();
+            let is_selected_gun = i == self.player.borrow().current_gun_template_index;
+
+            let gun_image_id = if is_selected_gun {
+                self.player.borrow().gun_templates[i].borrow().selected_gun_image_id
+            } else {
+                self.player.borrow().gun_templates[i].borrow().gun_image_id
+            };
+
+            let gun_texture = if is_selected_gun {
+                self.player.borrow().gun_templates[i].borrow().selected_gun_texture.clone()
+            } else {
+                self.player.borrow().gun_templates[i].borrow().gun_texture.clone()
+            };
+
             let mut image = conrod_core::widget::Image::new(gun_image_id)
                 .w_h(gun_texture.get_width() as f64, gun_texture.get_height() as f64);
 

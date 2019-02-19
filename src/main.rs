@@ -183,7 +183,9 @@ impl<'a> App<'a> {
 fn load_level(texture_manager:&mut TextureManager, sound_manager:&mut SoundManager, level_name:&str, asset_loader: Rc<AssetLoader>) -> World {
     let hand_gun_texture = texture_manager.get("textures\\hand-gun_square.png");
     let axe_gun_texture = texture_manager.get("textures\\GunaxeV1.png");
+    let axe_gun_texture_selected = texture_manager.get("textures\\GunaxeV1_selected.png");
     let gun_gun = texture_manager.get("textures\\GunGunV1.png");
+    let gun_gun_selected = texture_manager.get("textures\\GunGunV1_selected.png");
     let bullet = texture_manager.get("textures\\bullet.png");
     let wall = texture_manager.get("textures\\brick_square.png");
     let enemy = texture_manager.get("textures\\enemy.png");
@@ -194,10 +196,14 @@ fn load_level(texture_manager:&mut TextureManager, sound_manager:&mut SoundManag
 
     let hand_gun_image: G2dTexture = asset_loader.load_texture("textures/GunGunV1.png");
     let hand_gun_image_id= image_map.insert(hand_gun_image);
+    let selected_hand_gun_image: G2dTexture = asset_loader.load_texture("textures/GunGunV1_selected.png");
+    let selected_hand_gun_image_id= image_map.insert(selected_hand_gun_image);
     let hand_gun: RefCell<MetaGun> = RefCell::new( MetaGun {
         gun_sound: gun_sound.clone(),
         gun_texture: gun_gun.clone(),
         gun_image_id: hand_gun_image_id,
+        selected_gun_texture: gun_gun_selected.clone(),
+        selected_gun_image_id: selected_hand_gun_image_id,
         bullet_texture: bullet.clone(),
         bullet_sound: sound_manager.get("sounds\\boop.ogg"),
         gun_strategy: Box::new(HandGun {
@@ -210,10 +216,14 @@ fn load_level(texture_manager:&mut TextureManager, sound_manager:&mut SoundManag
 
     let gun_axe_image: G2dTexture = asset_loader.load_texture("textures/GunaxeV1.png");
     let gun_axe_image_id= image_map.insert(gun_axe_image);
+    let selected_gun_axe_image: G2dTexture = asset_loader.load_texture("textures/GunaxeV1_selected.png");
+    let selected_gun_axe_image_id= image_map.insert(selected_gun_axe_image);
     let gun_axe: RefCell<MetaGun> = RefCell::new( MetaGun {
         gun_sound: gun_sound.clone(),
         gun_texture: axe_gun_texture.clone(),
         gun_image_id: gun_axe_image_id,
+        selected_gun_texture: axe_gun_texture_selected.clone(),
+        selected_gun_image_id: selected_gun_axe_image_id,
         bullet_texture: bullet.clone(),
         bullet_sound: sound_manager.get("sounds\\boop.ogg"),
         gun_strategy: Box::new(GunAxe {
