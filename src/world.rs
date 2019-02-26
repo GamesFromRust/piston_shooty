@@ -204,9 +204,11 @@ impl World {
 
     // todo: gif of ctrl+f of shots_taken in our codebase
     fn update_ui(&self, ui_bundle: &mut UiBundle) {
+        // TODO: Please help.
         let gun_templates = &self.player.borrow().gun_templates;
         ui_bundle.ids.guns_hud.resize(gun_templates.len(), &mut ui_bundle.conrod_ui.widget_id_generator());
         ui_bundle.ids.shots_taken_hud.resize(gun_templates.len(), &mut ui_bundle.conrod_ui.widget_id_generator());
+        ui_bundle.ids.bullets_remaining_hud.resize(gun_templates.len(), &mut ui_bundle.conrod_ui.widget_id_generator());
 
         let mut ui_cell = ui_bundle.conrod_ui.set_widgets();
         conrod_core::widget::Canvas::new()
@@ -227,8 +229,8 @@ impl World {
         let mut id_gun_right = ui_bundle.ids.canvas;
         let mut width_gun_right = 0.0;
         for i in 0..gun_templates.len() {
+            // Draw gun texture & highlight selected
             let is_selected_gun = i == self.player.borrow().current_gun_template_index;
-
             let gun_image_id = if is_selected_gun {
                 self.player.borrow().gun_templates[i].borrow().selected_gun_image_id
             } else {
@@ -252,7 +254,8 @@ impl World {
             }
             image.set(ui_bundle.ids.guns_hud[i], &mut ui_cell);
 
-            let shots_taken_count = if self.player.borrow().gun_templates[i].borrow().has_gun_depth() {
+            // draw guns depth remaining
+            let gun_depth_remaining_text = if self.player.borrow().gun_templates[i].borrow().has_gun_depth() {
                 let shots_taken = self.player.borrow().gun_templates[i].borrow().shots_taken;
                 let gun_depth = self.player.borrow().gun_templates[i].borrow().get_gun_depth();
                 format!("{}/{}", gun_depth - shots_taken, gun_depth)
@@ -260,11 +263,26 @@ impl World {
                 "∞".to_string()
             };
 
-            conrod_core::widget::Text::new(shots_taken_count.as_str())
+            conrod_core::widget::Text::new(gun_depth_remaining_text.as_str())
                 .font_size(18)
                 .color(conrod_core::color::WHITE)
                 .mid_bottom_of(ui_bundle.ids.guns_hud[i])
                 .set(ui_bundle.ids.shots_taken_hud[i], &mut ui_cell);
+
+            // draw bullets remaining
+            let bullets_remaining = if self.player.borrow().gun_templates[i].borrow().has_shot_bullet {
+                0
+            } else {
+                1
+            };
+
+            let bullets_remaining_text = format!("{}/{}", bullets_remaining, 1);
+
+            conrod_core::widget::Text::new(bullets_remaining_text.as_str())
+                .font_size(18)
+                .color(conrod_core::color::WHITE)
+                .down_from(ui_bundle.ids.shots_taken_hud[i], 18.0)
+                .set(ui_bundle.ids.bullets_remaining_hud[i], &mut ui_cell);
 
             id_gun_right = ui_bundle.ids.guns_hud[i];
             width_gun_right = gun_texture.get_width() as f64;
