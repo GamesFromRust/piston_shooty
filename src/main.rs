@@ -198,6 +198,8 @@ fn load_level(texture_manager:&mut TextureManager, sound_manager:&mut SoundManag
     let hand_gun_image_id= image_map.insert(hand_gun_image);
     let selected_hand_gun_image: G2dTexture = asset_loader.load_texture("textures/GunGunV1_selected.png");
     let selected_hand_gun_image_id= image_map.insert(selected_hand_gun_image);
+    let bullet_image: G2dTexture = asset_loader.load_texture("textures/bullet.png");
+    let bullet_image_id= image_map.insert(bullet_image);
     let hand_gun: RefCell<MetaGun> = RefCell::new( MetaGun {
         gun_sound: gun_sound.clone(),
         gun_texture: gun_gun.clone(),
@@ -205,6 +207,7 @@ fn load_level(texture_manager:&mut TextureManager, sound_manager:&mut SoundManag
         selected_gun_texture: gun_gun_selected.clone(),
         selected_gun_image_id: selected_hand_gun_image_id,
         bullet_texture: bullet.clone(),
+        bullet_image_id: bullet_image_id,
         bullet_sound: sound_manager.get("sounds\\boop.ogg"),
         gun_strategy: Box::new(HandGun {
             should_delete: false
@@ -225,6 +228,7 @@ fn load_level(texture_manager:&mut TextureManager, sound_manager:&mut SoundManag
         selected_gun_texture: axe_gun_texture_selected.clone(),
         selected_gun_image_id: selected_gun_axe_image_id,
         bullet_texture: bullet.clone(),
+        bullet_image_id: bullet_image_id,
         bullet_sound: sound_manager.get("sounds\\boop.ogg"),
         gun_strategy: Box::new(GunAxe {
             should_delete: false

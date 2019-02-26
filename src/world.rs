@@ -31,6 +31,7 @@ use conrod_core::widget::Widget;
 use crate::fps_counter::FpsCounter;
 use conrod_core::position::Positionable;
 use conrod_core::position::Sizeable;
+use crate::gun::BULLET_SCALE;
 
 const ENEMY_LAYER: usize = 1;
 const PROJECTILE_LAYER: usize = 2;
@@ -209,10 +210,11 @@ impl World {
         ui_bundle.ids.guns_hud.resize(gun_templates.len(), &mut ui_bundle.conrod_ui.widget_id_generator());
         ui_bundle.ids.shots_taken_hud.resize(gun_templates.len(), &mut ui_bundle.conrod_ui.widget_id_generator());
         ui_bundle.ids.bullets_remaining_hud.resize(gun_templates.len(), &mut ui_bundle.conrod_ui.widget_id_generator());
+        ui_bundle.ids.bullets_hud.resize(gun_templates.len(), &mut ui_bundle.conrod_ui.widget_id_generator());
 
         let mut ui_cell = ui_bundle.conrod_ui.set_widgets();
         conrod_core::widget::Canvas::new()
-            .pad(30.0)
+            .pad(40.0)
             .color(conrod_core::color::TRANSPARENT)
             .set(ui_bundle.ids.canvas, &mut ui_cell);
 
@@ -244,15 +246,23 @@ impl World {
                 self.player.borrow().gun_templates[i].borrow().gun_texture.clone()
             };
 
-            let mut image = conrod_core::widget::Image::new(gun_image_id)
+            let mut gun_image = conrod_core::widget::Image::new(gun_image_id)
                 .w_h(gun_texture.get_width() as f64, gun_texture.get_height() as f64);
 
             if id_gun_right == ui_bundle.ids.canvas {
-                image = image.top_right_of(id_gun_right);
+                gun_image = gun_image.top_right_of(id_gun_right);
             } else {
-                image = image.left_from(id_gun_right, width_gun_right);
+                gun_image = gun_image.left_from(id_gun_right, width_gun_right);
             }
-            image.set(ui_bundle.ids.guns_hud[i], &mut ui_cell);
+            gun_image.set(ui_bundle.ids.guns_hud[i], &mut ui_cell);
+
+            let bullet_image_id = self.player.borrow().gun_templates[i].borrow().bullet_image_id;
+            let bullet_texture = self.player.borrow().gun_templates[i].borrow().bullet_texture.clone();
+            conrod_core::widget::Image::new(bullet_image_id)
+                    .w_h((BULLET_SCALE  * 1.5) * bullet_texture.get_width() as f64, (BULLET_SCALE  * 1.5) * bullet_texture.get_height() as f64)
+                    .down_from(ui_bundle.ids.guns_hud[i], 30.0)
+                    .align_middle_x_of(ui_bundle.ids.guns_hud[i])
+                    .set(ui_bundle.ids.bullets_hud[i], &mut ui_cell);
 
             // draw guns depth remaining
             let gun_depth_remaining_text = if self.player.borrow().gun_templates[i].borrow().has_gun_depth() {
@@ -266,7 +276,7 @@ impl World {
             conrod_core::widget::Text::new(gun_depth_remaining_text.as_str())
                 .font_size(18)
                 .color(conrod_core::color::WHITE)
-                .mid_bottom_of(ui_bundle.ids.guns_hud[i])
+                .right_from(ui_bundle.ids.guns_hud[i], 8.0)
                 .set(ui_bundle.ids.shots_taken_hud[i], &mut ui_cell);
 
             // draw bullets remaining
@@ -277,11 +287,10 @@ impl World {
             };
 
             let bullets_remaining_text = format!("{}/{}", bullets_remaining, 1);
-
             conrod_core::widget::Text::new(bullets_remaining_text.as_str())
                 .font_size(18)
                 .color(conrod_core::color::WHITE)
-                .down_from(ui_bundle.ids.shots_taken_hud[i], 18.0)
+                .right_from(ui_bundle.ids.bullets_hud[i], 8.0)
                 .set(ui_bundle.ids.bullets_remaining_hud[i], &mut ui_cell);
 
             id_gun_right = ui_bundle.ids.guns_hud[i];

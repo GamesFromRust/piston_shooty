@@ -23,6 +23,7 @@ pub struct MetaGun {
     pub selected_gun_image_id: conrod_core::image::Id,
     pub gun_sound: Rc<RefCell<Sound>>,
     pub bullet_texture: Rc<G2dTexture>,
+    pub bullet_image_id: conrod_core::image::Id,
     pub bullet_sound: Rc<RefCell<Sound>>,
     pub gun_strategy: Box<GunStrategy>,
     pub shots_taken: usize, // drinks all around https://www.youtube.com/watch?v=XNtTEibFvlQ

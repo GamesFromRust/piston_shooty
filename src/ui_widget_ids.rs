@@ -12,6 +12,7 @@ widget_ids! {
         guns_hud[],
         shots_taken_hud[],
         bullets_remaining_hud[],
+        bullets_hud[],
 
         // Main Menu World List
         world_list[],
