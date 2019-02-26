@@ -231,19 +231,22 @@ impl World {
         let mut id_gun_right = ui_bundle.ids.canvas;
         let mut width_gun_right = 0.0;
         for i in 0..gun_templates.len() {
+            let player = self.player.borrow();
+            let current_gun_template = player.gun_templates[i].borrow();
+
             // Draw gun texture & highlight selected
-            let is_selected_gun = i == self.player.borrow().current_gun_template_index;
+            let is_selected_gun = i == player.current_gun_template_index;
             let gun_image_id = if is_selected_gun {
-                self.player.borrow().gun_templates[i].borrow().selected_gun_image_id
+                current_gun_template.selected_gun_image_id
             } else {
-                self.player.borrow().gun_templates[i].borrow().gun_image_id
+                current_gun_template.gun_image_id
             };
 
             // note: gun_texture is only used for the width and height right now
             let gun_texture = if is_selected_gun {
-                self.player.borrow().gun_templates[i].borrow().selected_gun_texture.clone()
+                current_gun_template.selected_gun_texture.clone()
             } else {
-                self.player.borrow().gun_templates[i].borrow().gun_texture.clone()
+                current_gun_template.gun_texture.clone()
             };
 
             let mut gun_image = conrod_core::widget::Image::new(gun_image_id)
@@ -256,8 +259,8 @@ impl World {
             }
             gun_image.set(ui_bundle.ids.guns_hud[i], &mut ui_cell);
 
-            let bullet_image_id = self.player.borrow().gun_templates[i].borrow().bullet_image_id;
-            let bullet_texture = self.player.borrow().gun_templates[i].borrow().bullet_texture.clone();
+            let bullet_image_id = current_gun_template.bullet_image_id;
+            let bullet_texture = current_gun_template.bullet_texture.clone();
             conrod_core::widget::Image::new(bullet_image_id)
                     .w_h((BULLET_SCALE  * 1.5) * bullet_texture.get_width() as f64, (BULLET_SCALE  * 1.5) * bullet_texture.get_height() as f64)
                     .down_from(ui_bundle.ids.guns_hud[i], 30.0)
@@ -265,9 +268,9 @@ impl World {
                     .set(ui_bundle.ids.bullets_hud[i], &mut ui_cell);
 
             // draw guns depth remaining
-            let gun_depth_remaining_text = if self.player.borrow().gun_templates[i].borrow().has_gun_depth() {
-                let shots_taken = self.player.borrow().gun_templates[i].borrow().shots_taken;
-                let gun_depth = self.player.borrow().gun_templates[i].borrow().get_gun_depth();
+            let gun_depth_remaining_text = if current_gun_template.has_gun_depth() {
+                let shots_taken = current_gun_template.shots_taken;
+                let gun_depth = current_gun_template.get_gun_depth();
                 format!("{}/{}", gun_depth - shots_taken, gun_depth)
             } else {
                 "∞".to_string()
@@ -280,7 +283,7 @@ impl World {
                 .set(ui_bundle.ids.shots_taken_hud[i], &mut ui_cell);
 
             // draw bullets remaining
-            let bullets_remaining = if self.player.borrow().gun_templates[i].borrow().has_shot_bullet {
+            let bullets_remaining = if current_gun_template.has_shot_bullet {
                 0
             } else {
                 1
