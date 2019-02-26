@@ -40,7 +40,7 @@ impl GameState for VictoryScreen {
         input::ButtonState>, 
         mouse_pos: &Vector2, 
         ui_bundle: &mut UiBundle,
-        args: &UpdateArgs) -> UpdateResult {
+        args: UpdateArgs) -> UpdateResult {
 
         let mut ui_cell = ui_bundle.conrod_ui.set_widgets();
 
@@ -53,13 +53,13 @@ impl GameState for VictoryScreen {
         render_utils::draw_text_overlay("VICTORY! Click to continue.", &mut ui_cell, &ui_bundle.ids, conrod_core::color::WHITE, 36);
 
         if game_state_utils::did_click(&mouse_states) {
-            return UPDATE_RESULT_SUCCESS;
+            UPDATE_RESULT_SUCCESS
         } else {
-            return UPDATE_RESULT_RUNNING;
+            UPDATE_RESULT_RUNNING
         }
     }
 
     fn get_type(&self) -> GameStateType {
-        return GameStateType::Victory;        
+        GameStateType::Victory
     }
 }

@@ -77,7 +77,7 @@ impl Updatable for Gun {
                 key_states: &HashMap<Key, input::ButtonState>,
                 mouse_states: &HashMap<MouseButton, input::ButtonState>,
                 mouse_pos: &Vector2,
-                args: &UpdateArgs) -> Vec<WorldReq> {
+                args: UpdateArgs) -> Vec<WorldReq> {
         self.position += self.velocity * args.dt;
         self.rotation += GUN_ROTATIONAL_VELOCITY * args.dt;
         Vec::new()
@@ -129,13 +129,13 @@ impl Gun {
         let position = *self.get_position() + (velocity / PROJECTILE_VELOCITY_MAGNITUDE) * 30.0;
         
         let gun = Gun {
-            position: position,
-            rotation: rotation,
+            position,
+            rotation,
             scale: GUN_SCALE,
             renderable_object: RenderableObject {
                 texture: self.gun_texture.clone(),
             },
-            velocity: velocity,
+            velocity,
             collidable_object: CollidableObject {
                 width: self.gun_texture.get_size().0 as f64,
                 height: self.gun_texture.get_size().1 as f64,

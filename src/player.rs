@@ -61,40 +61,40 @@ impl Updatable for Player {
                 key_states: &HashMap<Key, input::ButtonState>,
                 mouse_states: &HashMap<MouseButton, input::ButtonState>,
                 mouse_pos: &Vector2,
-                args: &UpdateArgs) -> Vec<WorldReq> {
+                args: UpdateArgs) -> Vec<WorldReq> {
         self.meta_gun_mut().update();
 
         // Rotate to face our mouse.
         let player_to_mouse = *mouse_pos - self.position;
         self.rotation = player_to_mouse.y.atan2(player_to_mouse.x);
 
-        return self.apply_input(&key_states, &mouse_states, &mouse_pos, args.dt);
+        self.apply_input(&key_states, &mouse_states, &mouse_pos, args.dt)
     }
 }
 
 impl Player {
     fn meta_gun_mut(&self) -> RefMut<MetaGun> {
-        return self.gun_templates[self.current_gun_template_index].borrow_mut()
+        self.gun_templates[self.current_gun_template_index].borrow_mut()
     }
 
     fn shoot_bullets(&mut self) -> Vec<WorldReq> {
-        return self.meta_gun_mut().shoot_bullets();
+        self.meta_gun_mut().shoot_bullets()
     }
     
     pub fn can_shoot_bullet(&self) -> bool {
-        return self.gun_templates.iter()
+        self.gun_templates.iter()
             .find(|&gun_template| gun_template.borrow().can_shoot_bullet())
-            .is_some();
+            .is_some()
     }
 
     pub fn can_shoot_gun(&self) -> bool {
-        return self.gun_templates.iter()
+        self.gun_templates.iter()
             .find(|&gun_template| gun_template.borrow().can_shoot_gun())
-            .is_some();
+            .is_some()
     }
 
     fn shoot_gun(&mut self, mouse_pos: &Vector2) -> Vec<WorldReq>  {
-        return self.meta_gun_mut().shoot_gun(&self.position, self.rotation, mouse_pos);
+        self.meta_gun_mut().shoot_gun(&self.position, self.rotation, mouse_pos)
     }
     
     #[allow(unused_variables)]

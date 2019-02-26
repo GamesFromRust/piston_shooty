@@ -121,7 +121,7 @@ impl World {
         true
     }
 
-    fn update_game_running(&mut self, key_states: &HashMap<Key, input::ButtonState>, mouse_states: &HashMap<MouseButton, input::ButtonState>, mouse_pos: &Vector2, args: &UpdateArgs) -> UpdateResult {
+    fn update_game_running(&mut self, key_states: &HashMap<Key, input::ButtonState>, mouse_states: &HashMap<MouseButton, input::ButtonState>, mouse_pos: &Vector2, args: UpdateArgs) -> UpdateResult {
         let _ = self.receiver.try_recv().map(|_| self.should_display_level_name = false);
 
         if self.is_victorious() {
@@ -163,7 +163,7 @@ impl World {
 
         let mut world_reqs: Vec<WorldReq> = Vec::new();
         for updatable in &self.updatables {
-            let current_world_reqs = &mut updatable.borrow_mut().update(&key_states, &mouse_states, &mouse_pos, &args);
+            let current_world_reqs = &mut updatable.borrow_mut().update(&key_states, &mouse_states, &mouse_pos, args);
             world_reqs.append(current_world_reqs);
         }
 
@@ -193,17 +193,17 @@ impl World {
 
     fn update_game_ended_lost(&self, mouse_states: &HashMap<MouseButton, input::ButtonState>) -> UpdateResult {
         if game_state_utils::did_click(&mouse_states) {
-            return UPDATE_RESULT_FAIL;
+            UPDATE_RESULT_FAIL
         } else {
-            return UPDATE_RESULT_RUNNING;
+            UPDATE_RESULT_RUNNING
         }
     }
 
     fn update_game_ended_won(&self, mouse_states: &HashMap<MouseButton, input::ButtonState>) -> UpdateResult {
         if game_state_utils::did_click(&mouse_states) {
-            return UPDATE_RESULT_SUCCESS;
+            UPDATE_RESULT_SUCCESS
         } else {
-            return UPDATE_RESULT_RUNNING;
+            UPDATE_RESULT_RUNNING
         }
     }
 
@@ -245,7 +245,7 @@ impl World {
             self.draw_bullets_remaining_text(&mut ui_cell, i, &current_gun_template, ids);
 
             id_gun_right = ids.guns_hud[i];
-            width_gun_right = gun_texture.get_width() as f64;
+            width_gun_right = f64::from(gun_texture.get_width());
         }
 
         self.fps_counter.update_ui(&mut ui_cell, &ui_bundle.ids);
@@ -346,11 +346,11 @@ impl GameState for World {
         mouse_states: &HashMap<MouseButton, input::ButtonState>,
         mouse_pos: &Vector2,
         ui_bundle: &mut UiBundle,
-        args: &UpdateArgs) -> UpdateResult {
+        args: UpdateArgs) -> UpdateResult {
         self.update_ui(ui_bundle);
 
         if self.game_ended_state.game_ended == false && self.game_ended_state.won == false {
-            return self.update_game_running(&key_states, &mouse_states, &mouse_pos, &args);
+            return self.update_game_running(&key_states, &mouse_states, &mouse_pos, args);
         }
 
         if self.game_ended_state.game_ended == true && self.game_ended_state.won == false {
@@ -366,7 +366,7 @@ impl GameState for World {
     }
 
     fn get_type(&self) -> GameStateType {
-        return GameStateType::World;
+        GameStateType::World
     }
 }
 
@@ -386,8 +386,7 @@ fn create_aabb_cuboid2(collidable: &Collidable) -> ncollide2d::bounding_volume::
             collidable.get_position().x,
             collidable.get_position().y),
         collidable.get_rotation());
-    let aabb_cuboid2 = bounding_volume::aabb(&cuboid2, &cuboid2_pos);
-    aabb_cuboid2
+    bounding_volume::aabb(&cuboid2, &cuboid2_pos)
 }
 
 fn render_renderable(c: &Context, gl: &mut G2d, renderable: &Renderable) {

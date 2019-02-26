@@ -61,7 +61,7 @@ impl Updatable for Bullet {
                 key_states: &HashMap<Key, input::ButtonState>,
                 mouse_states: &HashMap<MouseButton, input::ButtonState>,
                 mouse_pos: &Vector2,
-                args: &UpdateArgs) -> Vec<WorldReq> {
+                args: UpdateArgs) -> Vec<WorldReq> {
         self.position += self.velocity * args.dt;
         Vec::new()
     }

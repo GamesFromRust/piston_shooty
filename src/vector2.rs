@@ -9,7 +9,7 @@ pub struct Vector2 {
 
 impl Vector2 {
     pub fn magnitude(&self) -> f64 {
-        return ((self.x * self.x) + (self.y * self.y) as f64).sqrt();
+        ((self.x * self.x) + (self.y * self.y) as f64).sqrt()
     }
 
     // pub fn normalize(&mut self) {

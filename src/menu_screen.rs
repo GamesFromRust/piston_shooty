@@ -44,40 +44,34 @@ impl<'a> GameState for MenuScreen<'a> {
         mouse_states: &HashMap<MouseButton, input::ButtonState>, 
         mouse_pos: &Vector2, 
         ui_bundle: &mut UiBundle,
-        args: &UpdateArgs) -> UpdateResult {
+        args: UpdateArgs) -> UpdateResult {
 
-        if game_state_utils::did_press_key(&key_states, Key::Up) {
-            if self.selected_world_index > 0 {
-                self.selected_world_index = self.selected_world_index - 1;
-            }
+        if game_state_utils::did_press_key(&key_states, Key::Up) && self.selected_world_index > 0 {
+            self.selected_world_index = self.selected_world_index - 1;
         }
 
-        if game_state_utils::did_press_key(&key_states, Key::Down) {
-            if self.selected_world_index < self.world_list.len() - 1 {
-                self.selected_world_index = self.selected_world_index + 1;
-            }
+        if game_state_utils::did_press_key(&key_states, Key::Down) && self.selected_world_index < self.world_list.len() - 1 {
+            self.selected_world_index = self.selected_world_index + 1;
         }
 
-        if game_state_utils::did_press_key(&key_states, Key::Down) {
-            if self.selected_world_index < self.world_list.len() - 1 {
-                self.selected_world_index = self.selected_world_index + 1;
-            }
+        if game_state_utils::did_press_key(&key_states, Key::Down) && self.selected_world_index < self.world_list.len() - 1 {
+            self.selected_world_index = self.selected_world_index + 1;
         }
 
         self.update_ui(ui_bundle);
 
         if game_state_utils::did_click(&mouse_states) || game_state_utils::did_press_key(&key_states, Key::Return) {
-            return UpdateResult {
+            UpdateResult {
                 result_type: UpdateResultType::Success,
                 result_code: self.selected_world_index as i64,
             }
         } else {
-            return UPDATE_RESULT_RUNNING;
+            UPDATE_RESULT_RUNNING
         }
     }
 
     fn get_type(&self) -> GameStateType {
-        return GameStateType::WorldSelect;        
+        GameStateType::WorldSelect
     }
 }
 

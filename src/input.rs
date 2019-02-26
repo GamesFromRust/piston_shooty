@@ -77,7 +77,7 @@ pub fn gather_input(input: &Event,
 
 pub fn update_input(key_states: &mut HashMap<Key, ButtonState>,
                     mouse_states: &mut HashMap<MouseButton, ButtonState>) {
-    for (_, value) in key_states {
+    for value in key_states.values_mut() {
         if value.pressed {
             // If we're pressed, change state to held.
             value.held = true;
@@ -88,7 +88,7 @@ pub fn update_input(key_states: &mut HashMap<Key, ButtonState>,
         }
     }
 
-    for (_, value) in mouse_states {
+    for value in mouse_states.values_mut() {
         if value.pressed {
             // If we're pressed, change state to held.
             value.held = true;

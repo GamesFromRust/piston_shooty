@@ -71,7 +71,7 @@ impl MetaGun {
             return false;
         }
 
-        return true;
+        true
     }
 
     pub fn shoot_gun(&mut self, player_pos: &Vector2, player_rot: f64, mouse_pos: &Vector2) -> Vec<WorldReq> {
@@ -86,7 +86,7 @@ impl MetaGun {
 
         self.guns.push(new_gun.clone());
         self.shots_taken += 1;
-        return self.world_requests_for_gun(new_gun);
+        self.world_requests_for_gun(new_gun)
     }
 
     fn shoot_gun_from_player(&mut self, player_pos: &Vector2, player_rot: f64, mouse_pos: &Vector2) -> Rc<RefCell<Gun>> {
@@ -99,7 +99,7 @@ impl MetaGun {
             renderable_object: RenderableObject {
                 texture: self.gun_texture.clone(),
             },
-            velocity: velocity,
+            velocity,
             collidable_object: CollidableObject {
                 width: self.gun_texture.get_size().0 as f64,
                 height: self.gun_texture.get_size().1 as f64,

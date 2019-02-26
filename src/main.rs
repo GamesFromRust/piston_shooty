@@ -118,8 +118,8 @@ impl<'a> App<'a> {
         });
     }
 
-    fn update(&mut self, key_states: &HashMap<Key, input::ButtonState>, mouse_states: &HashMap<MouseButton, input::ButtonState>, mouse_pos: &Vector2, args: &UpdateArgs) {
-        let update_result = self.game_state.update(&key_states, &mouse_states, &mouse_pos, &mut self.ui_bundle, &args);
+    fn update(&mut self, key_states: &HashMap<Key, input::ButtonState>, mouse_states: &HashMap<MouseButton, input::ButtonState>, mouse_pos: &Vector2, args: UpdateArgs) {
+        let update_result = self.game_state.update(&key_states, &mouse_states, &mouse_pos, &mut self.ui_bundle, args);
         self.advance_game_state(update_result);
     }
 
@@ -145,7 +145,7 @@ impl<'a> App<'a> {
                 // do nothing
             },
             UpdateResultType::Success => {
-                self.level_index = self.level_index + 1;
+                self.level_index += 1;
                 self.advance_level();
             },
             UpdateResultType::Fail => {
@@ -157,9 +157,7 @@ impl<'a> App<'a> {
     fn advance_game_state(&mut self, update_result:UpdateResult) {
         if GameStateType::WorldSelect == self.game_state.get_type() {
             self.advance_game_state_from_world_select(update_result);
-        } else if GameStateType::World == self.game_state.get_type() {
-            self.advance_game_state_from_world(update_result);
-        } else if GameStateType::Victory == self.game_state.get_type() {
+        } else if GameStateType::World == self.game_state.get_type() || GameStateType::Victory == self.game_state.get_type() {
             self.advance_game_state_from_world(update_result);
         }
     }
@@ -207,7 +205,7 @@ fn load_level(texture_manager:&mut TextureManager, sound_manager:&mut SoundManag
         selected_gun_texture: gun_gun_selected.clone(),
         selected_gun_image_id: selected_hand_gun_image_id,
         bullet_texture: bullet.clone(),
-        bullet_image_id: bullet_image_id,
+        bullet_image_id,
         bullet_sound: sound_manager.get("sounds\\boop.ogg"),
         gun_strategy: Box::new(HandGun {
             should_delete: false
@@ -228,7 +226,7 @@ fn load_level(texture_manager:&mut TextureManager, sound_manager:&mut SoundManag
         selected_gun_texture: axe_gun_texture_selected.clone(),
         selected_gun_image_id: selected_gun_axe_image_id,
         bullet_texture: bullet.clone(),
-        bullet_image_id: bullet_image_id,
+        bullet_image_id,
         bullet_sound: sound_manager.get("sounds\\boop.ogg"),
         gun_strategy: Box::new(GunAxe {
             should_delete: false
@@ -270,11 +268,11 @@ fn load_level(texture_manager:&mut TextureManager, sound_manager:&mut SoundManag
             won: false
         },
         player: player.clone(),
-        receiver: receiver,
+        receiver,
         should_display_level_name: true,
         name: String::from(level_name),
         fps_counter: FpsCounter::default(),
-        image_map: image_map,
+        image_map,
     };
 
     let file_name = format!("assets\\Levels\\{}.csv", level_name);
@@ -427,11 +425,11 @@ fn make_menu_screen<'a>(world_list: Rc<Vec<&'a str>>, asset_loader: &AssetLoader
     let logo_image_id = image_map.insert(logo_texture);
 
     MenuScreen {
-        world_list: world_list,
+        world_list,
         selected_world_index: 0,
         fps_counter: FpsCounter::default(),
-        image_map: image_map,
-        logo_image_id: logo_image_id,
+        image_map,
+        logo_image_id,
     }
 }
 
@@ -447,7 +445,7 @@ fn main() {
         .unwrap();
 
     let asset_loader = AssetLoader {
-        assets_path: assets_path,
+        assets_path,
         factory: window.factory.clone(),
     };
     let asset_loader = Rc::new(asset_loader);
@@ -500,20 +498,20 @@ fn main() {
     
     let ui_bundle: UiBundle = UiBundle {
         conrod_ui: ui,
-        glyph_cache: glyph_cache,
-        text_texture_cache: text_texture_cache,
-        ids: ids,
+        glyph_cache,
+        text_texture_cache,
+        ids,
     };
 
     let mut app = App {
-        window: window,
+        window,
         game_state: Box::new(menu_screen),
-        texture_manager: texture_manager,
-        sound_manager: sound_manager,
+        texture_manager,
+        sound_manager,
         level_index: 0,
-        world_list: world_list,
-        ui_bundle: ui_bundle,
-        asset_loader: asset_loader,
+        world_list,
+        ui_bundle,
+        asset_loader,
     };
     app.window.set_max_fps(u64::max_value());
 
@@ -530,7 +528,7 @@ fn main() {
         input::gather_input(&event, &mut key_states, &mut mouse_states, &mut mouse_pos);
         
         if let Some(u) = event.update_args() {
-            app.update(&key_states, &mouse_states, &mouse_pos, &u);
+            app.update(&key_states, &mouse_states, &mouse_pos, u);
             input::update_input(&mut key_states, &mut mouse_states);
         }
 
