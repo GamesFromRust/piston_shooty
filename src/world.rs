@@ -1,41 +1,43 @@
-use std::collections::HashMap;
-use piston_window::*;
-use crate::vector2::*;
-use std::rc::Rc;
 use std::cell::RefCell;
+use std::collections::HashMap;
+use std::ops::Deref;
+use std::rc::Rc;
 use std::sync::mpsc::Receiver;
-use ncollide2d::bounding_volume::BoundingVolume;
-use ncollide2d::bounding_volume;
-use ncollide2d::shape::Cuboid;
-use crate::input;
+
+use conrod_core;
+use conrod_core::color::Colorable;
+use conrod_core::position::Positionable;
+use conrod_core::position::Sizeable;
+use conrod_core::widget::Widget;
+use conrod_core::UiCell;
+use gfx_device_gl::Resources;
 use nalgebra;
 use ncollide2d;
-use crate::renderable::Renderable;
-use crate::object_type::ObjectType;
-use crate::updatable::Updatable;
-use crate::player::Player;
-use std::ops::Deref;
+use ncollide2d::bounding_volume;
+use ncollide2d::bounding_volume::BoundingVolume;
+use ncollide2d::shape::Cuboid;
+use piston_window::*;
+
+use crate::collidable::Collidable;
+use crate::fps_counter::FpsCounter;
 use crate::game_state::GameState;
 use crate::game_state::GameStateType;
 use crate::game_state::UpdateResult;
-use crate::game_state::UPDATE_RESULT_SUCCESS;
-use crate::game_state::UPDATE_RESULT_RUNNING;
 use crate::game_state::UPDATE_RESULT_FAIL;
-use crate::render_utils;
+use crate::game_state::UPDATE_RESULT_RUNNING;
+use crate::game_state::UPDATE_RESULT_SUCCESS;
 use crate::game_state_utils;
-use crate::collidable::Collidable;
-use crate::ui_bundle::UiBundle;
-use conrod_core;
-use conrod_core::color::Colorable;
-use conrod_core::widget::Widget;
-use crate::fps_counter::FpsCounter;
-use conrod_core::position::Positionable;
-use conrod_core::position::Sizeable;
 use crate::gun::BULLET_SCALE;
-use conrod_core::UiCell;
+use crate::input;
 use crate::meta_gun::MetaGun;
-use gfx_device_gl::Resources;
+use crate::object_type::ObjectType;
+use crate::player::Player;
+use crate::render_utils;
+use crate::renderable::Renderable;
+use crate::ui_bundle::UiBundle;
 use crate::ui_widget_ids;
+use crate::updatable::Updatable;
+use crate::vector2::*;
 
 const ENEMY_LAYER: usize = 1;
 const PROJECTILE_LAYER: usize = 2;
@@ -125,12 +127,18 @@ impl World {
         let _ = self.receiver.try_recv().map(|_| self.should_display_level_name = false);
 
         if self.is_victorious() {
-            self.game_ended_state = GameEndedState { game_ended: true, won: true };
+            self.game_ended_state = GameEndedState {
+                game_ended: true,
+                won: true,
+            };
             return UPDATE_RESULT_RUNNING;
         }
 
         if self.was_defeated() {
-            self.game_ended_state = GameEndedState { game_ended: true, won: false };
+            self.game_ended_state = GameEndedState {
+                game_ended: true,
+                won: false,
+            };
             return UPDATE_RESULT_RUNNING;
         }
 
@@ -148,18 +156,12 @@ impl World {
         }
 
         for renderable_layer in &mut self.renderables {
-            renderable_layer.retain(|ref renderable| {
-                !renderable.borrow().get_should_delete()
-            });
+            renderable_layer.retain(|ref renderable| !renderable.borrow().get_should_delete());
         }
 
-        self.updatables.retain(|ref updatable| {
-            !updatable.borrow().get_should_delete()
-        });
+        self.updatables.retain(|ref updatable| !updatable.borrow().get_should_delete());
 
-        self.collidables.retain(|ref collidable| {
-            !collidable.borrow().get_should_delete()
-        });
+        self.collidables.retain(|ref collidable| !collidable.borrow().get_should_delete());
 
         let mut world_reqs: Vec<WorldReq> = Vec::new();
         for updatable in &self.updatables {
@@ -217,10 +219,7 @@ impl World {
         ui_bundle.ids.bullets_hud.resize(gun_templates.len(), &mut ui_bundle.conrod_ui.widget_id_generator());
 
         let mut ui_cell = ui_bundle.conrod_ui.set_widgets();
-        conrod_core::widget::Canvas::new()
-            .pad(40.0)
-            .color(conrod_core::color::TRANSPARENT)
-            .set(ui_bundle.ids.canvas, &mut ui_cell);
+        conrod_core::widget::Canvas::new().pad(40.0).color(conrod_core::color::TRANSPARENT).set(ui_bundle.ids.canvas, &mut ui_cell);
 
         if self.game_ended_state.game_ended {
             if self.game_ended_state.won {
@@ -275,11 +274,7 @@ impl World {
         } else {
             "∞".to_string()
         };
-        conrod_core::widget::Text::new(gun_depth_remaining_text.as_str())
-            .font_size(18)
-            .color(conrod_core::color::WHITE)
-            .right_from(ids.guns_hud[i], 8.0)
-            .set(ids.shots_taken_hud[i], &mut ui_cell);
+        conrod_core::widget::Text::new(gun_depth_remaining_text.as_str()).font_size(18).color(conrod_core::color::WHITE).right_from(ids.guns_hud[i], 8.0).set(ids.shots_taken_hud[i], &mut ui_cell);
     }
 
     fn draw_bullet_image_hud(&self, ids: &ui_widget_ids::Ids, mut ui_cell: &mut UiCell, i: usize, current_gun_template: &MetaGun) {
@@ -293,14 +288,16 @@ impl World {
     }
 
     #[allow(clippy::too_many_arguments)]
-    fn draw_gun_image_hud(&self,
-                          ids: &ui_widget_ids::Ids,
-                          mut ui_cell: &mut UiCell,
-                          id_gun_right: conrod_core::widget::Id,
-                          width_gun_right: f64,
-                          i: usize,
-                          player: &Player,
-                          current_gun_template: &MetaGun) -> Rc<Texture<Resources>> {
+    fn draw_gun_image_hud(
+        &self,
+        ids: &ui_widget_ids::Ids,
+        mut ui_cell: &mut UiCell,
+        id_gun_right: conrod_core::widget::Id,
+        width_gun_right: f64,
+        i: usize,
+        player: &Player,
+        current_gun_template: &MetaGun,
+    ) -> Rc<Texture<Resources>> {
         // Draw gun texture & highlight selected
         let is_selected_gun = i == player.current_gun_template_index;
         let gun_image_id = if is_selected_gun {
@@ -316,8 +313,7 @@ impl World {
             current_gun_template.gun_texture.clone()
         };
 
-        let mut gun_image = conrod_core::widget::Image::new(gun_image_id)
-            .w_h(f64::from(gun_texture.get_width()), f64::from(gun_texture.get_height()));
+        let mut gun_image = conrod_core::widget::Image::new(gun_image_id).w_h(f64::from(gun_texture.get_width()), f64::from(gun_texture.get_height()));
         if id_gun_right == ids.canvas {
             gun_image = gun_image.top_right_of(id_gun_right);
         } else {
@@ -347,7 +343,8 @@ impl GameState for World {
         mouse_states: &HashMap<MouseButton, input::ButtonState>,
         mouse_pos: &Vector2,
         ui_bundle: &mut UiBundle,
-        args: UpdateArgs) -> UpdateResult {
+        args: UpdateArgs,
+    ) -> UpdateResult {
         self.update_ui(ui_bundle);
 
         if !self.game_ended_state.game_ended && !self.game_ended_state.won {
@@ -378,25 +375,20 @@ fn collides(collidable1: &Collidable, collidable2: &Collidable) -> bool {
 }
 
 fn create_aabb_cuboid2(collidable: &Collidable) -> ncollide2d::bounding_volume::aabb::AABB<f64> {
-    let half_extents: nalgebra::core::Vector2<f64> = nalgebra::core::Vector2::new(
-        collidable.get_collidable_object().width as f64 * 0.5 * collidable.get_scale(),
-        collidable.get_collidable_object().height as f64 * 0.5 * collidable.get_scale());
+    let half_extents: nalgebra::core::Vector2<f64> =
+        nalgebra::core::Vector2::new(collidable.get_collidable_object().width as f64 * 0.5 * collidable.get_scale(), collidable.get_collidable_object().height as f64 * 0.5 * collidable.get_scale());
     let cuboid2 = Cuboid::new(half_extents);
-    let cuboid2_pos = nalgebra::geometry::Isometry2::new(
-        nalgebra::core::Vector2::new(
-            collidable.get_position().x,
-            collidable.get_position().y),
-        collidable.get_rotation());
+    let cuboid2_pos = nalgebra::geometry::Isometry2::new(nalgebra::core::Vector2::new(collidable.get_position().x, collidable.get_position().y), collidable.get_rotation());
     bounding_volume::aabb(&cuboid2, &cuboid2_pos)
 }
 
 fn render_renderable(c: &Context, gl: &mut G2d, renderable: &Renderable) {
     let texture = &renderable.get_renderable_object().texture;
-    let transform = c.transform
+    let transform = c
+        .transform
         .trans(renderable.get_position().x, renderable.get_position().y)
         .rot_rad(renderable.get_rotation())
-        .trans((f64::from(texture.get_size().0)) * -0.5 * renderable.get_scale(),
-               (f64::from(texture.get_size().1)) * -0.5 * renderable.get_scale())
+        .trans((f64::from(texture.get_size().0)) * -0.5 * renderable.get_scale(), (f64::from(texture.get_size().1)) * -0.5 * renderable.get_scale())
         .scale(renderable.get_scale(), renderable.get_scale());
     image(texture.deref(), transform, gl);
 }

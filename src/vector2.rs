@@ -1,5 +1,5 @@
-use std::ops::*;
 use std::fmt;
+use std::ops::*;
 
 #[derive(Clone, Copy, PartialEq)]
 pub struct Vector2 {
@@ -39,7 +39,10 @@ impl fmt::Display for Vector2 {
 
 impl Default for Vector2 {
     fn default() -> Vector2 {
-        Vector2 { x: 0.0, y: 0.0 }
+        Vector2 {
+            x: 0.0,
+            y: 0.0,
+        }
     }
 }
 

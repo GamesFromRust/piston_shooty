@@ -1,0 +1,8 @@
+reorder_imports = true
+indent_style = "Visual"
+use_small_heuristics = "Off"
+binop_separator = "Front"
+edition = "2018"
+max_width = 200
+use_field_init_shorthand = true
+unstable_features = true

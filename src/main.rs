@@ -1,81 +1,84 @@
-mod input;
-mod vector2;
+#![allow(clippy::needless_return)]
+
 mod asset_loader;
-mod texture_manager;
-mod sound_manager;
-mod world;
-mod renderable_object;
-mod renderable;
-mod object_type;
-mod updatable;
-mod ground;
-mod wall;
-mod enemy;
 mod bullet;
-mod player;
-mod game_state;
-mod render_utils;
-mod victory_screen;
-mod game_state_utils;
-mod menu_screen;
 mod collidable;
-mod hand_gun;
 mod collidable_object;
+mod enemy;
+mod fps_counter;
 mod game_object;
-mod gun_strategy;
+mod game_state;
+mod game_state_utils;
+mod ground;
 mod gun;
 mod gun_axe;
+mod gun_strategy;
+mod hand_gun;
+mod input;
+mod menu_screen;
 mod meta_gun;
+mod object_type;
+mod player;
+mod render_utils;
+mod renderable;
+mod renderable_object;
+mod sound_manager;
+mod texture_manager;
 mod ui_bundle;
 mod ui_widget_ids;
-mod fps_counter;
+mod updatable;
+mod vector2;
+mod victory_screen;
+mod wall;
+mod world;
 
-extern crate piston;
-extern crate glutin_window;
-extern crate time;
-extern crate piston_window;
-extern crate gfx_device_gl;
-extern crate graphics;
-extern crate find_folder;
-extern crate ears;
-extern crate ncollide2d;
-extern crate nalgebra;
 extern crate csv;
-#[macro_use] extern crate conrod_core;
+extern crate ears;
+extern crate find_folder;
+extern crate gfx_device_gl;
+extern crate glutin_window;
+extern crate graphics;
+extern crate nalgebra;
+extern crate ncollide2d;
+extern crate piston;
+extern crate piston_window;
+extern crate time;
+#[macro_use]
+extern crate conrod_core;
 extern crate conrod_piston;
 
-use std::collections::HashMap;
-use piston_window::*;
-use crate::vector2::*;
 use crate::asset_loader::AssetLoader;
-use std::rc::Rc;
-use std::cell::RefCell;
-use crate::texture_manager::TextureManager;
-use crate::sound_manager::SoundManager;
-use std::fs::File;
-use std::sync::mpsc::channel;
-use std::thread;
-use std::time::Duration;
-use crate::world::World;
-use crate::player::Player;
-use crate::wall::Wall;
-use crate::ground::Ground;
+use crate::collidable_object::CollidableObject;
 use crate::enemy::Enemy;
-use crate::world::GameEndedState;
-use crate::renderable_object::RenderableObject;
+use crate::fps_counter::FpsCounter;
 use crate::game_state::GameState;
 use crate::game_state::GameStateType;
 use crate::game_state::UpdateResult;
 use crate::game_state::UpdateResultType;
-use crate::victory_screen::VictoryScreen;
-use crate::menu_screen::MenuScreen;
-use crate::collidable_object::CollidableObject;
+use crate::ground::Ground;
 use crate::gun_axe::GunAxe;
 use crate::hand_gun::HandGun;
+use crate::menu_screen::MenuScreen;
 use crate::meta_gun::MetaGun;
+use crate::player::Player;
+use crate::renderable_object::RenderableObject;
+use crate::sound_manager::SoundManager;
+use crate::texture_manager::TextureManager;
 use crate::ui_bundle::UiBundle;
 use crate::ui_widget_ids::Ids;
-use crate::fps_counter::FpsCounter;
+use crate::vector2::*;
+use crate::victory_screen::VictoryScreen;
+use crate::wall::Wall;
+use crate::world::GameEndedState;
+use crate::world::World;
+use piston_window::*;
+use std::cell::RefCell;
+use std::collections::HashMap;
+use std::fs::File;
+use std::rc::Rc;
+use std::sync::mpsc::channel;
+use std::thread;
+use std::time::Duration;
 
 const WIDTH: u32 = 1280;
 const HEIGHT: u32 = 720;
@@ -111,7 +114,7 @@ impl<'a> App<'a> {
         let game_state = &mut self.game_state;
         let ui_bundle = &mut self.ui_bundle;
 
-        self.window.draw_2d(event, |c: graphics::Context, gl/*: &mut G2d*/| {
+        self.window.draw_2d(event, |c: graphics::Context, gl /*: &mut G2d*/| {
             clear(GREEN, gl);
 
             game_state.render(c, gl, ui_bundle);
@@ -123,38 +126,38 @@ impl<'a> App<'a> {
         self.advance_game_state(update_result);
     }
 
-    fn advance_game_state_from_world_select(&mut self, update_result:UpdateResult) {
+    fn advance_game_state_from_world_select(&mut self, update_result: UpdateResult) {
         match update_result.result_type {
             UpdateResultType::Running => {
                 // do nothing
-            },
+            }
             UpdateResultType::Success => {
                 self.level_index = update_result.result_code as usize;
                 let world = load_level(&mut self.texture_manager, &mut self.sound_manager, self.world_list[self.level_index], self.asset_loader.clone());
                 self.game_state = Box::new(world);
-            },
+            }
             UpdateResultType::Fail => {
                 // do nothing
-            },
+            }
         }
     }
 
-    fn advance_game_state_from_world(&mut self, update_result:UpdateResult) {
+    fn advance_game_state_from_world(&mut self, update_result: UpdateResult) {
         match update_result.result_type {
             UpdateResultType::Running => {
                 // do nothing
-            },
+            }
             UpdateResultType::Success => {
                 self.level_index += 1;
                 self.advance_level();
-            },
+            }
             UpdateResultType::Fail => {
                 self.advance_level();
-            },
+            }
         }
     }
 
-    fn advance_game_state(&mut self, update_result:UpdateResult) {
+    fn advance_game_state(&mut self, update_result: UpdateResult) {
         if GameStateType::WorldSelect == self.game_state.get_type() {
             self.advance_game_state_from_world_select(update_result);
         } else if GameStateType::World == self.game_state.get_type() || GameStateType::Victory == self.game_state.get_type() {
@@ -171,14 +174,14 @@ impl<'a> App<'a> {
             let world = load_level(&mut self.texture_manager, &mut self.sound_manager, self.world_list[self.level_index], self.asset_loader.clone());
             self.game_state = Box::new(world);
         } else if self.level_index == self.world_list.len() {
-            self.game_state = Box::new(VictoryScreen{
-                image_map: conrod_core::image::Map::new()
+            self.game_state = Box::new(VictoryScreen {
+                image_map: conrod_core::image::Map::new(),
             });
         }
     }
 }
 
-fn load_level(texture_manager:&mut TextureManager, sound_manager:&mut SoundManager, level_name:&str, asset_loader: Rc<AssetLoader>) -> World {
+fn load_level(texture_manager: &mut TextureManager, sound_manager: &mut SoundManager, level_name: &str, asset_loader: Rc<AssetLoader>) -> World {
     let hand_gun_texture = texture_manager.get("textures\\hand-gun_square.png");
     let axe_gun_texture = texture_manager.get("textures\\GunaxeV1.png");
     let axe_gun_texture_selected = texture_manager.get("textures\\GunaxeV1_selected.png");
@@ -193,12 +196,12 @@ fn load_level(texture_manager:&mut TextureManager, sound_manager:&mut SoundManag
     let gun_sound = sound_manager.get("sounds\\boom.ogg");
 
     let hand_gun_image: G2dTexture = asset_loader.load_texture("textures/GunGunV1.png");
-    let hand_gun_image_id= image_map.insert(hand_gun_image);
+    let hand_gun_image_id = image_map.insert(hand_gun_image);
     let selected_hand_gun_image: G2dTexture = asset_loader.load_texture("textures/GunGunV1_selected.png");
-    let selected_hand_gun_image_id= image_map.insert(selected_hand_gun_image);
+    let selected_hand_gun_image_id = image_map.insert(selected_hand_gun_image);
     let bullet_image: G2dTexture = asset_loader.load_texture("textures/bullet.png");
-    let bullet_image_id= image_map.insert(bullet_image);
-    let hand_gun: RefCell<MetaGun> = RefCell::new( MetaGun {
+    let bullet_image_id = image_map.insert(bullet_image);
+    let hand_gun: RefCell<MetaGun> = RefCell::new(MetaGun {
         gun_sound: gun_sound.clone(),
         gun_texture: gun_gun.clone(),
         gun_image_id: hand_gun_image_id,
@@ -208,7 +211,7 @@ fn load_level(texture_manager:&mut TextureManager, sound_manager:&mut SoundManag
         bullet_image_id,
         bullet_sound: sound_manager.get("sounds\\boop.ogg"),
         gun_strategy: Box::new(HandGun {
-            should_delete: false
+            should_delete: false,
         }),
         shots_taken: 0,
         guns: Vec::new(),
@@ -216,10 +219,10 @@ fn load_level(texture_manager:&mut TextureManager, sound_manager:&mut SoundManag
     });
 
     let gun_axe_image: G2dTexture = asset_loader.load_texture("textures/GunaxeV1.png");
-    let gun_axe_image_id= image_map.insert(gun_axe_image);
+    let gun_axe_image_id = image_map.insert(gun_axe_image);
     let selected_gun_axe_image: G2dTexture = asset_loader.load_texture("textures/GunaxeV1_selected.png");
-    let selected_gun_axe_image_id= image_map.insert(selected_gun_axe_image);
-    let gun_axe: RefCell<MetaGun> = RefCell::new( MetaGun {
+    let selected_gun_axe_image_id = image_map.insert(selected_gun_axe_image);
+    let gun_axe: RefCell<MetaGun> = RefCell::new(MetaGun {
         gun_sound: gun_sound.clone(),
         gun_texture: axe_gun_texture.clone(),
         gun_image_id: gun_axe_image_id,
@@ -229,17 +232,14 @@ fn load_level(texture_manager:&mut TextureManager, sound_manager:&mut SoundManag
         bullet_image_id,
         bullet_sound: sound_manager.get("sounds\\boop.ogg"),
         gun_strategy: Box::new(GunAxe {
-            should_delete: false
+            should_delete: false,
         }),
         shots_taken: 0,
         guns: Vec::new(),
         has_shot_bullet: false,
     });
 
-    let meta_guns: Vec<RefCell<MetaGun>> = vec![
-        hand_gun,
-        gun_axe,
-    ];
+    let meta_guns: Vec<RefCell<MetaGun>> = vec![hand_gun, gun_axe];
 
     let player: Player = Player {
         position: Vector2 {
@@ -254,9 +254,9 @@ fn load_level(texture_manager:&mut TextureManager, sound_manager:&mut SoundManag
         gun_templates: meta_guns,
         current_gun_template_index: 0,
     };
-    
+
     let player = Rc::new(RefCell::new(player));
-    
+
     let (sender, receiver) = channel();
 
     let mut world: World = World {
@@ -265,7 +265,7 @@ fn load_level(texture_manager:&mut TextureManager, sound_manager:&mut SoundManag
         updatables: Vec::new(),
         game_ended_state: GameEndedState {
             game_ended: false,
-            won: false
+            won: false,
         },
         player: player.clone(),
         receiver,
@@ -280,41 +280,45 @@ fn load_level(texture_manager:&mut TextureManager, sound_manager:&mut SoundManag
 
     let file = match file_result {
         Ok(f) => f,
-        Err(err) => {panic!("Couldn't read file from {}, err: {}", file_name, err);}
+        Err(err) => {
+            panic!("Couldn't read file from {}, err: {}", file_name, err);
+        }
     };
-//    let mut csv_rdr = csv::Reader::from_reader(file);
+    //    let mut csv_rdr = csv::Reader::from_reader(file);
     let mut csv_rdr = csv::ReaderBuilder::new().has_headers(false).from_reader(file);
 
     // Make sure it's the right size.
-//    let mut i = 0;
-//    for record_result in csv_rdr.records() {
-//        let mut record = match record_result {
-//            Ok(r) => r,
-//            Err(err) => { panic!("Couldn't read line {} from {}", i, file_name); }
-//        };
-//
-//        assert!(record.len() as u32 == GRID_WIDTH);
-//        i += 1;
-//    }
-//    assert!(i == GRID_HEIGHT);
+    //    let mut i = 0;
+    //    for record_result in csv_rdr.records() {
+    //        let mut record = match record_result {
+    //            Ok(r) => r,
+    //            Err(err) => { panic!("Couldn't read line {} from {}", i, file_name); }
+    //        };
+    //
+    //        assert!(record.len() as u32 == GRID_WIDTH);
+    //        i += 1;
+    //    }
+    //    assert!(i == GRID_HEIGHT);
 
-//    let new_csv_rdr = || csv::Reader::from_file(format!("assets\\Levels\\{}.csv", level_name)).unwrap().has_headers(false);
-//    let mut index_data = io::Cursor::new(Vec::new());
-//    create_index(new_csv_rdr(), index_data.by_ref()).unwrap();
-//    let mut index = Indexed::open(new_csv_rdr(), index_data).unwrap();
+    //    let new_csv_rdr = || csv::Reader::from_file(format!("assets\\Levels\\{}.csv", level_name)).unwrap().has_headers(false);
+    //    let mut index_data = io::Cursor::new(Vec::new());
+    //    create_index(new_csv_rdr(), index_data.by_ref()).unwrap();
+    //    let mut index = Indexed::open(new_csv_rdr(), index_data).unwrap();
 
     // Read in a level.
     for (line_num, record_result) in csv_rdr.records().enumerate() {
         let line = match record_result {
             Ok(r) => r,
-            Err(err) => {panic!("Couldn't read line {} from {}, err: {}", line_num, file_name, err);}
+            Err(err) => {
+                panic!("Couldn't read line {} from {}, err: {}", line_num, file_name, err);
+            }
         };
         for (item_num, item) in line.iter().enumerate() {
             if item == "W" {
                 let wall = Wall {
                     position: Vector2 {
                         x: f64::from(item_num as u32 * CELL_WIDTH + CELL_WIDTH / 2),
-                        y: f64::from(line_num as u32 * CELL_HEIGHT + CELL_HEIGHT / 2)
+                        y: f64::from(line_num as u32 * CELL_HEIGHT + CELL_HEIGHT / 2),
                     },
                     rotation: 0.0,
                     scale: WALL_SCALE,
@@ -333,7 +337,7 @@ fn load_level(texture_manager:&mut TextureManager, sound_manager:&mut SoundManag
                 let ground = Ground {
                     position: Vector2 {
                         x: f64::from(item_num as u32 * CELL_WIDTH + CELL_WIDTH / 2),
-                        y: f64::from(line_num as u32 * CELL_HEIGHT + CELL_HEIGHT / 2)
+                        y: f64::from(line_num as u32 * CELL_HEIGHT + CELL_HEIGHT / 2),
                     },
                     rotation: 0.0,
                     scale: GROUND_SCALE,
@@ -353,7 +357,7 @@ fn load_level(texture_manager:&mut TextureManager, sound_manager:&mut SoundManag
                 let ground = Ground {
                     position: Vector2 {
                         x: f64::from(item_num as u32 * CELL_WIDTH + CELL_WIDTH / 2),
-                        y: f64::from(line_num as u32 * CELL_HEIGHT + CELL_HEIGHT / 2)
+                        y: f64::from(line_num as u32 * CELL_HEIGHT + CELL_HEIGHT / 2),
                     },
                     rotation: 0.0,
                     scale: GROUND_SCALE,
@@ -367,7 +371,7 @@ fn load_level(texture_manager:&mut TextureManager, sound_manager:&mut SoundManag
                 let enemy = Enemy {
                     position: Vector2 {
                         x: f64::from(item_num as u32 * CELL_WIDTH + CELL_WIDTH / 2),
-                        y: f64::from(line_num as u32 * CELL_HEIGHT + CELL_HEIGHT / 2)
+                        y: f64::from(line_num as u32 * CELL_HEIGHT + CELL_HEIGHT / 2),
                     },
                     rotation: 0.0,
                     scale: ENEMY_SCALE,
@@ -388,7 +392,7 @@ fn load_level(texture_manager:&mut TextureManager, sound_manager:&mut SoundManag
                 let ground = Ground {
                     position: Vector2 {
                         x: f64::from(item_num as u32 * CELL_WIDTH + CELL_WIDTH / 2),
-                        y: f64::from(line_num as u32 * CELL_HEIGHT + CELL_HEIGHT / 2)
+                        y: f64::from(line_num as u32 * CELL_HEIGHT + CELL_HEIGHT / 2),
                     },
                     rotation: 0.0,
                     scale: GROUND_SCALE,
@@ -411,10 +415,10 @@ fn load_level(texture_manager:&mut TextureManager, sound_manager:&mut SoundManag
         let _ = sender.send(0);
     });
 
-    world
+    return world;
 }
 
-fn make_menu_screen<'a>(world_list: Rc<Vec<&'a str>>, asset_loader: &AssetLoader ) -> MenuScreen<'a> {
+fn make_menu_screen<'a>(world_list: Rc<Vec<&'a str>>, asset_loader: &AssetLoader) -> MenuScreen<'a> {
     let mut image_map = conrod_core::image::Map::new();
 
     let logo_texture: G2dTexture = asset_loader.load_texture("textures/GunGunV1.png");
@@ -432,13 +436,9 @@ fn make_menu_screen<'a>(world_list: Rc<Vec<&'a str>>, asset_loader: &AssetLoader
 fn main() {
     let window_settings = WindowSettings::new("piston_shooty", [WIDTH, HEIGHT]);
 
-    let assets_path: std::path::PathBuf = find_folder::Search::ParentsThenKids(3, 3)
-        .for_folder("assets")
-        .unwrap();
+    let assets_path: std::path::PathBuf = find_folder::Search::ParentsThenKids(3, 3).for_folder("assets").unwrap();
 
-    let mut window: piston_window::PistonWindow = window_settings.exit_on_esc(true)
-        .build()
-        .unwrap();
+    let mut window: piston_window::PistonWindow = window_settings.exit_on_esc(true).build().unwrap();
 
     let asset_loader = AssetLoader {
         assets_path,
@@ -463,14 +463,11 @@ fn main() {
     let mut key_states: HashMap<Key, input::ButtonState> = HashMap::new();
     let mut mouse_states: HashMap<MouseButton, input::ButtonState> = HashMap::new();
     let mut mouse_pos = Vector2::default();
-    
-    // todo: dupes
-    let assets_path: std::path::PathBuf = find_folder::Search::ParentsThenKids(3, 3)
-        .for_folder("assets")
-        .unwrap();
 
-    let mut ui = conrod_core::UiBuilder::new([f64::from(WIDTH), f64::from(HEIGHT)])
-        .build();
+    // todo: dupes
+    let assets_path: std::path::PathBuf = find_folder::Search::ParentsThenKids(3, 3).for_folder("assets").unwrap();
+
+    let mut ui = conrod_core::UiBuilder::new([f64::from(WIDTH), f64::from(HEIGHT)]).build();
 
     let font_path = assets_path.join("Roboto-Regular.ttf");
     ui.fonts.insert_from_file(font_path).unwrap();
@@ -486,12 +483,12 @@ fn main() {
         let settings = TextureSettings::new();
         let factory = &mut window.factory;
         let texture = G2dTexture::from_memory_alpha(factory, &init, WIDTH, HEIGHT, &settings).unwrap();
-        
+
         (cache, texture)
     };
 
     let ids = Ids::new(ui.widget_id_generator());
-    
+
     let ui_bundle: UiBundle = UiBundle {
         conrod_ui: ui,
         glyph_cache,
@@ -522,7 +519,7 @@ fn main() {
 
         // Input.
         input::gather_input(&event, &mut key_states, &mut mouse_states, &mut mouse_pos);
-        
+
         if let Some(u) = event.update_args() {
             app.update(&key_states, &mouse_states, &mouse_pos, u);
             input::update_input(&mut key_states, &mut mouse_states);

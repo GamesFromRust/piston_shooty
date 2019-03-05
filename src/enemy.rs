@@ -1,10 +1,10 @@
-use crate::renderable_object::RenderableObject;
-use crate::renderable::Renderable;
-use crate::object_type::ObjectType;
-use crate::collidable_object::CollidableObject;
 use crate::collidable::Collidable;
-use crate::vector2::Vector2;
+use crate::collidable_object::CollidableObject;
 use crate::game_object::GameObject;
+use crate::object_type::ObjectType;
+use crate::renderable::Renderable;
+use crate::renderable_object::RenderableObject;
+use crate::vector2::Vector2;
 
 pub struct Enemy {
     pub position: Vector2,
@@ -23,19 +23,19 @@ impl GameObject for Enemy {
     fn get_rotation(&self) -> f64 {
         self.rotation
     }
-    
+
     fn get_scale(&self) -> f64 {
         self.scale
     }
-    
+
     fn get_should_delete(&self) -> bool {
         self.should_delete
     }
-    
+
     fn set_should_delete(&mut self, should_delete: bool) {
         self.should_delete = should_delete
     }
-    
+
     fn get_object_type(&self) -> ObjectType {
         ObjectType::Enemy
     }
@@ -56,11 +56,11 @@ impl Collidable for Enemy {
         match other_object_type {
             ObjectType::Bullet => {
                 self.set_should_delete(true);
-            },
+            }
             ObjectType::GunAxe => {
                 self.set_should_delete(true);
-            },
-            _ => {},
+            }
+            _ => {}
         }
     }
 }
