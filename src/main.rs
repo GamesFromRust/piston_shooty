@@ -1,4 +1,5 @@
 #![deny(warnings)]
+#![deny(clippy::all)]
 #![allow(clippy::needless_return)]
 
 mod asset_loader;
