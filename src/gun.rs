@@ -111,8 +111,8 @@ impl Gun {
             velocity: velocity * BULLET_VELOCITY_MAGNITUDE,
             should_delete: false,
             collidable_object: CollidableObject {
-                width: bullet_texture.get_size().0 as f64,
-                height: bullet_texture.get_size().1 as f64,
+                width: f64::from(bullet_texture.get_size().0),
+                height: f64::from(bullet_texture.get_size().1),
             },
         }
     }
@@ -137,8 +137,8 @@ impl Gun {
             },
             velocity,
             collidable_object: CollidableObject {
-                width: self.gun_texture.get_size().0 as f64,
-                height: self.gun_texture.get_size().1 as f64,
+                width: f64::from(self.gun_texture.get_size().0),
+                height: f64::from(self.gun_texture.get_size().1),
             },
             gun_sound: self.gun_sound.clone(),
             gun_texture: self.gun_texture.clone(),

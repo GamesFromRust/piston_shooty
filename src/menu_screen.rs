@@ -47,15 +47,15 @@ impl<'a> GameState for MenuScreen<'a> {
         args: UpdateArgs) -> UpdateResult {
 
         if game_state_utils::did_press_key(&key_states, Key::Up) && self.selected_world_index > 0 {
-            self.selected_world_index = self.selected_world_index - 1;
+            self.selected_world_index -= 1;
         }
 
         if game_state_utils::did_press_key(&key_states, Key::Down) && self.selected_world_index < self.world_list.len() - 1 {
-            self.selected_world_index = self.selected_world_index + 1;
+            self.selected_world_index += 1;
         }
 
         if game_state_utils::did_press_key(&key_states, Key::Down) && self.selected_world_index < self.world_list.len() - 1 {
-            self.selected_world_index = self.selected_world_index + 1;
+            self.selected_world_index += 1;
         }
 
         self.update_ui(ui_bundle);
@@ -94,10 +94,11 @@ impl<'a> MenuScreen<'a> {
         
         let mut id_widget_above = ui_bundle.ids.title;
         for i in 0..self.world_list.len() {
-            let mut color = conrod_core::color::WHITE;
-            if i == self.selected_world_index {
-                color = conrod_core::color::BLUE;
-            }
+            let color = if i == self.selected_world_index {
+                conrod_core::color::BLUE
+            } else {
+                conrod_core::color::WHITE
+            };
 
             conrod_core::widget::Text::new(self.world_list[i])
                 .font_size(36)

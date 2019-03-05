@@ -19,11 +19,8 @@ impl GunStrategy for GunAxe {
     }
 
     fn collide(&mut self, other_object_type: ObjectType) {
-        match other_object_type {
-            ObjectType::Wall => {
-                self.set_should_delete(true);
-            },
-            _ => {},
+        if other_object_type == ObjectType::Wall {
+            self.set_should_delete(true);
         }
     }
 

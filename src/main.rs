@@ -304,19 +304,17 @@ fn load_level(texture_manager:&mut TextureManager, sound_manager:&mut SoundManag
 //    let mut index = Indexed::open(new_csv_rdr(), index_data).unwrap();
 
     // Read in a level.
-    let mut line_num = 0;
-    for record_result in csv_rdr.records() {
+    for (line_num, record_result) in csv_rdr.records().enumerate() {
         let line = match record_result {
             Ok(r) => r,
             Err(err) => {panic!("Couldn't read line {} from {}, err: {}", line_num, file_name, err);}
         };
-        let mut item_num = 0;
-        for item in line.iter() {
+        for (item_num, item) in line.iter().enumerate() {
             if item == "W" {
                 let wall = Wall {
                     position: Vector2 {
-                        x: (item_num * CELL_WIDTH + CELL_WIDTH / 2) as f64 ,
-                        y: (line_num * CELL_HEIGHT + CELL_HEIGHT / 2) as f64
+                        x: f64::from(item_num as u32 * CELL_WIDTH + CELL_WIDTH / 2),
+                        y: f64::from(line_num as u32 * CELL_HEIGHT + CELL_HEIGHT / 2)
                     },
                     rotation: 0.0,
                     scale: WALL_SCALE,
@@ -324,8 +322,8 @@ fn load_level(texture_manager:&mut TextureManager, sound_manager:&mut SoundManag
                         texture: wall.clone(),
                     },
                     collidable_object: CollidableObject {
-                        width: wall.get_size().0 as f64,
-                        height: wall.get_size().1 as f64,
+                        width: f64::from(wall.get_size().0),
+                        height: f64::from(wall.get_size().1),
                     },
                 };
                 let refcell = Rc::new(RefCell::new(wall));
@@ -334,8 +332,8 @@ fn load_level(texture_manager:&mut TextureManager, sound_manager:&mut SoundManag
             } else if item == "P" {
                 let ground = Ground {
                     position: Vector2 {
-                        x: (item_num * CELL_WIDTH + CELL_WIDTH / 2) as f64 ,
-                        y: (line_num * CELL_HEIGHT + CELL_HEIGHT / 2) as f64
+                        x: f64::from(item_num as u32 * CELL_WIDTH + CELL_WIDTH / 2),
+                        y: f64::from(line_num as u32 * CELL_HEIGHT + CELL_HEIGHT / 2)
                     },
                     rotation: 0.0,
                     scale: GROUND_SCALE,
@@ -346,16 +344,16 @@ fn load_level(texture_manager:&mut TextureManager, sound_manager:&mut SoundManag
                 let refcell = Rc::new(RefCell::new(ground));
                 world.add_renderable_at_layer(refcell.clone(), GROUND_LAYER);
 
-                player.borrow_mut().position.x = (item_num * CELL_WIDTH + CELL_WIDTH / 2) as f64;
-                player.borrow_mut().position.y = (line_num * CELL_HEIGHT + CELL_HEIGHT / 2) as f64;
+                player.borrow_mut().position.x = f64::from(item_num as u32 * CELL_WIDTH + CELL_WIDTH / 2);
+                player.borrow_mut().position.y = f64::from(line_num as u32 * CELL_HEIGHT + CELL_HEIGHT / 2);
 
                 world.add_renderable_at_layer(player.clone(), PLAYER_LAYER);
                 world.add_updatable(player.clone());
             } else if item == "E" {
                 let ground = Ground {
                     position: Vector2 {
-                        x: (item_num * CELL_WIDTH + CELL_WIDTH / 2) as f64 ,
-                        y: (line_num * CELL_HEIGHT + CELL_HEIGHT / 2) as f64
+                        x: f64::from(item_num as u32 * CELL_WIDTH + CELL_WIDTH / 2),
+                        y: f64::from(line_num as u32 * CELL_HEIGHT + CELL_HEIGHT / 2)
                     },
                     rotation: 0.0,
                     scale: GROUND_SCALE,
@@ -368,8 +366,8 @@ fn load_level(texture_manager:&mut TextureManager, sound_manager:&mut SoundManag
 
                 let enemy = Enemy {
                     position: Vector2 {
-                        x: (item_num * CELL_WIDTH + CELL_WIDTH / 2) as f64,
-                        y: (line_num * CELL_HEIGHT + CELL_HEIGHT / 2) as f64
+                        x: f64::from(item_num as u32 * CELL_WIDTH + CELL_WIDTH / 2),
+                        y: f64::from(line_num as u32 * CELL_HEIGHT + CELL_HEIGHT / 2)
                     },
                     rotation: 0.0,
                     scale: ENEMY_SCALE,
@@ -378,8 +376,8 @@ fn load_level(texture_manager:&mut TextureManager, sound_manager:&mut SoundManag
                     },
                     should_delete: false,
                     collidable_object: CollidableObject {
-                        width: enemy.get_size().0 as f64,
-                        height: enemy.get_size().1 as f64,
+                        width: f64::from(enemy.get_size().0),
+                        height: f64::from(enemy.get_size().1),
                     },
                 };
                 let refcell = Rc::new(RefCell::new(enemy));
@@ -389,8 +387,8 @@ fn load_level(texture_manager:&mut TextureManager, sound_manager:&mut SoundManag
                 // todo: make this a func and factor out from 3 ifs above
                 let ground = Ground {
                     position: Vector2 {
-                        x: (item_num * CELL_WIDTH + CELL_WIDTH / 2) as f64 ,
-                        y: (line_num * CELL_HEIGHT + CELL_HEIGHT / 2) as f64
+                        x: f64::from(item_num as u32 * CELL_WIDTH + CELL_WIDTH / 2),
+                        y: f64::from(line_num as u32 * CELL_HEIGHT + CELL_HEIGHT / 2)
                     },
                     rotation: 0.0,
                     scale: GROUND_SCALE,
@@ -401,9 +399,7 @@ fn load_level(texture_manager:&mut TextureManager, sound_manager:&mut SoundManag
                 let refcell = Rc::new(RefCell::new(ground));
                 world.add_renderable_at_layer(refcell.clone(), GROUND_LAYER);
             }
-            item_num += 1;
         }
-        line_num += 1;
     }
 
     // Spawn one second timer.
@@ -473,7 +469,7 @@ fn main() {
         .for_folder("assets")
         .unwrap();
 
-    let mut ui = conrod_core::UiBuilder::new([WIDTH as f64, HEIGHT as f64])
+    let mut ui = conrod_core::UiBuilder::new([f64::from(WIDTH), f64::from(HEIGHT)])
         .build();
 
     let font_path = assets_path.join("Roboto-Regular.ttf");

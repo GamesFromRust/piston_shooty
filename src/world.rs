@@ -286,12 +286,13 @@ impl World {
         let bullet_image_id = current_gun_template.bullet_image_id;
         let bullet_texture = current_gun_template.bullet_texture.clone();
         conrod_core::widget::Image::new(bullet_image_id)
-            .w_h((BULLET_SCALE * 1.5) * bullet_texture.get_width() as f64, (BULLET_SCALE * 1.5) * bullet_texture.get_height() as f64)
+            .w_h((BULLET_SCALE * 1.5) * f64::from(bullet_texture.get_width()), (BULLET_SCALE * 1.5) * f64::from(bullet_texture.get_height()))
             .down_from(ids.guns_hud[i], 30.0)
             .align_middle_x_of(ids.guns_hud[i])
             .set(ids.bullets_hud[i], &mut ui_cell);
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn draw_gun_image_hud(&self,
                           ids: &ui_widget_ids::Ids,
                           mut ui_cell: &mut UiCell,
@@ -316,7 +317,7 @@ impl World {
         };
 
         let mut gun_image = conrod_core::widget::Image::new(gun_image_id)
-            .w_h(gun_texture.get_width() as f64, gun_texture.get_height() as f64);
+            .w_h(f64::from(gun_texture.get_width()), f64::from(gun_texture.get_height()));
         if id_gun_right == ids.canvas {
             gun_image = gun_image.top_right_of(id_gun_right);
         } else {
@@ -349,15 +350,15 @@ impl GameState for World {
         args: UpdateArgs) -> UpdateResult {
         self.update_ui(ui_bundle);
 
-        if self.game_ended_state.game_ended == false && self.game_ended_state.won == false {
+        if !self.game_ended_state.game_ended && !self.game_ended_state.won {
             return self.update_game_running(&key_states, &mouse_states, &mouse_pos, args);
         }
 
-        if self.game_ended_state.game_ended == true && self.game_ended_state.won == false {
+        if self.game_ended_state.game_ended && !self.game_ended_state.won {
             return self.update_game_ended_lost(&mouse_states);
         }
 
-        if self.game_ended_state.game_ended == true && self.game_ended_state.won == true {
+        if self.game_ended_state.game_ended && self.game_ended_state.won {
             return self.update_game_ended_won(&mouse_states);
         }
 
@@ -394,8 +395,8 @@ fn render_renderable(c: &Context, gl: &mut G2d, renderable: &Renderable) {
     let transform = c.transform
         .trans(renderable.get_position().x, renderable.get_position().y)
         .rot_rad(renderable.get_rotation())
-        .trans((texture.get_size().0 as f64) * -0.5 * renderable.get_scale(),
-               (texture.get_size().1 as f64) * -0.5 * renderable.get_scale())
+        .trans((f64::from(texture.get_size().0)) * -0.5 * renderable.get_scale(),
+               (f64::from(texture.get_size().1)) * -0.5 * renderable.get_scale())
         .scale(renderable.get_scale(), renderable.get_scale());
     image(texture.deref(), transform, gl);
 }

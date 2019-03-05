@@ -83,14 +83,12 @@ impl Player {
     
     pub fn can_shoot_bullet(&self) -> bool {
         self.gun_templates.iter()
-            .find(|&gun_template| gun_template.borrow().can_shoot_bullet())
-            .is_some()
+            .any(|gun_template| gun_template.borrow().can_shoot_bullet())
     }
 
     pub fn can_shoot_gun(&self) -> bool {
         self.gun_templates.iter()
-            .find(|&gun_template| gun_template.borrow().can_shoot_gun())
-            .is_some()
+            .any(|gun_template| gun_template.borrow().can_shoot_gun())
     }
 
     fn shoot_gun(&mut self, mouse_pos: &Vector2) -> Vec<WorldReq>  {
