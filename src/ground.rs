@@ -1,8 +1,8 @@
-use crate::renderable_object::RenderableObject;
-use crate::renderable::Renderable;
-use crate::object_type::ObjectType;
-use crate::vector2::Vector2;
 use crate::game_object::GameObject;
+use crate::object_type::ObjectType;
+use crate::renderable::Renderable;
+use crate::renderable_object::RenderableObject;
+use crate::vector2::Vector2;
 
 pub struct Ground {
     pub position: Vector2,
@@ -19,20 +19,20 @@ impl GameObject for Ground {
     fn get_rotation(&self) -> f64 {
         self.rotation
     }
-    
+
     fn get_scale(&self) -> f64 {
         self.scale
     }
-    
+
     fn get_should_delete(&self) -> bool {
         false
     }
-    
+
     #[allow(unused_variables)]
     fn set_should_delete(&mut self, should_delete: bool) {
         // do nothing
     }
-    
+
     fn get_object_type(&self) -> ObjectType {
         ObjectType::Ground
     }

@@ -1,30 +1,30 @@
-use crate::renderable_object::RenderableObject;
-use crate::renderable::Renderable;
+use crate::bullet::Bullet;
+use crate::collidable::Collidable;
+use crate::collidable_object::CollidableObject;
+use crate::game_object::GameObject;
+use crate::gun_strategy::GunStrategy;
+use crate::input;
 use crate::object_type::ObjectType;
+use crate::renderable::Renderable;
+use crate::renderable_object::RenderableObject;
 use crate::updatable::Updatable;
 use crate::vector2::Vector2;
-use crate::input;
+use crate::world::WorldReq;
+use ears::*;
+use piston_window::G2dTexture;
+use piston_window::ImageSize;
 use piston_window::Key;
 use piston_window::MouseButton;
 use piston_window::UpdateArgs;
-use std::collections::HashMap;
-use crate::world::WorldReq;
-use std::rc::Rc;
 use std::cell::RefCell;
-use crate::collidable::Collidable;
-use crate::bullet::Bullet;
-use piston_window::G2dTexture;
-use crate::collidable_object::CollidableObject;
-use crate::game_object::GameObject;
-use piston_window::ImageSize;
-use ears::*;
-use crate::gun_strategy::GunStrategy;
+use std::collections::HashMap;
+use std::rc::Rc;
 
 pub const PROJECTILE_VELOCITY_MAGNITUDE: f64 = 75.0;
 pub const GUN_SCALE: f64 = 0.5;
 
 pub const BULLET_VELOCITY_MAGNITUDE: f64 = 200.0;
-pub const BULLET_SCALE:f64 = 0.03125;
+pub const BULLET_SCALE: f64 = 0.03125;
 pub const GUN_ROTATIONAL_VELOCITY: f64 = 4.0;
 
 pub struct Gun {
@@ -36,7 +36,7 @@ pub struct Gun {
     pub velocity: Vector2,
     pub gun_texture: Rc<G2dTexture>,
     pub gun_sound: Rc<RefCell<Sound>>,
-    pub gun_strategy: Box<GunStrategy>
+    pub gun_strategy: Box<GunStrategy>,
 }
 
 impl GameObject for Gun {
@@ -47,19 +47,19 @@ impl GameObject for Gun {
     fn get_rotation(&self) -> f64 {
         self.rotation
     }
-    
+
     fn get_scale(&self) -> f64 {
         self.scale
     }
-    
+
     fn get_should_delete(&self) -> bool {
         self.gun_strategy.get_should_delete()
     }
-    
+
     fn set_should_delete(&mut self, should_delete: bool) {
         self.gun_strategy.set_should_delete(should_delete)
     }
-    
+
     fn get_object_type(&self) -> ObjectType {
         self.gun_strategy.get_object_type()
     }
@@ -73,11 +73,7 @@ impl Renderable for Gun {
 
 impl Updatable for Gun {
     #[allow(unused_variables)]
-    fn update(&mut self,
-                key_states: &HashMap<Key, input::ButtonState>,
-                mouse_states: &HashMap<MouseButton, input::ButtonState>,
-                mouse_pos: &Vector2,
-                args: UpdateArgs) -> Vec<WorldReq> {
+    fn update(&mut self, key_states: &HashMap<Key, input::ButtonState>, mouse_states: &HashMap<MouseButton, input::ButtonState>, mouse_pos: &Vector2, args: UpdateArgs) -> Vec<WorldReq> {
         self.position += self.velocity * args.dt;
         self.rotation += GUN_ROTATIONAL_VELOCITY * args.dt;
         Vec::new()
@@ -127,7 +123,7 @@ impl Gun {
         let velocity = vel * PROJECTILE_VELOCITY_MAGNITUDE;
 
         let position = *self.get_position() + (velocity / PROJECTILE_VELOCITY_MAGNITUDE) * 30.0;
-        
+
         let gun = Gun {
             position,
             rotation,

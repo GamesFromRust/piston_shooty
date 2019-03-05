@@ -1,7 +1,7 @@
-use std::collections::HashMap;
 use crate::input;
-use piston_window::MouseButton;
 use piston_window::Key;
+use piston_window::MouseButton;
+use std::collections::HashMap;
 
 pub fn did_click(mouse_states: &HashMap<MouseButton, input::ButtonState>) -> bool {
     if let Some(value) = mouse_states.get(&MouseButton::Left) {

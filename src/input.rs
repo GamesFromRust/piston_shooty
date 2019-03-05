@@ -15,10 +15,7 @@ pub struct ButtonState {
     pub released: bool,
 }
 
-pub fn gather_input(input: &Event,
-                    key_states: &mut HashMap<Key, ButtonState>,
-                    mouse_states: &mut HashMap<MouseButton, ButtonState>,
-                    mouse_pos: &mut Vector2) {
+pub fn gather_input(input: &Event, key_states: &mut HashMap<Key, ButtonState>, mouse_states: &mut HashMap<MouseButton, ButtonState>, mouse_pos: &mut Vector2) {
     // Keyboard pressed.
     if let Some(Button::Keyboard(key)) = input.press_args() {
         // If the key is being held, we want to ignore this pressed event.
@@ -75,8 +72,7 @@ pub fn gather_input(input: &Event,
     }
 }
 
-pub fn update_input(key_states: &mut HashMap<Key, ButtonState>,
-                    mouse_states: &mut HashMap<MouseButton, ButtonState>) {
+pub fn update_input(key_states: &mut HashMap<Key, ButtonState>, mouse_states: &mut HashMap<MouseButton, ButtonState>) {
     for value in key_states.values_mut() {
         if value.pressed {
             // If we're pressed, change state to held.

@@ -1,12 +1,12 @@
+use crate::input;
+use crate::ui_bundle::UiBundle;
+use crate::vector2::Vector2;
 use piston_window::Context;
 use piston_window::G2d;
 use piston_window::Key;
 use piston_window::MouseButton;
 use piston_window::UpdateArgs;
 use std::collections::HashMap;
-use crate::input;
-use crate::vector2::Vector2;
-use crate::ui_bundle::UiBundle;
 
 pub struct UpdateResult {
     pub result_type: UpdateResultType,
@@ -38,23 +38,20 @@ pub enum UpdateResultType {
 pub enum GameStateType {
     WorldSelect,
     World,
-    Victory
+    Victory,
 }
 
 pub trait GameState {
-    fn render(
-        &mut self, 
-        c: Context, 
-        gl: &mut G2d,
-        ui_bundle: &mut UiBundle);
+    fn render(&mut self, c: Context, gl: &mut G2d, ui_bundle: &mut UiBundle);
 
     fn update(
-        &mut self, 
-        key_states: &HashMap<Key, input::ButtonState>, 
-        mouse_states: &HashMap<MouseButton, input::ButtonState>, 
-        mouse_pos: &Vector2, 
+        &mut self,
+        key_states: &HashMap<Key, input::ButtonState>,
+        mouse_states: &HashMap<MouseButton, input::ButtonState>,
+        mouse_pos: &Vector2,
         ui_bundle: &mut UiBundle,
-        args: UpdateArgs) -> UpdateResult;
+        args: UpdateArgs,
+    ) -> UpdateResult;
 
     fn get_type(&self) -> GameStateType;
 }
