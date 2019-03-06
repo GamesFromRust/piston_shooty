@@ -2,6 +2,8 @@
 
 Our first foray into making a game using the Piston engine's stuff.
 
+[Game Design Doc](https://docs.google.com/document/d/1o4KA7FMiAnsUhNSu8TVDPX4hDut6xDh9fK15ulkDJVI/edit?usp=sharing)
+
 ## Dependencies
 
 Sound:
