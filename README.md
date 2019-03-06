@@ -1,8 +1,9 @@
 # piston_shooty
 
-Our first foray into making a game using the Piston engine's stuff.
+Our first foray into making a game using the Piston engine's stuff, and the rust programming language.
 
 [Game Design Doc](https://docs.google.com/document/d/1o4KA7FMiAnsUhNSu8TVDPX4hDut6xDh9fK15ulkDJVI/edit?usp=sharing)
+(Now accepting low-brow comments & suggestions only.  Puns must be level 7 or higher to be accepted.)
 
 ## Dependencies
 
