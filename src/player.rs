@@ -113,14 +113,22 @@ impl Player {
             match *key {
                 Key::Q => {
                     if value.pressed {
+                        self.gun_templates[self.current_gun_template_index].borrow_mut().set_selected(false);
+
                         self.current_gun_template_index += 1;
                         self.current_gun_template_index %= self.gun_templates.len();
+
+                        self.gun_templates[self.current_gun_template_index].borrow_mut().set_selected(true);
                     }
                 }
                 Key::E => {
                     if value.pressed {
+                        self.gun_templates[self.current_gun_template_index].borrow_mut().set_selected(false);
+
                         self.current_gun_template_index -= 1;
                         self.current_gun_template_index %= self.gun_templates.len();
+
+                        self.gun_templates[self.current_gun_template_index].borrow_mut().set_selected(true);
                     }
                 }
                 _ => {}

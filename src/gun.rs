@@ -32,11 +32,14 @@ pub struct Gun {
     pub rotation: f64,
     pub scale: f64,
     pub renderable_object: RenderableObject,
+    pub selected_renderable_object: RenderableObject,
     pub collidable_object: CollidableObject,
     pub velocity: Vector2,
     pub gun_texture: Rc<G2dTexture>,
+    pub selected_gun_texture: Rc<G2dTexture>,
     pub gun_sound: Rc<RefCell<Sound>>,
     pub gun_strategy: Box<GunStrategy>,
+    pub is_selected: bool,
 }
 
 impl GameObject for Gun {
@@ -67,7 +70,11 @@ impl GameObject for Gun {
 
 impl Renderable for Gun {
     fn get_renderable_object(&self) -> &RenderableObject {
-        &self.renderable_object
+        if self.is_selected {
+            &self.selected_renderable_object
+        } else {
+            &self.renderable_object
+        }
     }
 }
 
@@ -131,6 +138,9 @@ impl Gun {
             renderable_object: RenderableObject {
                 texture: self.gun_texture.clone(),
             },
+            selected_renderable_object: RenderableObject {
+                texture: self.selected_gun_texture.clone(),
+            },
             velocity,
             collidable_object: CollidableObject {
                 width: f64::from(self.gun_texture.get_size().0),
@@ -138,7 +148,9 @@ impl Gun {
             },
             gun_sound: self.gun_sound.clone(),
             gun_texture: self.gun_texture.clone(),
+            selected_gun_texture: self.selected_gun_texture.clone(),
             gun_strategy: self.gun_strategy.new_gun_strategy(),
+            is_selected: true
         };
 
         self.gun_sound.borrow_mut().play();

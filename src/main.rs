@@ -218,6 +218,7 @@ fn load_level(texture_manager: &mut TextureManager, sound_manager: &mut SoundMan
         shots_taken: 0,
         guns: Vec::new(),
         has_shot_bullet: false,
+        is_selected: false,
     });
 
     let gun_axe_image: G2dTexture = asset_loader.load_texture("textures/GunaxeV1.png");
@@ -239,6 +240,7 @@ fn load_level(texture_manager: &mut TextureManager, sound_manager: &mut SoundMan
         shots_taken: 0,
         guns: Vec::new(),
         has_shot_bullet: false,
+        is_selected: false,
     });
 
     let meta_guns: Vec<RefCell<MetaGun>> = vec![hand_gun, gun_axe];

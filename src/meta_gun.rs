@@ -29,6 +29,7 @@ pub struct MetaGun {
     pub shots_taken: usize, // drinks all around https://www.youtube.com/watch?v=XNtTEibFvlQ
     pub guns: Vec<Rc<RefCell<Gun>>>,
     pub has_shot_bullet: bool,
+    pub is_selected: bool,
 }
 
 impl MetaGun {
@@ -44,8 +45,18 @@ impl MetaGun {
         self.gun_strategy.new_gun_strategy()
     }
 
+    pub fn set_selected(&mut self, selected: bool) {
+        self.is_selected = selected;
+        if let Some(last_gun) = self.guns.last() {
+            last_gun.borrow_mut().is_selected = selected;
+        }
+    }
+
     pub fn update(&mut self) {
         self.guns.retain(|ref gun| !gun.borrow().get_should_delete());
+        if let Some(last_gun) = self.guns.last() {
+            last_gun.borrow_mut().is_selected = true;
+        }
     }
 
     pub fn can_shoot_bullet(&self) -> bool {
@@ -77,10 +88,12 @@ impl MetaGun {
             return Vec::new();
         }
 
-        let mut new_gun = self.shoot_gun_from_player(player_pos, player_rot, mouse_pos);
-        if let Some(gun) = self.guns.last() {
-            new_gun = gun.borrow().shoot_gun();
-        }
+        let new_gun = if let Some(gun) = self.guns.last() {
+            gun.borrow_mut().is_selected = false;
+            gun.borrow().shoot_gun()
+        } else {
+            self.shoot_gun_from_player(player_pos, player_rot, mouse_pos)
+        };
 
         self.guns.push(new_gun.clone());
         self.shots_taken += 1;
@@ -97,6 +110,9 @@ impl MetaGun {
             renderable_object: RenderableObject {
                 texture: self.gun_texture.clone(),
             },
+            selected_renderable_object: RenderableObject {
+                texture: self.selected_gun_texture.clone(),
+            },
             velocity,
             collidable_object: CollidableObject {
                 width: f64::from(self.gun_texture.get_size().0),
@@ -104,7 +120,9 @@ impl MetaGun {
             },
             gun_sound: self.gun_sound.clone(),
             gun_texture: self.gun_texture.clone(),
+            selected_gun_texture: self.selected_gun_texture.clone(),
             gun_strategy: self.new_gun_strategy(),
+            is_selected: true,
         };
 
         self.gun_sound.borrow_mut().play();
