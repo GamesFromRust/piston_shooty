@@ -19,6 +19,7 @@ pub struct Player {
     pub rotation: f64,
     pub scale: f64,
     pub renderable_object: RenderableObject,
+    pub selected_renderable_object: RenderableObject,
     pub gun_templates: Vec<RefCell<MetaGun>>,
     pub current_gun_template_index: usize,
 }
@@ -52,7 +53,11 @@ impl GameObject for Player {
 
 impl Renderable for Player {
     fn get_renderable_object(&self) -> &RenderableObject {
-        &self.renderable_object
+        if self.gun_templates[self.current_gun_template_index].borrow().guns.len() == 0 {
+            &self.selected_renderable_object
+        } else {
+            &self.renderable_object
+        }
     }
 }
 

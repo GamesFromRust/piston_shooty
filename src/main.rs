@@ -185,6 +185,7 @@ impl<'a> App<'a> {
 
 fn load_level(texture_manager: &mut TextureManager, sound_manager: &mut SoundManager, level_name: &str, asset_loader: Rc<AssetLoader>) -> World {
     let hand_gun_texture = texture_manager.get("textures\\hand-gun_square.png");
+    let selected_hand_gun_texture = texture_manager.get("textures\\hand-gun_square_selected.png");
     let axe_gun_texture = texture_manager.get("textures\\GunaxeV1.png");
     let axe_gun_texture_selected = texture_manager.get("textures\\GunaxeV1_selected.png");
     let gun_gun = texture_manager.get("textures\\GunGunV1.png");
@@ -254,6 +255,9 @@ fn load_level(texture_manager: &mut TextureManager, sound_manager: &mut SoundMan
         scale: PLAYER_SCALE,
         renderable_object: RenderableObject {
             texture: hand_gun_texture.clone(),
+        },
+        selected_renderable_object: RenderableObject {
+            texture: selected_hand_gun_texture.clone(),
         },
         gun_templates: meta_guns,
         current_gun_template_index: 0,
