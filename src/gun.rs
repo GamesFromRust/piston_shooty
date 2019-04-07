@@ -120,41 +120,7 @@ impl Gun {
         }
     }
 
-    pub fn shoot_gun(&self) -> Rc<RefCell<Gun>> {
-        let rotation = self.get_rotation();
-
-        let vel = Vector2 {
-            x: rotation.cos(),
-            y: rotation.sin(),
-        };
-        let velocity = vel * PROJECTILE_VELOCITY_MAGNITUDE;
-
-        let position = *self.get_position() + (velocity / PROJECTILE_VELOCITY_MAGNITUDE) * 30.0;
-
-        let gun = Gun {
-            position,
-            rotation,
-            scale: GUN_SCALE,
-            renderable_object: RenderableObject {
-                texture: self.gun_texture.clone(),
-            },
-            selected_renderable_object: RenderableObject {
-                texture: self.selected_gun_texture.clone(),
-            },
-            velocity,
-            collidable_object: CollidableObject {
-                width: f64::from(self.gun_texture.get_size().0),
-                height: f64::from(self.gun_texture.get_size().1),
-            },
-            gun_sound: self.gun_sound.clone(),
-            gun_texture: self.gun_texture.clone(),
-            selected_gun_texture: self.selected_gun_texture.clone(),
-            gun_strategy: self.gun_strategy.new_gun_strategy(),
-            is_selected: true
-        };
-
-        self.gun_sound.borrow_mut().play();
-
-        Rc::new(RefCell::new(gun))
+    pub fn shoot_gun(&self) -> Vec<Rc<RefCell<Gun>>> {
+        self.gun_strategy.shoot_gun(&self)
     }
 }

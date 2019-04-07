@@ -34,7 +34,7 @@ pub struct MetaGun {
 
 impl MetaGun {
     pub fn has_guns_in_play(&self) -> bool {
-        self.guns.len() != 0
+        !self.guns.is_empty()
     }
 
     pub fn has_gun_depth(&self) -> bool {
@@ -92,19 +92,19 @@ impl MetaGun {
             return Vec::new();
         }
 
-        let new_gun = if let Some(gun) = self.guns.last() {
+        let new_guns = if let Some(gun) = self.guns.last() {
             gun.borrow_mut().is_selected = false;
             gun.borrow().shoot_gun()
         } else {
             self.shoot_gun_from_player(player_pos, player_rot, mouse_pos)
         };
 
-        self.guns.push(new_gun.clone());
+        self.guns.append(&mut new_guns.clone());
         self.shots_taken += 1;
-        self.world_requests_for_gun(new_gun)
+        self.world_requests_for_guns(new_guns)
     }
 
-    fn shoot_gun_from_player(&mut self, player_pos: &Vector2, player_rot: f64, mouse_pos: &Vector2) -> Rc<RefCell<Gun>> {
+    fn shoot_gun_from_player(&mut self, player_pos: &Vector2, player_rot: f64, mouse_pos: &Vector2) -> Vec<Rc<RefCell<Gun>>> {
         let velocity = (*mouse_pos - *player_pos).normalized() * PROJECTILE_VELOCITY_MAGNITUDE;
 
         let gun = Gun {
@@ -131,15 +131,23 @@ impl MetaGun {
 
         self.gun_sound.borrow_mut().play();
 
-        Rc::new(RefCell::new(gun))
+        vec![Rc::new(RefCell::new(gun))]
     }
 
     // TODO: DUPLICATES world_requests_for_bullet
-    fn world_requests_for_gun(&self, gun: Rc<RefCell<Gun>>) -> Vec<WorldReq> {
+    fn world_requests_for_guns(&self, guns: Vec<Rc<RefCell<Gun>>>) -> Vec<WorldReq> {
         // TODO: https://stackoverflow.com/questions/28632968/why-doesnt-rust-support-trait-object-upcasting
 
         let mut world_reqs: Vec<WorldReq> = vec![];
 
+        for gun in guns {
+            self.world_requests_for_gun(gun, &mut world_reqs);
+        }
+
+        world_reqs
+    }
+
+    fn world_requests_for_gun(&self, gun: Rc<RefCell<Gun>>, world_reqs: &mut Vec<WorldReq>) {
         let world_req: WorldReq = WorldReq {
             renderable: Some(gun.clone()),
             updatable: None,
@@ -154,7 +162,6 @@ impl MetaGun {
             req_type: WorldRequestType::AddUpdatable,
         };
         world_reqs.push(world_req);
-        world_reqs
     }
 
     pub fn shoot_bullets(&mut self) -> Vec<WorldReq> {

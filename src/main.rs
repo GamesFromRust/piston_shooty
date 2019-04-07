@@ -464,7 +464,7 @@ fn main() {
         sounds_by_filename: HashMap::new(),
     };
 
-    let world_list = Rc::new(vec!["Sunday-Gunday", "Multi-Level Mark-hitting"]);
+    let world_list = Rc::new(vec!["ShotGunGun", "Sunday-Gunday", "Multi-Level Mark-hitting"]);
 
     let menu_screen = make_menu_screen(world_list.clone(), &asset_loader);
 

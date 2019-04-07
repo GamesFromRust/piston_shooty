@@ -1,22 +1,14 @@
 use crate::gun_strategy::GunStrategy;
 use crate::object_type::ObjectType;
-use std::rc::Rc;
-use std::cell::RefCell;
-use crate::gun::Gun;
-use crate::vector2::Vector2;
-use crate::gun::PROJECTILE_VELOCITY_MAGNITUDE;
-use crate::gun::GUN_SCALE;
-use crate::renderable_object::RenderableObject;
-use crate::collidable_object::CollidableObject;
 use crate::game_object::GameObject;
 use piston_window::ImageSize;
 use ears::AudioController;
 
-pub struct GunAxe {
+pub struct ShotGun {
     pub should_delete: bool,
 }
 
-impl GunStrategy for GunAxe {
+impl GunStrategy for ShotGun {
     fn get_should_delete(&self) -> bool {
         self.should_delete
     }
@@ -26,7 +18,7 @@ impl GunStrategy for GunAxe {
     }
 
     fn get_object_type(&self) -> ObjectType {
-        ObjectType::GunAxe
+        ObjectType::ShotGun
     }
 
     fn collide(&mut self, other_object_type: ObjectType) {
@@ -36,17 +28,17 @@ impl GunStrategy for GunAxe {
     }
 
     fn new_gun_strategy(&self) -> Box<GunStrategy> {
-        Box::new(GunAxe {
+        Box::new(ShotGun {
             should_delete: false,
         })
     }
 
     fn has_gun_depth(&self) -> bool {
-        true
+        false
     }
 
     fn get_gun_depth(&self) -> usize {
-        2
+        0
     }
 
     fn shoot_gun(&self, gun: &Gun) -> Vec<Rc<RefCell<Gun>>> {

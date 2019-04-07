@@ -23,7 +23,7 @@ pub fn gather_input(input: &Event, key_states: &mut HashMap<Key, ButtonState>, m
     gather_mouse_moved(input, mouse_pos)
 }
 
-fn gather_mouse_moved(input: &Event, mouse_pos: &mut Vector2) -> () {
+fn gather_mouse_moved(input: &Event, mouse_pos: &mut Vector2) {
     if let Some(pos) = input.mouse_cursor_args() {
         mouse_pos.x = pos[0];
         mouse_pos.y = pos[1];
