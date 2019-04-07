@@ -33,6 +33,10 @@ pub struct MetaGun {
 }
 
 impl MetaGun {
+    pub fn has_guns_in_play(&self) -> bool {
+        self.guns.len() != 0
+    }
+
     pub fn has_gun_depth(&self) -> bool {
         self.gun_strategy.has_gun_depth()
     }

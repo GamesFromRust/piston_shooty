@@ -53,10 +53,10 @@ impl GameObject for Player {
 
 impl Renderable for Player {
     fn get_renderable_object(&self) -> &RenderableObject {
-        if self.gun_templates[self.current_gun_template_index].borrow().guns.len() == 0 {
-            &self.selected_renderable_object
-        } else {
+        if self.gun_templates[self.current_gun_template_index].borrow().has_guns_in_play() {
             &self.renderable_object
+        } else {
+            &self.selected_renderable_object
         }
     }
 }
