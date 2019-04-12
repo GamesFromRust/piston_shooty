@@ -79,7 +79,8 @@ impl GunStrategy for HandGun {
             gun_texture: gun.gun_texture.clone(),
             selected_gun_texture: gun.selected_gun_texture.clone(),
             gun_strategy: gun.gun_strategy.new_gun_strategy(),
-            is_selected: true
+            is_selected: true,
+            depth: gun.depth + 1,
         };
 
         gun.gun_sound.borrow_mut().play();

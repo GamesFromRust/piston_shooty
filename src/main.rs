@@ -33,6 +33,7 @@ mod vector2;
 mod victory_screen;
 mod wall;
 mod world;
+mod shot_gun;
 
 extern crate csv;
 extern crate ears;
@@ -73,6 +74,7 @@ use crate::victory_screen::VictoryScreen;
 use crate::wall::Wall;
 use crate::world::GameEndedState;
 use crate::world::World;
+use crate::shot_gun::ShotGun;
 use piston_window::*;
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -186,10 +188,12 @@ impl<'a> App<'a> {
 fn load_level(texture_manager: &mut TextureManager, sound_manager: &mut SoundManager, level_name: &str, asset_loader: Rc<AssetLoader>) -> World {
     let hand_gun_texture = texture_manager.get("textures\\hand-gun_square.png");
     let selected_hand_gun_texture = texture_manager.get("textures\\hand-gun_square_selected.png");
-    let axe_gun_texture = texture_manager.get("textures\\GunaxeV1.png");
-    let axe_gun_texture_selected = texture_manager.get("textures\\GunaxeV1_selected.png");
     let gun_gun = texture_manager.get("textures\\GunGunV1.png");
     let gun_gun_selected = texture_manager.get("textures\\GunGunV1_selected.png");
+    let gun_axe_texture = texture_manager.get("textures\\GunaxeV1.png");
+    let gun_axe_texture_selected = texture_manager.get("textures\\GunaxeV1_selected.png");
+    let shot_gun_texture = texture_manager.get("textures\\shotgun.png");
+    let shot_gun_texture_selected = texture_manager.get("textures\\shotgun_selected.png");
     let bullet = texture_manager.get("textures\\bullet.png");
     let wall = texture_manager.get("textures\\brick_square.png");
     let enemy = texture_manager.get("textures\\enemy.png");
@@ -228,9 +232,9 @@ fn load_level(texture_manager: &mut TextureManager, sound_manager: &mut SoundMan
     let selected_gun_axe_image_id = image_map.insert(selected_gun_axe_image);
     let gun_axe: RefCell<MetaGun> = RefCell::new(MetaGun {
         gun_sound: gun_sound.clone(),
-        gun_texture: axe_gun_texture.clone(),
+        gun_texture: gun_axe_texture.clone(),
         gun_image_id: gun_axe_image_id,
-        selected_gun_texture: axe_gun_texture_selected.clone(),
+        selected_gun_texture: gun_axe_texture_selected.clone(),
         selected_gun_image_id: selected_gun_axe_image_id,
         bullet_texture: bullet.clone(),
         bullet_image_id,
@@ -244,7 +248,29 @@ fn load_level(texture_manager: &mut TextureManager, sound_manager: &mut SoundMan
         is_selected: false,
     });
 
-    let meta_guns: Vec<RefCell<MetaGun>> = vec![hand_gun, gun_axe];
+    let shot_gun_image: G2dTexture = asset_loader.load_texture("textures/shotgun.png");
+    let shot_gun_image_id = image_map.insert(shot_gun_image);
+    let selected_shot_gun_image: G2dTexture = asset_loader.load_texture("textures/shotgun_selected.png");
+    let selected_shot_gun_image_id = image_map.insert(selected_shot_gun_image);
+    let shot_gun: RefCell<MetaGun> = RefCell::new(MetaGun {
+        gun_sound: gun_sound.clone(),
+        gun_texture: shot_gun_texture.clone(),
+        gun_image_id: shot_gun_image_id,
+        selected_gun_texture: shot_gun_texture_selected.clone(),
+        selected_gun_image_id: selected_shot_gun_image_id,
+        bullet_texture: bullet.clone(),
+        bullet_image_id,
+        bullet_sound: sound_manager.get("sounds\\boop.ogg"),
+        gun_strategy: Box::new(ShotGun {
+            should_delete: false,
+        }),
+        shots_taken: 0,
+        guns: Vec::new(),
+        has_shot_bullet: false,
+        is_selected: false,
+    });
+
+    let meta_guns: Vec<RefCell<MetaGun>> = vec![hand_gun, gun_axe, shot_gun];
 
     let player: Player = Player {
         position: Vector2 {

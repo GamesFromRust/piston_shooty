@@ -15,6 +15,7 @@ use piston_window::G2dTexture;
 use piston_window::ImageSize;
 use std::cell::RefCell;
 use std::rc::Rc;
+use crate::object_type::ObjectType;
 
 pub struct MetaGun {
     pub gun_texture: Rc<G2dTexture>,
@@ -92,11 +93,26 @@ impl MetaGun {
             return Vec::new();
         }
 
-        let new_guns = if let Some(gun) = self.guns.last() {
+        let new_guns = if self.guns.is_empty() {
+            self.shoot_gun_from_player(player_pos, player_rot, mouse_pos)
+        } else if self.gun_strategy.get_object_type() == ObjectType::ShotGun {
+            let mut shot_guns: Vec<Rc<RefCell<Gun>>> = vec![]; // I see what you did there.
+            let deepest_gun_depth = if let Some(last_gun) = self.guns.last() {
+                last_gun.borrow().depth
+            } else {
+                0
+            };
+            for gun in self.guns.iter().rev() {
+                if gun.borrow().depth != deepest_gun_depth {
+                    break;
+                }
+                shot_guns.append(&mut gun.borrow().shoot_gun());
+            }
+            shot_guns
+        } else {
+            let gun = self.guns.last().unwrap();
             gun.borrow_mut().is_selected = false;
             gun.borrow().shoot_gun()
-        } else {
-            self.shoot_gun_from_player(player_pos, player_rot, mouse_pos)
         };
 
         self.guns.append(&mut new_guns.clone());
@@ -127,6 +143,7 @@ impl MetaGun {
             selected_gun_texture: self.selected_gun_texture.clone(),
             gun_strategy: self.new_gun_strategy(),
             is_selected: true,
+            depth: 0,
         };
 
         self.gun_sound.borrow_mut().play();

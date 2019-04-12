@@ -40,6 +40,7 @@ pub struct Gun {
     pub gun_sound: Rc<RefCell<Sound>>,
     pub gun_strategy: Box<GunStrategy>,
     pub is_selected: bool,
+    pub depth: u32,
 }
 
 impl GameObject for Gun {

@@ -130,8 +130,11 @@ impl Player {
                     if value.pressed {
                         self.gun_templates[self.current_gun_template_index].borrow_mut().set_selected(false);
 
-                        self.current_gun_template_index -= 1;
-                        self.current_gun_template_index %= self.gun_templates.len();
+                        if self.current_gun_template_index == 0 {
+                            self.current_gun_template_index = self.gun_templates.len() - 1;
+                        } else {
+                            self.current_gun_template_index -= 1;
+                        }
 
                         self.gun_templates[self.current_gun_template_index].borrow_mut().set_selected(true);
                     }

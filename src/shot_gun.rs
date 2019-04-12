@@ -3,6 +3,12 @@ use crate::object_type::ObjectType;
 use crate::game_object::GameObject;
 use piston_window::ImageSize;
 use ears::AudioController;
+use crate::gun::{Gun, PROJECTILE_VELOCITY_MAGNITUDE, GUN_SCALE};
+use std::rc::Rc;
+use std::cell::RefCell;
+use crate::vector2::Vector2;
+use crate::renderable_object::RenderableObject;
+use crate::collidable_object::CollidableObject;
 
 pub struct ShotGun {
     pub should_delete: bool,
@@ -50,9 +56,27 @@ impl GunStrategy for ShotGun {
         };
         let velocity = vel * PROJECTILE_VELOCITY_MAGNITUDE;
 
-        let position = *gun.get_position() + (velocity / PROJECTILE_VELOCITY_MAGNITUDE) * 30.0;
+        let gun1 = self.make_gun(gun, rotation, velocity, rotation - 45.0);
+        let gun2 = self.make_gun(gun, rotation, velocity, rotation + 45.0);
 
-        let gun = Gun {
+        gun.gun_sound.borrow_mut().play();
+
+        vec![
+            Rc::new(RefCell::new(gun1)),
+            Rc::new(RefCell::new(gun2))
+        ]
+    }
+}
+
+impl ShotGun {
+    fn make_gun(&self, gun: &Gun, rotation: f64, velocity: Vector2, new_gun_rotation: f64) -> Gun {
+        let vel = Vector2 {
+            x: new_gun_rotation.cos(),
+            y: new_gun_rotation.sin(),
+        };
+        let position = *gun.get_position() + vel * 30.0;
+
+        Gun {
             position,
             rotation,
             scale: GUN_SCALE,
@@ -71,11 +95,8 @@ impl GunStrategy for ShotGun {
             gun_texture: gun.gun_texture.clone(),
             selected_gun_texture: gun.selected_gun_texture.clone(),
             gun_strategy: gun.gun_strategy.new_gun_strategy(),
-            is_selected: true
-        };
-
-        gun.gun_sound.borrow_mut().play();
-
-        vec![Rc::new(RefCell::new(gun))]
+            is_selected: true,
+            depth: gun.depth + 1,
+        }
     }
 }
