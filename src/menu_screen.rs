@@ -49,10 +49,6 @@ impl<'a> GameState for MenuScreen<'a> {
             self.selected_world_index += 1;
         }
 
-        if game_state_utils::did_press_key(&key_states, Key::Down) && self.selected_world_index < self.world_list.len() - 1 {
-            self.selected_world_index += 1;
-        }
-
         self.update_ui(ui_bundle);
 
         if game_state_utils::did_click(&mouse_states) || game_state_utils::did_press_key(&key_states, Key::Return) {
