@@ -1,3 +1,14 @@
+use std::cell::RefCell;
+use std::collections::HashMap;
+use std::rc::Rc;
+
+use ears::*;
+use piston_window::G2dTexture;
+use piston_window::ImageSize;
+use piston_window::Key;
+use piston_window::MouseButton;
+use piston_window::UpdateArgs;
+
 use crate::bullet::Bullet;
 use crate::collidable::Collidable;
 use crate::collidable_object::CollidableObject;
@@ -10,15 +21,6 @@ use crate::renderable_object::RenderableObject;
 use crate::updatable::Updatable;
 use crate::vector2::Vector2;
 use crate::world::WorldReq;
-use ears::*;
-use piston_window::G2dTexture;
-use piston_window::ImageSize;
-use piston_window::Key;
-use piston_window::MouseButton;
-use piston_window::UpdateArgs;
-use std::cell::RefCell;
-use std::collections::HashMap;
-use std::rc::Rc;
 
 pub const PROJECTILE_VELOCITY_MAGNITUDE: f64 = 75.0;
 pub const GUN_SCALE: f64 = 0.5;
@@ -121,7 +123,7 @@ impl Gun {
         }
     }
 
-    pub fn shoot_gun(&self) -> Vec<Rc<RefCell<Gun>>> {
-        self.gun_strategy.shoot_gun(&self)
-    }
+//    pub fn shoot_gun(&self) -> Vec<Rc<RefCell<Gun>>> {
+//        self.gun_strategy.shoot_gun(self)
+//    }
 }

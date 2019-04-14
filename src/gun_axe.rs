@@ -1,19 +1,25 @@
-use crate::gun_strategy::GunStrategy;
-use crate::object_type::ObjectType;
-use std::rc::Rc;
 use std::cell::RefCell;
-use crate::gun::Gun;
-use crate::vector2::Vector2;
-use crate::gun::PROJECTILE_VELOCITY_MAGNITUDE;
-use crate::gun::GUN_SCALE;
-use crate::renderable_object::RenderableObject;
+use std::rc::Rc;
+
+use ears::AudioController;
+use piston_window::ImageSize;
+
 use crate::collidable_object::CollidableObject;
 use crate::game_object::GameObject;
-use piston_window::ImageSize;
-use ears::AudioController;
+use crate::gun::Gun;
+use crate::gun::GUN_SCALE;
+use crate::gun::PROJECTILE_VELOCITY_MAGNITUDE;
+use crate::gun_strategy::GunStrategy;
+use crate::gun_strategy_util::GunStrategyUtil;
+use crate::object_type::ObjectType;
+use crate::renderable_object::RenderableObject;
+use crate::vector2::Vector2;
+use crate::world::WorldReq;
 
 pub struct GunAxe {
     pub should_delete: bool,
+    pub gun_strategy_util: Rc<GunStrategyUtil>,
+    pub guns: Vec<Rc<RefCell<Gun>>>,
 }
 
 impl GunStrategy for GunAxe {
@@ -38,6 +44,8 @@ impl GunStrategy for GunAxe {
     fn new_gun_strategy(&self) -> Box<GunStrategy> {
         Box::new(GunAxe {
             should_delete: false,
+            gun_strategy_util: self.gun_strategy_util.clone(),
+            guns: vec![]
         })
     }
 
@@ -49,8 +57,24 @@ impl GunStrategy for GunAxe {
         2
     }
 
-    fn shoot_gun(&self, gun: &Gun) -> Vec<Rc<RefCell<Gun>>> {
-        let rotation = gun.get_rotation();
+    fn shoot_gun(&mut self, player_pos: &Vector2, player_rot: f64, mouse_pos: &Vector2) -> Vec<WorldReq> {
+        let new_guns = if self.guns.is_empty() {
+            self.gun_strategy_util.shoot_gun_from_player(player_pos, player_rot, mouse_pos)
+        } else {
+            let gun = self.guns.last().unwrap();
+            self.is_selected = false;
+            self.make_gun()
+        };
+
+        self.guns.append(&mut new_guns.clone());
+        self.shots_taken += 1;
+        self.gun_strategy_util.world_requests_for_guns(new_guns)
+    }
+}
+
+impl GunAxe {
+    fn make_gun(&self) -> Vec<Rc<RefCell<Gun>>> {
+        let rotation = self.get_rotation();
 
         let vel = Vector2 {
             x: rotation.cos(),
@@ -58,32 +82,32 @@ impl GunStrategy for GunAxe {
         };
         let velocity = vel * PROJECTILE_VELOCITY_MAGNITUDE;
 
-        let position = *gun.get_position() + (velocity / PROJECTILE_VELOCITY_MAGNITUDE) * 30.0;
+        let position = *self.get_position() + (velocity / PROJECTILE_VELOCITY_MAGNITUDE) * 30.0;
 
         let gun = Gun {
             position,
             rotation,
             scale: GUN_SCALE,
             renderable_object: RenderableObject {
-                texture: gun.gun_texture.clone(),
+                texture: self.gun_texture.clone(),
             },
             selected_renderable_object: RenderableObject {
-                texture: gun.selected_gun_texture.clone(),
+                texture: self.selected_gun_texture.clone(),
             },
             velocity,
             collidable_object: CollidableObject {
-                width: f64::from(gun.gun_texture.get_size().0),
-                height: f64::from(gun.gun_texture.get_size().1),
+                width: f64::from(self.gun_texture.get_size().0),
+                height: f64::from(self.gun_texture.get_size().1),
             },
-            gun_sound: gun.gun_sound.clone(),
-            gun_texture: gun.gun_texture.clone(),
-            selected_gun_texture: gun.selected_gun_texture.clone(),
-            gun_strategy: gun.gun_strategy.new_gun_strategy(),
+            gun_sound: self.gun_sound.clone(),
+            gun_texture: self.gun_texture.clone(),
+            selected_gun_texture: self.selected_gun_texture.clone(),
+            gun_strategy: self.gun_strategy.new_gun_strategy(),
             is_selected: true,
-            depth: gun.depth + 1,
+            depth: self.depth + 1,
         };
 
-        gun.gun_sound.borrow_mut().play();
+        self.gun_sound.borrow_mut().play();
 
         vec![Rc::new(RefCell::new(gun))]
     }

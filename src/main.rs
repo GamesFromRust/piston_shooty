@@ -2,6 +2,58 @@
 #![deny(clippy::all)]
 #![allow(clippy::needless_return)]
 
+#[macro_use]
+extern crate conrod_core;
+extern crate conrod_piston;
+extern crate csv;
+extern crate ears;
+extern crate find_folder;
+extern crate gfx_device_gl;
+extern crate glutin_window;
+extern crate graphics;
+extern crate nalgebra;
+extern crate ncollide2d;
+extern crate piston;
+extern crate piston_window;
+extern crate time;
+
+use std::cell::RefCell;
+use std::collections::HashMap;
+use std::fs::File;
+use std::rc::Rc;
+use std::sync::mpsc::channel;
+use std::thread;
+use std::time::Duration;
+
+use piston_window::*;
+
+use crate::asset_loader::AssetLoader;
+use crate::collidable_object::CollidableObject;
+use crate::enemy::Enemy;
+use crate::fps_counter::FpsCounter;
+use crate::game_state::GameState;
+use crate::game_state::GameStateType;
+use crate::game_state::UpdateResult;
+use crate::game_state::UpdateResultType;
+use crate::ground::Ground;
+use crate::gun_axe::GunAxe;
+use crate::gun_strategy_util::GunStrategyUtil;
+use crate::hand_gun::HandGun;
+use crate::menu_screen::MenuScreen;
+use crate::meta_gun::MetaGun;
+use crate::player::Player;
+use crate::renderable_object::RenderableObject;
+use crate::shot_gun::ShotGun;
+use crate::sound_manager::SoundManager;
+use crate::texture_manager::TextureManager;
+use crate::ui_bundle::UiBundle;
+use crate::ui_widget_ids::Ids;
+use crate::vector2::*;
+use crate::victory_screen::VictoryScreen;
+use crate::wall::Wall;
+use crate::world::GameEndedState;
+use crate::world::World;
+
 mod asset_loader;
 mod bullet;
 mod collidable;
@@ -34,55 +86,7 @@ mod victory_screen;
 mod wall;
 mod world;
 mod shot_gun;
-
-extern crate csv;
-extern crate ears;
-extern crate find_folder;
-extern crate gfx_device_gl;
-extern crate glutin_window;
-extern crate graphics;
-extern crate nalgebra;
-extern crate ncollide2d;
-extern crate piston;
-extern crate piston_window;
-extern crate time;
-#[macro_use]
-extern crate conrod_core;
-extern crate conrod_piston;
-
-use crate::asset_loader::AssetLoader;
-use crate::collidable_object::CollidableObject;
-use crate::enemy::Enemy;
-use crate::fps_counter::FpsCounter;
-use crate::game_state::GameState;
-use crate::game_state::GameStateType;
-use crate::game_state::UpdateResult;
-use crate::game_state::UpdateResultType;
-use crate::ground::Ground;
-use crate::gun_axe::GunAxe;
-use crate::hand_gun::HandGun;
-use crate::menu_screen::MenuScreen;
-use crate::meta_gun::MetaGun;
-use crate::player::Player;
-use crate::renderable_object::RenderableObject;
-use crate::sound_manager::SoundManager;
-use crate::texture_manager::TextureManager;
-use crate::ui_bundle::UiBundle;
-use crate::ui_widget_ids::Ids;
-use crate::vector2::*;
-use crate::victory_screen::VictoryScreen;
-use crate::wall::Wall;
-use crate::world::GameEndedState;
-use crate::world::World;
-use crate::shot_gun::ShotGun;
-use piston_window::*;
-use std::cell::RefCell;
-use std::collections::HashMap;
-use std::fs::File;
-use std::rc::Rc;
-use std::sync::mpsc::channel;
-use std::thread;
-use std::time::Duration;
+mod gun_strategy_util;
 
 const WIDTH: u32 = 1280;
 const HEIGHT: u32 = 720;
@@ -201,6 +205,7 @@ fn load_level(texture_manager: &mut TextureManager, sound_manager: &mut SoundMan
     let mut image_map = conrod_core::image::Map::new();
 
     let gun_sound = sound_manager.get("sounds\\boom.ogg");
+    let gun_strategy_util: Rc<GunStrategyUtil> = Rc::new(GunStrategyUtil {});
 
     let hand_gun_image: G2dTexture = asset_loader.load_texture("textures/GunGunV1.png");
     let hand_gun_image_id = image_map.insert(hand_gun_image);
@@ -219,6 +224,7 @@ fn load_level(texture_manager: &mut TextureManager, sound_manager: &mut SoundMan
         bullet_sound: sound_manager.get("sounds\\boop.ogg"),
         gun_strategy: Box::new(HandGun {
             should_delete: false,
+            gun_strategy_util: gun_strategy_util.clone(),
         }),
         shots_taken: 0,
         guns: Vec::new(),
@@ -241,6 +247,7 @@ fn load_level(texture_manager: &mut TextureManager, sound_manager: &mut SoundMan
         bullet_sound: sound_manager.get("sounds\\boop.ogg"),
         gun_strategy: Box::new(GunAxe {
             should_delete: false,
+            gun_strategy_util: gun_strategy_util.clone(),
         }),
         shots_taken: 0,
         guns: Vec::new(),
@@ -263,6 +270,7 @@ fn load_level(texture_manager: &mut TextureManager, sound_manager: &mut SoundMan
         bullet_sound: sound_manager.get("sounds\\boop.ogg"),
         gun_strategy: Box::new(ShotGun {
             should_delete: false,
+            gun_strategy_util: gun_strategy_util.clone(),
         }),
         shots_taken: 0,
         guns: Vec::new(),

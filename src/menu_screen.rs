@@ -1,21 +1,23 @@
-use crate::fps_counter::FpsCounter;
-use crate::game_state::GameState;
-use crate::game_state::GameStateType;
-use crate::game_state::UpdateResult;
-use crate::game_state::UpdateResultType;
-use crate::game_state::UPDATE_RESULT_RUNNING;
-use crate::game_state_utils;
-use crate::input;
-use crate::ui_bundle::UiBundle;
-use crate::vector2::Vector2;
+use std::collections::HashMap;
+use std::rc::Rc;
+
 use conrod_core::color::Colorable;
 use conrod_core::image::Id;
 use conrod_core::Positionable;
 use conrod_core::Widget;
 use piston_window;
 use piston_window::*;
-use std::collections::HashMap;
-use std::rc::Rc;
+
+use crate::fps_counter::FpsCounter;
+use crate::game_state::GameState;
+use crate::game_state::GameStateType;
+use crate::game_state::UPDATE_RESULT_RUNNING;
+use crate::game_state::UpdateResult;
+use crate::game_state::UpdateResultType;
+use crate::game_state_utils;
+use crate::input;
+use crate::ui_bundle::UiBundle;
+use crate::vector2::Vector2;
 
 pub struct MenuScreen<'a> {
     pub world_list: Rc<Vec<&'a str>>,
