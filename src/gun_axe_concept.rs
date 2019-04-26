@@ -1,23 +1,26 @@
+use std::cell::RefCell;
+use std::rc::Rc;
+
+use ears::AudioController;
+use ears::Sound;
+use piston_window::G2dTexture;
+use piston_window::ImageSize;
+
 use crate::bullet::Bullet;
 use crate::collidable_object::CollidableObject;
 use crate::game_object::GameObject;
 use crate::gun::Gun;
 use crate::gun::GUN_SCALE;
 use crate::gun::PROJECTILE_VELOCITY_MAGNITUDE;
+use crate::gun_concept::GunConcept;
 use crate::gun_strategy::GunStrategy;
+use crate::object_type::ObjectType;
 use crate::renderable_object::RenderableObject;
 use crate::vector2::Vector2;
 use crate::world::WorldReq;
 use crate::world::WorldRequestType;
-use ears::AudioController;
-use ears::Sound;
-use piston_window::G2dTexture;
-use piston_window::ImageSize;
-use std::cell::RefCell;
-use std::rc::Rc;
-use crate::object_type::ObjectType;
 
-pub struct MetaGun {
+pub struct GunAxeConcept {
     pub gun_texture: Rc<G2dTexture>,
     pub gun_image_id: conrod_core::image::Id,
     pub selected_gun_texture: Rc<G2dTexture>,
@@ -33,38 +36,79 @@ pub struct MetaGun {
     pub is_selected: bool,
 }
 
-impl MetaGun {
-    pub fn has_guns_in_play(&self) -> bool {
+impl GunConcept for GunAxeConcept {
+    fn gun_texture(&self) -> &Rc<G2dTexture> {
+        &self.gun_texture
+    }
+    fn gun_image_id(&self) -> conrod_core::image::Id {
+        self.gun_image_id
+    }
+    fn selected_gun_texture(&self) -> &Rc<G2dTexture> {
+        &self.selected_gun_texture
+    }
+    fn selected_gun_image_id(&self) -> conrod_core::image::Id {
+        self.selected_gun_image_id
+    }
+    fn gun_sound(&self) -> &Rc<RefCell<Sound>> {
+        &self.gun_sound
+    }
+    fn bullet_sound(&self) -> &Rc<RefCell<Sound>> {
+        &self.bullet_sound
+    }
+    fn gun_strategy(&self) -> &GunStrategy {
+        self.gun_strategy.as_ref()
+    }
+    fn guns(&self) -> &Vec<Rc<RefCell<Gun>>> {
+        &self.guns
+    }
+    fn has_shot_bullet(&self) -> bool {
+        self.has_shot_bullet
+    }
+    fn is_selected(&self) -> bool {
+        self.is_selected
+    }
+
+    fn shots_taken(&self) -> usize {
+        self.shots_taken
+    }
+    fn bullet_image_id(&self) -> conrod_core::image::Id {
+        self.bullet_image_id
+    }
+    fn bullet_texture(&self) -> &Rc<G2dTexture> {
+        &self.bullet_texture
+    }
+
+    fn has_guns_in_play(&self) -> bool {
         !self.guns.is_empty()
     }
 
-    pub fn has_gun_depth(&self) -> bool {
+    fn has_gun_depth(&self) -> bool {
         self.gun_strategy.has_gun_depth()
     }
 
-    pub fn get_gun_depth(&self) -> usize {
+    fn get_gun_depth(&self) -> usize {
         self.gun_strategy.get_gun_depth()
     }
 
-    pub fn new_gun_strategy(&self) -> Box<GunStrategy> {
+    fn new_gun_strategy(&self) -> Box<GunStrategy> {
         self.gun_strategy.new_gun_strategy()
     }
 
-    pub fn set_selected(&mut self, selected: bool) {
+    fn set_selected(&mut self, selected: bool) {
         self.is_selected = selected;
         if let Some(last_gun) = self.guns.last() {
             last_gun.borrow_mut().is_selected = selected;
         }
     }
 
-    pub fn update(&mut self) {
+    fn update(&mut self) {
         self.guns.retain(|ref gun| !gun.borrow().get_should_delete());
         if let Some(last_gun) = self.guns.last() {
             last_gun.borrow_mut().is_selected = true;
         }
     }
 
-    pub fn can_shoot_bullet(&self) -> bool {
+    fn can_shoot_bullet(&self) -> bool {
         if self.has_shot_bullet {
             return false;
         }
@@ -76,7 +120,7 @@ impl MetaGun {
         true
     }
 
-    pub fn can_shoot_gun(&self) -> bool {
+    fn can_shoot_gun(&self) -> bool {
         if self.has_shot_bullet {
             return false;
         }
@@ -88,7 +132,7 @@ impl MetaGun {
         true
     }
 
-    pub fn shoot_gun(&mut self, player_pos: &Vector2, player_rot: f64, mouse_pos: &Vector2) -> Vec<WorldReq> {
+    fn shoot_gun(&mut self, player_pos: &Vector2, player_rot: f64, mouse_pos: &Vector2) -> Vec<WorldReq> {
         if !self.can_shoot_gun() {
             return Vec::new();
         }
@@ -181,7 +225,7 @@ impl MetaGun {
         world_reqs.push(world_req);
     }
 
-    pub fn shoot_bullets(&mut self) -> Vec<WorldReq> {
+    fn shoot_bullets(&mut self) -> Vec<WorldReq> {
         if !self.can_shoot_bullet() {
             return Vec::new();
         }
@@ -222,3 +266,4 @@ impl MetaGun {
         world_reqs
     }
 }
+

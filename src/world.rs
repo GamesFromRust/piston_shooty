@@ -29,7 +29,7 @@ use crate::game_state::UPDATE_RESULT_SUCCESS;
 use crate::game_state_utils;
 use crate::gun::BULLET_SCALE;
 use crate::input;
-use crate::meta_gun::MetaGun;
+use crate::gun_concept::GunConcept;
 use crate::object_type::ObjectType;
 use crate::player::Player;
 use crate::render_utils;
@@ -212,11 +212,11 @@ impl World {
     // todo: gif of ctrl+f of shots_taken in our codebase
     fn update_ui(&self, ui_bundle: &mut UiBundle) {
         // TODO: Please help.
-        let gun_templates = &self.player.borrow().gun_templates;
-        ui_bundle.ids.guns_hud.resize(gun_templates.len(), &mut ui_bundle.conrod_ui.widget_id_generator());
-        ui_bundle.ids.shots_taken_hud.resize(gun_templates.len(), &mut ui_bundle.conrod_ui.widget_id_generator());
-        ui_bundle.ids.bullets_remaining_hud.resize(gun_templates.len(), &mut ui_bundle.conrod_ui.widget_id_generator());
-        ui_bundle.ids.bullets_hud.resize(gun_templates.len(), &mut ui_bundle.conrod_ui.widget_id_generator());
+        let gun_concepts = &self.player.borrow().gun_concepts;
+        ui_bundle.ids.guns_hud.resize(gun_concepts.len(), &mut ui_bundle.conrod_ui.widget_id_generator());
+        ui_bundle.ids.shots_taken_hud.resize(gun_concepts.len(), &mut ui_bundle.conrod_ui.widget_id_generator());
+        ui_bundle.ids.bullets_remaining_hud.resize(gun_concepts.len(), &mut ui_bundle.conrod_ui.widget_id_generator());
+        ui_bundle.ids.bullets_hud.resize(gun_concepts.len(), &mut ui_bundle.conrod_ui.widget_id_generator());
 
         let mut ui_cell = ui_bundle.conrod_ui.set_widgets();
         conrod_core::widget::Canvas::new().pad(40.0).color(conrod_core::color::TRANSPARENT).set(ui_bundle.ids.canvas, &mut ui_cell);
@@ -233,15 +233,15 @@ impl World {
 
         let mut id_gun_right = ui_bundle.ids.canvas;
         let mut width_gun_right = 0.0;
-        for i in 0..gun_templates.len() {
+        for i in 0..gun_concepts.len() {
             let player = self.player.borrow();
-            let current_gun_template = player.gun_templates[i].borrow();
+            let current_gun_concept = player.gun_concepts[i].clone();
             let ids = &ui_bundle.ids;
 
-            let gun_texture = self.draw_gun_image_hud(ids, &mut ui_cell, id_gun_right, width_gun_right, i, &player, &current_gun_template);
-            self.draw_bullet_image_hud(ids, &mut ui_cell, i, &current_gun_template);
-            self.draw_gun_depth_remaining_text(ids, &mut ui_cell, i, &current_gun_template);
-            self.draw_bullets_remaining_text(&mut ui_cell, i, &current_gun_template, ids);
+            let gun_texture = self.draw_gun_image_hud(ids, &mut ui_cell, id_gun_right, width_gun_right, i, &player, current_gun_concept.clone());
+            self.draw_bullet_image_hud(ids, &mut ui_cell, i, current_gun_concept.clone());
+            self.draw_gun_depth_remaining_text(ids, &mut ui_cell, i, current_gun_concept.clone());
+            self.draw_bullets_remaining_text(&mut ui_cell, i, current_gun_concept.clone(), ids);
 
             id_gun_right = ids.guns_hud[i];
             width_gun_right = f64::from(gun_texture.get_width());
@@ -250,9 +250,9 @@ impl World {
         self.fps_counter.update_ui(&mut ui_cell, &ui_bundle.ids);
     }
 
-    fn draw_bullets_remaining_text(&self, mut ui_cell: &mut UiCell, i: usize, current_gun_template: &MetaGun, ids: &ui_widget_ids::Ids) {
+    fn draw_bullets_remaining_text(&self, mut ui_cell: &mut UiCell, i: usize, current_gun_concept: Rc<RefCell<GunConcept>>, ids: &ui_widget_ids::Ids) {
         // draw bullets remaining
-        let bullets_remaining = if current_gun_template.has_shot_bullet {
+        let bullets_remaining = if current_gun_concept.borrow().has_shot_bullet() {
             0
         } else {
             1
@@ -265,11 +265,11 @@ impl World {
             .set(ids.bullets_remaining_hud[i], &mut ui_cell);
     }
 
-    fn draw_gun_depth_remaining_text(&self, ids: &ui_widget_ids::Ids, mut ui_cell: &mut UiCell, i: usize, current_gun_template: &MetaGun) {
+    fn draw_gun_depth_remaining_text(&self, ids: &ui_widget_ids::Ids, mut ui_cell: &mut UiCell, i: usize, current_gun_concept: Rc<RefCell<GunConcept>>) {
         // draw guns depth remaining
-        let gun_depth_remaining_text = if current_gun_template.has_gun_depth() {
-            let shots_taken = current_gun_template.shots_taken;
-            let gun_depth = current_gun_template.get_gun_depth();
+        let gun_depth_remaining_text = if current_gun_concept.borrow().has_gun_depth() {
+            let shots_taken = current_gun_concept.borrow().shots_taken();
+            let gun_depth = current_gun_concept.borrow().get_gun_depth();
             format!("{}/{}", gun_depth - shots_taken, gun_depth)
         } else {
             "∞".to_string()
@@ -277,9 +277,9 @@ impl World {
         conrod_core::widget::Text::new(gun_depth_remaining_text.as_str()).font_size(18).color(conrod_core::color::WHITE).right_from(ids.guns_hud[i], 8.0).set(ids.shots_taken_hud[i], &mut ui_cell);
     }
 
-    fn draw_bullet_image_hud(&self, ids: &ui_widget_ids::Ids, mut ui_cell: &mut UiCell, i: usize, current_gun_template: &MetaGun) {
-        let bullet_image_id = current_gun_template.bullet_image_id;
-        let bullet_texture = current_gun_template.bullet_texture.clone();
+    fn draw_bullet_image_hud(&self, ids: &ui_widget_ids::Ids, mut ui_cell: &mut UiCell, i: usize, current_gun_concept: Rc<RefCell<GunConcept>>) {
+        let bullet_image_id = current_gun_concept.borrow().bullet_image_id();
+        let bullet_texture = current_gun_concept.borrow().bullet_texture().clone();
         conrod_core::widget::Image::new(bullet_image_id)
             .w_h((BULLET_SCALE * 1.5) * f64::from(bullet_texture.get_width()), (BULLET_SCALE * 1.5) * f64::from(bullet_texture.get_height()))
             .down_from(ids.guns_hud[i], 30.0)
@@ -296,21 +296,21 @@ impl World {
         width_gun_right: f64,
         i: usize,
         player: &Player,
-        current_gun_template: &MetaGun,
+        current_gun_concept: Rc<RefCell<GunConcept>>,
     ) -> Rc<Texture<Resources>> {
         // Draw gun texture & highlight selected
-        let is_selected_gun = i == player.current_gun_template_index;
+        let is_selected_gun = i == player.current_gun_concept_index;
         let gun_image_id = if is_selected_gun {
-            current_gun_template.selected_gun_image_id
+            current_gun_concept.borrow().selected_gun_image_id()
         } else {
-            current_gun_template.gun_image_id
+            current_gun_concept.borrow().gun_image_id()
         };
 
         // note: gun_texture is only used for the width and height right now
         let gun_texture = if is_selected_gun {
-            current_gun_template.selected_gun_texture.clone()
+            current_gun_concept.borrow().selected_gun_texture().clone()
         } else {
-            current_gun_template.gun_texture.clone()
+            current_gun_concept.borrow().gun_texture().clone()
         };
 
         let mut gun_image = conrod_core::widget::Image::new(gun_image_id).w_h(f64::from(gun_texture.get_width()), f64::from(gun_texture.get_height()));

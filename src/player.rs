@@ -1,6 +1,6 @@
 use crate::game_object::GameObject;
 use crate::input;
-use crate::meta_gun::MetaGun;
+use crate::gun_concept::GunConcept;
 use crate::object_type::ObjectType;
 use crate::renderable::Renderable;
 use crate::renderable_object::RenderableObject;
@@ -10,9 +10,9 @@ use crate::world::WorldReq;
 use piston_window::Key;
 use piston_window::MouseButton;
 use piston_window::UpdateArgs;
-use std::cell::RefCell;
-use std::cell::RefMut;
+use std::cell::{RefMut, RefCell};
 use std::collections::HashMap;
+use std::rc::Rc;
 
 pub struct Player {
     pub position: Vector2,
@@ -20,8 +20,8 @@ pub struct Player {
     pub scale: f64,
     pub renderable_object: RenderableObject,
     pub selected_renderable_object: RenderableObject,
-    pub gun_templates: Vec<RefCell<MetaGun>>,
-    pub current_gun_template_index: usize,
+    pub gun_concepts: Vec<Rc<RefCell<GunConcept>>>,
+    pub current_gun_concept_index: usize,
 }
 
 impl GameObject for Player {
@@ -53,7 +53,7 @@ impl GameObject for Player {
 
 impl Renderable for Player {
     fn get_renderable_object(&self) -> &RenderableObject {
-        if self.gun_templates[self.current_gun_template_index].borrow().has_guns_in_play() {
+        if self.gun_concepts[self.current_gun_concept_index].borrow().has_guns_in_play() {
             &self.renderable_object
         } else {
             &self.selected_renderable_object
@@ -63,7 +63,7 @@ impl Renderable for Player {
 
 impl Updatable for Player {
     fn update(&mut self, key_states: &HashMap<Key, input::ButtonState>, mouse_states: &HashMap<MouseButton, input::ButtonState>, mouse_pos: &Vector2, args: UpdateArgs) -> Vec<WorldReq> {
-        self.meta_gun_mut().update();
+        self.gun_concept_mut().update();
 
         // Rotate to face our mouse.
         let player_to_mouse = *mouse_pos - self.position;
@@ -74,24 +74,24 @@ impl Updatable for Player {
 }
 
 impl Player {
-    fn meta_gun_mut(&self) -> RefMut<MetaGun> {
-        self.gun_templates[self.current_gun_template_index].borrow_mut()
+    fn gun_concept_mut(&self) -> RefMut<GunConcept> {
+        self.gun_concepts[self.current_gun_concept_index].borrow_mut()
     }
 
     fn shoot_bullets(&mut self) -> Vec<WorldReq> {
-        self.meta_gun_mut().shoot_bullets()
+        self.gun_concept_mut().shoot_bullets()
     }
 
     pub fn can_shoot_bullet(&self) -> bool {
-        self.gun_templates.iter().any(|gun_template| gun_template.borrow().can_shoot_bullet())
+        self.gun_concepts.iter().any(|gun_concept| gun_concept.borrow().can_shoot_bullet())
     }
 
     pub fn can_shoot_gun(&self) -> bool {
-        self.gun_templates.iter().any(|gun_template| gun_template.borrow().can_shoot_gun())
+        self.gun_concepts.iter().any(|gun_concept| gun_concept.borrow().can_shoot_gun())
     }
 
     fn shoot_gun(&mut self, mouse_pos: &Vector2) -> Vec<WorldReq> {
-        self.meta_gun_mut().shoot_gun(&self.position, self.rotation, mouse_pos)
+        self.gun_concept_mut().shoot_gun(&self.position, self.rotation, mouse_pos)
     }
 
     #[allow(unused_variables)]
@@ -118,25 +118,25 @@ impl Player {
             match *key {
                 Key::Q => {
                     if value.pressed {
-                        self.gun_templates[self.current_gun_template_index].borrow_mut().set_selected(false);
+                        self.gun_concepts[self.current_gun_concept_index].borrow_mut().set_selected(false);
 
-                        self.current_gun_template_index += 1;
-                        self.current_gun_template_index %= self.gun_templates.len();
+                        self.current_gun_concept_index += 1;
+                        self.current_gun_concept_index %= self.gun_concepts.len();
 
-                        self.gun_templates[self.current_gun_template_index].borrow_mut().set_selected(true);
+                        self.gun_concepts[self.current_gun_concept_index].borrow_mut().set_selected(true);
                     }
                 }
                 Key::E => {
                     if value.pressed {
-                        self.gun_templates[self.current_gun_template_index].borrow_mut().set_selected(false);
+                        self.gun_concepts[self.current_gun_concept_index].borrow_mut().set_selected(false);
 
-                        if self.current_gun_template_index == 0 {
-                            self.current_gun_template_index = self.gun_templates.len() - 1;
+                        if self.current_gun_concept_index == 0 {
+                            self.current_gun_concept_index = self.gun_concepts.len() - 1;
                         } else {
-                            self.current_gun_template_index -= 1;
+                            self.current_gun_concept_index -= 1;
                         }
 
-                        self.gun_templates[self.current_gun_template_index].borrow_mut().set_selected(true);
+                        self.gun_concepts[self.current_gun_concept_index].borrow_mut().set_selected(true);
                     }
                 }
                 _ => {}

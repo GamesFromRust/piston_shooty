@@ -18,7 +18,7 @@ mod gun_strategy;
 mod hand_gun;
 mod input;
 mod menu_screen;
-mod meta_gun;
+mod gun_concept_utils;
 mod object_type;
 mod player;
 mod render_utils;
@@ -34,6 +34,10 @@ mod victory_screen;
 mod wall;
 mod world;
 mod shot_gun;
+mod gun_concept;
+mod shot_gun_concept;
+mod hand_gun_concept;
+mod gun_axe_concept;
 
 extern crate csv;
 extern crate ears;
@@ -62,7 +66,7 @@ use crate::ground::Ground;
 use crate::gun_axe::GunAxe;
 use crate::hand_gun::HandGun;
 use crate::menu_screen::MenuScreen;
-use crate::meta_gun::MetaGun;
+use crate::gun_concept::GunConcept;
 use crate::player::Player;
 use crate::renderable_object::RenderableObject;
 use crate::sound_manager::SoundManager;
@@ -83,6 +87,9 @@ use std::rc::Rc;
 use std::sync::mpsc::channel;
 use std::thread;
 use std::time::Duration;
+use crate::hand_gun_concept::HandGunConcept;
+use crate::gun_axe_concept::GunAxeConcept;
+use crate::shot_gun_concept::ShotGunConcept;
 
 const WIDTH: u32 = 1280;
 const HEIGHT: u32 = 720;
@@ -208,7 +215,7 @@ fn load_level(texture_manager: &mut TextureManager, sound_manager: &mut SoundMan
     let selected_hand_gun_image_id = image_map.insert(selected_hand_gun_image);
     let bullet_image: G2dTexture = asset_loader.load_texture("textures/bullet.png");
     let bullet_image_id = image_map.insert(bullet_image);
-    let hand_gun: RefCell<MetaGun> = RefCell::new(MetaGun {
+    let hand_gun: Rc<RefCell<GunConcept>> = Rc::new(RefCell::new(HandGunConcept {
         gun_sound: gun_sound.clone(),
         gun_texture: gun_gun.clone(),
         gun_image_id: hand_gun_image_id,
@@ -224,13 +231,13 @@ fn load_level(texture_manager: &mut TextureManager, sound_manager: &mut SoundMan
         guns: Vec::new(),
         has_shot_bullet: false,
         is_selected: false,
-    });
+    }));
 
     let gun_axe_image: G2dTexture = asset_loader.load_texture("textures/GunaxeV1.png");
     let gun_axe_image_id = image_map.insert(gun_axe_image);
     let selected_gun_axe_image: G2dTexture = asset_loader.load_texture("textures/GunaxeV1_selected.png");
     let selected_gun_axe_image_id = image_map.insert(selected_gun_axe_image);
-    let gun_axe: RefCell<MetaGun> = RefCell::new(MetaGun {
+    let gun_axe: Rc<RefCell<GunConcept>> = Rc::new(RefCell::new(GunAxeConcept {
         gun_sound: gun_sound.clone(),
         gun_texture: gun_axe_texture.clone(),
         gun_image_id: gun_axe_image_id,
@@ -246,13 +253,13 @@ fn load_level(texture_manager: &mut TextureManager, sound_manager: &mut SoundMan
         guns: Vec::new(),
         has_shot_bullet: false,
         is_selected: false,
-    });
+    }));
 
     let shot_gun_image: G2dTexture = asset_loader.load_texture("textures/shotgun.png");
     let shot_gun_image_id = image_map.insert(shot_gun_image);
     let selected_shot_gun_image: G2dTexture = asset_loader.load_texture("textures/shotgun_selected.png");
     let selected_shot_gun_image_id = image_map.insert(selected_shot_gun_image);
-    let shot_gun: RefCell<MetaGun> = RefCell::new(MetaGun {
+    let shot_gun: Rc<RefCell<GunConcept>> = Rc::new(RefCell::new(ShotGunConcept {
         gun_sound: gun_sound.clone(),
         gun_texture: shot_gun_texture.clone(),
         gun_image_id: shot_gun_image_id,
@@ -268,9 +275,9 @@ fn load_level(texture_manager: &mut TextureManager, sound_manager: &mut SoundMan
         guns: Vec::new(),
         has_shot_bullet: false,
         is_selected: false,
-    });
+    }));
 
-    let meta_guns: Vec<RefCell<MetaGun>> = vec![hand_gun, gun_axe, shot_gun];
+    let gun_concepts: Vec<Rc<RefCell<GunConcept>>> = vec![hand_gun, gun_axe, shot_gun];
 
     let player: Player = Player {
         position: Vector2 {
@@ -285,8 +292,8 @@ fn load_level(texture_manager: &mut TextureManager, sound_manager: &mut SoundMan
         selected_renderable_object: RenderableObject {
             texture: selected_hand_gun_texture.clone(),
         },
-        gun_templates: meta_guns,
-        current_gun_template_index: 0,
+        gun_concepts,
+        current_gun_concept_index: 0,
     };
 
     let player = Rc::new(RefCell::new(player));
