@@ -1,22 +1,20 @@
-use crate::gun_strategy::GunStrategy;
+use crate::gun_behavior::GunBehavior;
 use crate::object_type::ObjectType;
-use std::rc::Rc;
-use std::cell::RefCell;
-use crate::gun::Gun;
-use crate::vector2::Vector2;
-use crate::renderable_object::RenderableObject;
-use crate::collidable_object::CollidableObject;
-use crate::gun::GUN_SCALE;
-use crate::gun::PROJECTILE_VELOCITY_MAGNITUDE;
 use crate::game_object::GameObject;
 use piston_window::ImageSize;
 use ears::AudioController;
+use crate::gun::{Gun, PROJECTILE_VELOCITY_MAGNITUDE, GUN_SCALE};
+use std::rc::Rc;
+use std::cell::RefCell;
+use crate::vector2::Vector2;
+use crate::renderable_object::RenderableObject;
+use crate::collidable_object::CollidableObject;
 
-pub struct HandGun {
+pub struct ShotGunBehavior {
     pub should_delete: bool,
 }
 
-impl GunStrategy for HandGun {
+impl GunBehavior for ShotGunBehavior {
     fn get_should_delete(&self) -> bool {
         self.should_delete
     }
@@ -26,7 +24,7 @@ impl GunStrategy for HandGun {
     }
 
     fn get_object_type(&self) -> ObjectType {
-        ObjectType::HandGun
+        ObjectType::ShotGun
     }
 
     fn collide(&mut self, other_object_type: ObjectType) {
@@ -35,8 +33,8 @@ impl GunStrategy for HandGun {
         }
     }
 
-    fn new_gun_strategy(&self) -> Box<GunStrategy> {
-        Box::new(HandGun {
+    fn new_gun_behavior(&self) -> Box<GunBehavior> {
+        Box::new(ShotGunBehavior {
             should_delete: false,
         })
     }
@@ -58,9 +56,27 @@ impl GunStrategy for HandGun {
         };
         let velocity = vel * PROJECTILE_VELOCITY_MAGNITUDE;
 
-        let position = *gun.get_position() + (velocity / PROJECTILE_VELOCITY_MAGNITUDE) * 30.0;
+        let gun1 = self.make_gun(gun, rotation, velocity, rotation - 45.0);
+        let gun2 = self.make_gun(gun, rotation, velocity, rotation + 45.0);
 
-        let gun = Gun {
+        gun.gun_sound.borrow_mut().play();
+
+        vec![
+            Rc::new(RefCell::new(gun1)),
+            Rc::new(RefCell::new(gun2))
+        ]
+    }
+}
+
+impl ShotGunBehavior {
+    fn make_gun(&self, gun: &Gun, rotation: f64, velocity: Vector2, new_gun_rotation: f64) -> Gun {
+        let vel = Vector2 {
+            x: new_gun_rotation.cos(),
+            y: new_gun_rotation.sin(),
+        };
+        let position = *gun.get_position() + vel * 30.0;
+
+        Gun {
             position,
             rotation,
             scale: GUN_SCALE,
@@ -78,13 +94,9 @@ impl GunStrategy for HandGun {
             gun_sound: gun.gun_sound.clone(),
             gun_texture: gun.gun_texture.clone(),
             selected_gun_texture: gun.selected_gun_texture.clone(),
-            gun_strategy: gun.gun_strategy.new_gun_strategy(),
+            gun_behavior: gun.gun_behavior.new_gun_behavior(),
             is_selected: true,
             depth: gun.depth + 1,
-        };
-
-        gun.gun_sound.borrow_mut().play();
-
-        vec![Rc::new(RefCell::new(gun))]
+        }
     }
 }

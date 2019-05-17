@@ -13,9 +13,9 @@ mod game_state;
 mod game_state_utils;
 mod ground;
 mod gun;
-mod gun_axe;
-mod gun_strategy;
-mod hand_gun;
+mod gun_axe_behavior;
+mod gun_behavior;
+mod hand_gun_behavior;
 mod input;
 mod menu_screen;
 mod gun_concept_utils;
@@ -33,7 +33,7 @@ mod vector2;
 mod victory_screen;
 mod wall;
 mod world;
-mod shot_gun;
+mod shot_gun_behavior;
 mod gun_concept;
 mod shot_gun_concept;
 mod hand_gun_concept;
@@ -63,8 +63,8 @@ use crate::game_state::GameStateType;
 use crate::game_state::UpdateResult;
 use crate::game_state::UpdateResultType;
 use crate::ground::Ground;
-use crate::gun_axe::GunAxe;
-use crate::hand_gun::HandGun;
+use crate::gun_axe_behavior::GunAxeBehavior;
+use crate::hand_gun_behavior::HandGunBehavior;
 use crate::menu_screen::MenuScreen;
 use crate::gun_concept::GunConcept;
 use crate::player::Player;
@@ -78,7 +78,7 @@ use crate::victory_screen::VictoryScreen;
 use crate::wall::Wall;
 use crate::world::GameEndedState;
 use crate::world::World;
-use crate::shot_gun::ShotGun;
+use crate::shot_gun_behavior::ShotGunBehavior;
 use piston_window::*;
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -224,7 +224,7 @@ fn load_level(texture_manager: &mut TextureManager, sound_manager: &mut SoundMan
         bullet_texture: bullet.clone(),
         bullet_image_id,
         bullet_sound: sound_manager.get("sounds\\boop.ogg"),
-        gun_strategy: Box::new(HandGun {
+        gun_behavior: Box::new(HandGunBehavior {
             should_delete: false,
         }),
         shots_taken: 0,
@@ -246,7 +246,7 @@ fn load_level(texture_manager: &mut TextureManager, sound_manager: &mut SoundMan
         bullet_texture: bullet.clone(),
         bullet_image_id,
         bullet_sound: sound_manager.get("sounds\\boop.ogg"),
-        gun_strategy: Box::new(GunAxe {
+        gun_behavior: Box::new(GunAxeBehavior {
             should_delete: false,
         }),
         shots_taken: 0,
@@ -268,7 +268,7 @@ fn load_level(texture_manager: &mut TextureManager, sound_manager: &mut SoundMan
         bullet_texture: bullet.clone(),
         bullet_image_id,
         bullet_sound: sound_manager.get("sounds\\boop.ogg"),
-        gun_strategy: Box::new(ShotGun {
+        gun_behavior: Box::new(ShotGunBehavior {
             should_delete: false,
         }),
         shots_taken: 0,

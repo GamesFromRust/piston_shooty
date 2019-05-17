@@ -3,7 +3,7 @@ use std::rc::Rc;
 
 use crate::bullet::Bullet;
 use crate::gun::Gun;
-use crate::gun_strategy::GunStrategy;
+use crate::gun_behavior::GunBehavior;
 use crate::vector2::Vector2;
 use crate::world::WorldReq;
 use piston_window::G2dTexture;
@@ -16,7 +16,7 @@ pub trait GunConcept {
     fn selected_gun_image_id(&self) -> conrod_core::image::Id;
     fn gun_sound(&self) -> &Rc<RefCell<Sound>>;
     fn bullet_sound(&self) -> &Rc<RefCell<Sound>>;
-    fn gun_strategy(&self) -> &GunStrategy;
+    fn gun_behavior(&self) -> &GunBehavior;
     fn guns(&self) -> &Vec<Rc<RefCell<Gun>>>;
     fn has_shot_bullet(&self) -> bool;
     fn is_selected(&self) -> bool;
@@ -28,7 +28,7 @@ pub trait GunConcept {
     fn has_guns_in_play(&self) -> bool;
     fn has_gun_depth(&self) -> bool;
     fn get_gun_depth(&self) -> usize;
-    fn new_gun_strategy(&self) -> Box<GunStrategy>;
+    fn new_gun_behavior(&self) -> Box<GunBehavior>;
     fn set_selected(&mut self, selected: bool);
     fn update(&mut self);
     fn can_shoot_bullet(&self) -> bool;

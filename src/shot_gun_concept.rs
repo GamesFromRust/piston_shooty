@@ -13,7 +13,7 @@ use crate::gun::Gun;
 use crate::gun::GUN_SCALE;
 use crate::gun::PROJECTILE_VELOCITY_MAGNITUDE;
 use crate::gun_concept::GunConcept;
-use crate::gun_strategy::GunStrategy;
+use crate::gun_behavior::GunBehavior;
 use crate::object_type::ObjectType;
 use crate::renderable_object::RenderableObject;
 use crate::vector2::Vector2;
@@ -29,7 +29,7 @@ pub struct ShotGunConcept {
     pub bullet_texture: Rc<G2dTexture>,
     pub bullet_image_id: conrod_core::image::Id,
     pub bullet_sound: Rc<RefCell<Sound>>,
-    pub gun_strategy: Box<GunStrategy>,
+    pub gun_behavior: Box<GunBehavior>,
     pub shots_taken: usize, // drinks all around https://www.youtube.com/watch?v=XNtTEibFvlQ
     pub guns: Vec<Rc<RefCell<Gun>>>,
     pub has_shot_bullet: bool,
@@ -55,8 +55,8 @@ impl GunConcept for ShotGunConcept {
     fn bullet_sound(&self) -> &Rc<RefCell<Sound>> {
         &self.bullet_sound
     }
-    fn gun_strategy(&self) -> &GunStrategy {
-        self.gun_strategy.as_ref()
+    fn gun_behavior(&self) -> &GunBehavior {
+        self.gun_behavior.as_ref()
     }
     fn guns(&self) -> &Vec<Rc<RefCell<Gun>>> {
         &self.guns
@@ -83,15 +83,15 @@ impl GunConcept for ShotGunConcept {
     }
 
     fn has_gun_depth(&self) -> bool {
-        self.gun_strategy.has_gun_depth()
+        self.gun_behavior.has_gun_depth()
     }
 
     fn get_gun_depth(&self) -> usize {
-        self.gun_strategy.get_gun_depth()
+        self.gun_behavior.get_gun_depth()
     }
 
-    fn new_gun_strategy(&self) -> Box<GunStrategy> {
-        self.gun_strategy.new_gun_strategy()
+    fn new_gun_behavior(&self) -> Box<GunBehavior> {
+        self.gun_behavior.new_gun_behavior()
     }
 
     fn set_selected(&mut self, selected: bool) {
@@ -139,7 +139,7 @@ impl GunConcept for ShotGunConcept {
 
         let new_guns = if self.guns.is_empty() {
             self.shoot_gun_from_player(player_pos, player_rot, mouse_pos)
-        } else if self.gun_strategy.get_object_type() == ObjectType::ShotGun {
+        } else if self.gun_behavior.get_object_type() == ObjectType::ShotGun {
             let mut shot_guns: Vec<Rc<RefCell<Gun>>> = vec![]; // I see what you did there.
             let deepest_gun_depth = if let Some(last_gun) = self.guns.last() {
                 last_gun.borrow().depth
@@ -185,7 +185,7 @@ impl GunConcept for ShotGunConcept {
             gun_sound: self.gun_sound.clone(),
             gun_texture: self.gun_texture.clone(),
             selected_gun_texture: self.selected_gun_texture.clone(),
-            gun_strategy: self.new_gun_strategy(),
+            gun_behavior: self.new_gun_behavior(),
             is_selected: true,
             depth: 0,
         };
