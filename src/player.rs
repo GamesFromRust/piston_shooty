@@ -22,6 +22,7 @@ pub struct Player {
     pub selected_renderable_object: RenderableObject,
     pub gun_concepts: Vec<Rc<RefCell<GunConcept>>>,
     pub current_gun_concept_index: usize,
+    pub is_visible: bool,
 }
 
 impl GameObject for Player {
@@ -58,6 +59,10 @@ impl Renderable for Player {
         } else {
             &self.selected_renderable_object
         }
+    }
+
+    fn is_visible(&self) -> bool {
+        self.is_visible
     }
 }
 

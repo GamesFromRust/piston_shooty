@@ -81,6 +81,7 @@ impl GunBehavior for GunAxeBehavior {
             gun_behavior: gun.gun_behavior.new_gun_behavior(),
             is_selected: true,
             depth: gun.depth + 1,
+            is_visible: true,
         };
 
         gun.gun_sound.borrow_mut().play();

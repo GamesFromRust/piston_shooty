@@ -383,6 +383,10 @@ fn create_aabb_cuboid2(collidable: &Collidable) -> ncollide2d::bounding_volume::
 }
 
 fn render_renderable(c: &Context, gl: &mut G2d, renderable: &Renderable) {
+    if !renderable.is_visible() {
+        return;
+    }
+
     let texture = &renderable.get_renderable_object().texture;
     let transform = c
         .transform

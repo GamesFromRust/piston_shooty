@@ -9,6 +9,7 @@ pub struct Ground {
     pub rotation: f64,
     pub scale: f64,
     pub renderable_object: RenderableObject,
+    pub is_visible: bool,
 }
 
 impl GameObject for Ground {
@@ -41,5 +42,9 @@ impl GameObject for Ground {
 impl Renderable for Ground {
     fn get_renderable_object(&self) -> &RenderableObject {
         &self.renderable_object
+    }
+
+    fn is_visible(&self) -> bool {
+        self.is_visible
     }
 }

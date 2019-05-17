@@ -13,6 +13,7 @@ pub struct Enemy {
     pub renderable_object: RenderableObject,
     pub should_delete: bool,
     pub collidable_object: CollidableObject,
+    pub is_visible: bool,
 }
 
 impl GameObject for Enemy {
@@ -44,6 +45,10 @@ impl GameObject for Enemy {
 impl Renderable for Enemy {
     fn get_renderable_object(&self) -> &RenderableObject {
         &self.renderable_object
+    }
+
+    fn is_visible(&self) -> bool {
+        self.is_visible
     }
 }
 

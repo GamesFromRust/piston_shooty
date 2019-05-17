@@ -14,7 +14,6 @@ use crate::gun::GUN_SCALE;
 use crate::gun::PROJECTILE_VELOCITY_MAGNITUDE;
 use crate::gun_concept::GunConcept;
 use crate::gun_behavior::GunBehavior;
-use crate::object_type::ObjectType;
 use crate::renderable_object::RenderableObject;
 use crate::vector2::Vector2;
 use crate::world::WorldReq;
@@ -139,20 +138,6 @@ impl GunConcept for GunAxeConcept {
 
         let new_guns = if self.guns.is_empty() {
             self.shoot_gun_from_player(player_pos, player_rot, mouse_pos)
-        } else if self.gun_behavior.get_object_type() == ObjectType::ShotGun {
-            let mut shot_guns: Vec<Rc<RefCell<Gun>>> = vec![]; // I see what you did there.
-            let deepest_gun_depth = if let Some(last_gun) = self.guns.last() {
-                last_gun.borrow().depth
-            } else {
-                0
-            };
-            for gun in self.guns.iter().rev() {
-                if gun.borrow().depth != deepest_gun_depth {
-                    break;
-                }
-                shot_guns.append(&mut gun.borrow().shoot_gun());
-            }
-            shot_guns
         } else {
             let gun = self.guns.last().unwrap();
             gun.borrow_mut().is_selected = false;
@@ -188,6 +173,7 @@ impl GunConcept for GunAxeConcept {
             gun_behavior: self.new_gun_behavior(),
             is_selected: true,
             depth: 0,
+            is_visible: true,
         };
 
         self.gun_sound.borrow_mut().play();

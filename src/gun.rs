@@ -41,6 +41,7 @@ pub struct Gun {
     pub gun_behavior: Box<GunBehavior>,
     pub is_selected: bool,
     pub depth: u32,
+    pub is_visible: bool,
 }
 
 impl GameObject for Gun {
@@ -76,6 +77,10 @@ impl Renderable for Gun {
         } else {
             &self.renderable_object
         }
+    }
+
+    fn is_visible(&self) -> bool {
+        self.is_visible
     }
 }
 
@@ -118,6 +123,7 @@ impl Gun {
                 width: f64::from(bullet_texture.get_size().0),
                 height: f64::from(bullet_texture.get_size().1),
             },
+            is_visible: true,
         }
     }
 

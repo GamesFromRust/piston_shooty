@@ -294,6 +294,7 @@ fn load_level(texture_manager: &mut TextureManager, sound_manager: &mut SoundMan
         },
         gun_concepts,
         current_gun_concept_index: 0,
+        is_visible: true,
     };
 
     let player = Rc::new(RefCell::new(player));
@@ -370,6 +371,7 @@ fn load_level(texture_manager: &mut TextureManager, sound_manager: &mut SoundMan
                         width: f64::from(wall.get_size().0),
                         height: f64::from(wall.get_size().1),
                     },
+                    is_visible: true,
                 };
                 let refcell = Rc::new(RefCell::new(wall));
                 world.add_renderable_at_layer(refcell.clone(), WALL_LAYER);
@@ -385,6 +387,7 @@ fn load_level(texture_manager: &mut TextureManager, sound_manager: &mut SoundMan
                     renderable_object: RenderableObject {
                         texture: ground.clone(),
                     },
+                    is_visible: true,
                 };
                 let refcell = Rc::new(RefCell::new(ground));
                 world.add_renderable_at_layer(refcell.clone(), GROUND_LAYER);
@@ -405,6 +408,7 @@ fn load_level(texture_manager: &mut TextureManager, sound_manager: &mut SoundMan
                     renderable_object: RenderableObject {
                         texture: ground.clone(),
                     },
+                    is_visible: true,
                 };
                 let refcell = Rc::new(RefCell::new(ground));
                 world.add_renderable_at_layer(refcell.clone(), GROUND_LAYER);
@@ -424,6 +428,7 @@ fn load_level(texture_manager: &mut TextureManager, sound_manager: &mut SoundMan
                         width: f64::from(enemy.get_size().0),
                         height: f64::from(enemy.get_size().1),
                     },
+                    is_visible: true,
                 };
                 let refcell = Rc::new(RefCell::new(enemy));
                 world.add_renderable_at_layer(refcell.clone(), ENEMY_LAYER);
@@ -440,6 +445,7 @@ fn load_level(texture_manager: &mut TextureManager, sound_manager: &mut SoundMan
                     renderable_object: RenderableObject {
                         texture: ground.clone(),
                     },
+                    is_visible: true,
                 };
                 let refcell = Rc::new(RefCell::new(ground));
                 world.add_renderable_at_layer(refcell.clone(), GROUND_LAYER);
