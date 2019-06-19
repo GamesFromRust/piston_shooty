@@ -2,6 +2,8 @@
 
 (Title WIP) is a 2D gun-hell / puzzle shooter about guns that shoot other guns that shoot other guns (or bullets).  It's our first foray into the Rust programming language, and primarily uses the Piston engine project.  You can see the progress of our first year (~100 hours) of work on [youtube](https://www.youtube.com/watch?v=JL33RTniXtU).  You can also check out our [Game Design Doc](https://docs.google.com/document/d/1o4KA7FMiAnsUhNSu8TVDPX4hDut6xDh9fK15ulkDJVI/edit?usp=sharing). (Now accepting low-brow comments & suggestions only.  Puns must be level 7 or higher to be accepted.)
 
+![](https://media.giphy.com/media/l1J3VPHSE8ybjels4/giphy.gif)
+
 ## Setup
 
 Install:
