@@ -36,20 +36,20 @@ pub struct ShotGunConcept {
 }
 
 
-
 impl ShotGunConcept {
     fn select_mah_guns(&mut self) {
-            let mut deepest_level = 0;
-	            if let Some(last_gun) = self.guns.last() {
-		                deepest_level = last_gun.borrow().depth;
-				        }
+        let deepest_gun_depth = if let Some(last_gun) = self.guns.last() {
+            last_gun.borrow().depth
+        } else {
+            0
+        };
 
-					        for gun in &self.guns {
-						            let is_selected = gun.borrow().depth == deepest_level;
-							                gun.borrow_mut().is_selected = is_selected;
-									        }
-										    }
-										    }
+        for gun in &self.guns {
+            let is_selected = gun.borrow().depth == deepest_gun_depth;
+            gun.borrow_mut().is_selected = is_selected;
+        }
+    }
+}
 
 impl GunConcept for ShotGunConcept {
     fn gun_texture(&self) -> &Rc<G2dTexture> {
@@ -115,13 +115,12 @@ impl GunConcept for ShotGunConcept {
 
     fn update(&mut self) {
         self.guns.retain(|ref gun| !gun.borrow().get_should_delete());
-	
-	        if !self.is_selected {
-		            return;
-			            }
 
-				            self.select_mah_guns();
+        if !self.is_selected {
+            return;
+        }
 
+        self.select_mah_guns();
     }
 
     fn can_shoot_bullet(&self) -> bool {
@@ -245,7 +244,15 @@ impl GunConcept for ShotGunConcept {
 
         let mut world_reqs: Vec<WorldReq> = Vec::new();
 
-        for gun in &self.guns {
+        let deepest_gun_depth = if let Some(last_gun) = self.guns.last() {
+            last_gun.borrow().depth
+        } else {
+            0
+        };
+        for gun in self.guns.iter().rev() {
+            if gun.borrow().depth != deepest_gun_depth {
+                break;
+            }
             let bullet = Rc::new(RefCell::new(gun.borrow_mut().shoot_bullet(&self.bullet_texture)));
             self.bullet_sound.borrow_mut().play();
             world_reqs.append(&mut self.world_requests_for_bullet(bullet));

@@ -48,16 +48,8 @@ impl GunBehavior for ShotGunBehavior {
     }
 
     fn shoot_gun(&self, gun: &Gun) -> Vec<Rc<RefCell<Gun>>> {
-        let rotation = gun.get_rotation();
-
-        let vel = Vector2 {
-            x: rotation.cos(),
-            y: rotation.sin(),
-        };
-        let velocity = vel * PROJECTILE_VELOCITY_MAGNITUDE;
-
-        let gun1 = self.make_gun(gun, rotation, velocity, rotation - 45.0);
-        let gun2 = self.make_gun(gun, rotation, velocity, rotation + 45.0);
+        let gun1 = self.make_gun(gun, std::f64::consts::PI / 8.0);
+        let gun2 = self.make_gun(gun, -(std::f64::consts::PI / 8.0));
 
         gun.gun_sound.borrow_mut().play();
 
@@ -69,16 +61,27 @@ impl GunBehavior for ShotGunBehavior {
 }
 
 impl ShotGunBehavior {
-    fn make_gun(&self, gun: &Gun, rotation: f64, velocity: Vector2, new_gun_rotation: f64) -> Gun {
-        let vel = Vector2 {
-            x: new_gun_rotation.cos(),
-            y: new_gun_rotation.sin(),
+    fn make_gun(&self, gun: &Gun, rotation_offset: f64) -> Gun {
+        let old_gun_rotation = gun.get_rotation();
+
+        let angle_of_position_offset = old_gun_rotation + rotation_offset;
+        let unit_position_offset = Vector2 {
+            x: angle_of_position_offset.cos(),
+            y: angle_of_position_offset.sin(),
         };
-        let position = *gun.get_position() + vel * 30.0;
+        let new_gun_position = *gun.get_position() + unit_position_offset * 75.0;
+
+        let velocity_angle = old_gun_rotation;
+        let unit_velocity = Vector2 {
+            x: velocity_angle.cos(),
+            y: velocity_angle.sin(),
+        };
+        let new_gun_velocity = unit_velocity * PROJECTILE_VELOCITY_MAGNITUDE;
+
 
         Gun {
-            position,
-            rotation,
+            position: new_gun_position,
+            rotation: old_gun_rotation,
             scale: GUN_SCALE,
             renderable_object: RenderableObject {
                 texture: gun.gun_texture.clone(),
@@ -86,7 +89,7 @@ impl ShotGunBehavior {
             selected_renderable_object: RenderableObject {
                 texture: gun.selected_gun_texture.clone(),
             },
-            velocity,
+            velocity: new_gun_velocity,
             collidable_object: CollidableObject {
                 width: f64::from(gun.gun_texture.get_size().0),
                 height: f64::from(gun.gun_texture.get_size().1),
