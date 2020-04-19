@@ -14,6 +14,8 @@ use ears::AudioController;
 
 pub struct GunAxeBehavior {
     pub should_delete: bool,
+    pub gun_depth: usize,
+    pub has_gun_depth: bool,
 }
 
 impl GunBehavior for GunAxeBehavior {
@@ -38,15 +40,17 @@ impl GunBehavior for GunAxeBehavior {
     fn new_gun_behavior(&self) -> Box<GunBehavior> {
         Box::new(GunAxeBehavior {
             should_delete: false,
+            gun_depth: self.gun_depth,
+            has_gun_depth: self.has_gun_depth,
         })
     }
 
     fn has_gun_depth(&self) -> bool {
-        true
+        self.has_gun_depth
     }
 
     fn get_gun_depth(&self) -> usize {
-        2
+        self.gun_depth
     }
 
     fn shoot_gun(&self, gun: &Gun) -> Vec<Rc<RefCell<Gun>>> {

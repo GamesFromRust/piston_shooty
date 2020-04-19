@@ -25,3 +25,5 @@ nalgebra = "0.16.13"
 csv = "1.0.5"
 conrod_core = "0.62.0"
 conrod_piston = "0.62.0"
+serde = { version = "1.0.106", features = ["derive"] }
+serde_json = "1.0.51"

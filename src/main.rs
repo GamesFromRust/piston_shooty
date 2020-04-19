@@ -2,6 +2,65 @@
 #![deny(clippy::all)]
 #![allow(clippy::needless_return)]
 
+#[macro_use]
+extern crate conrod_core;
+extern crate conrod_piston;
+extern crate csv;
+extern crate ears;
+extern crate find_folder;
+extern crate gfx_device_gl;
+extern crate glutin_window;
+extern crate graphics;
+extern crate nalgebra;
+extern crate ncollide2d;
+extern crate piston;
+extern crate piston_window;
+extern crate serde;
+extern crate serde_json;
+extern crate time;
+
+use std::cell::RefCell;
+use std::collections::HashMap;
+use std::fs::File;
+use std::io::BufReader;
+use std::path::Path;
+use std::rc::Rc;
+use std::sync::mpsc::channel;
+use std::thread;
+use std::time::Duration;
+
+use piston_window::*;
+
+use crate::asset_loader::AssetLoader;
+use crate::collidable_object::CollidableObject;
+use crate::config::Config;
+use crate::enemy::Enemy;
+use crate::fps_counter::FpsCounter;
+use crate::game_state::GameState;
+use crate::game_state::GameStateType;
+use crate::game_state::UpdateResult;
+use crate::game_state::UpdateResultType;
+use crate::ground::Ground;
+use crate::gun_axe_behavior::GunAxeBehavior;
+use crate::gun_axe_concept::GunAxeConcept;
+use crate::gun_concept::GunConcept;
+use crate::hand_gun_behavior::HandGunBehavior;
+use crate::hand_gun_concept::HandGunConcept;
+use crate::menu_screen::MenuScreen;
+use crate::player::Player;
+use crate::renderable_object::RenderableObject;
+use crate::shot_gun_behavior::ShotGunBehavior;
+use crate::shot_gun_concept::ShotGunConcept;
+use crate::sound_manager::SoundManager;
+use crate::texture_manager::TextureManager;
+use crate::ui_bundle::UiBundle;
+use crate::ui_widget_ids::Ids;
+use crate::vector2::*;
+use crate::victory_screen::VictoryScreen;
+use crate::wall::Wall;
+use crate::world::GameEndedState;
+use crate::world::World;
+
 mod asset_loader;
 mod bullet;
 mod collidable;
@@ -38,58 +97,7 @@ mod gun_concept;
 mod shot_gun_concept;
 mod hand_gun_concept;
 mod gun_axe_concept;
-
-extern crate csv;
-extern crate ears;
-extern crate find_folder;
-extern crate gfx_device_gl;
-extern crate glutin_window;
-extern crate graphics;
-extern crate nalgebra;
-extern crate ncollide2d;
-extern crate piston;
-extern crate piston_window;
-extern crate time;
-#[macro_use]
-extern crate conrod_core;
-extern crate conrod_piston;
-
-use crate::asset_loader::AssetLoader;
-use crate::collidable_object::CollidableObject;
-use crate::enemy::Enemy;
-use crate::fps_counter::FpsCounter;
-use crate::game_state::GameState;
-use crate::game_state::GameStateType;
-use crate::game_state::UpdateResult;
-use crate::game_state::UpdateResultType;
-use crate::ground::Ground;
-use crate::gun_axe_behavior::GunAxeBehavior;
-use crate::hand_gun_behavior::HandGunBehavior;
-use crate::menu_screen::MenuScreen;
-use crate::gun_concept::GunConcept;
-use crate::player::Player;
-use crate::renderable_object::RenderableObject;
-use crate::sound_manager::SoundManager;
-use crate::texture_manager::TextureManager;
-use crate::ui_bundle::UiBundle;
-use crate::ui_widget_ids::Ids;
-use crate::vector2::*;
-use crate::victory_screen::VictoryScreen;
-use crate::wall::Wall;
-use crate::world::GameEndedState;
-use crate::world::World;
-use crate::shot_gun_behavior::ShotGunBehavior;
-use piston_window::*;
-use std::cell::RefCell;
-use std::collections::HashMap;
-use std::fs::File;
-use std::rc::Rc;
-use std::sync::mpsc::channel;
-use std::thread;
-use std::time::Duration;
-use crate::hand_gun_concept::HandGunConcept;
-use crate::gun_axe_concept::GunAxeConcept;
-use crate::shot_gun_concept::ShotGunConcept;
+mod config;
 
 const WIDTH: u32 = 1280;
 const HEIGHT: u32 = 720;
@@ -118,6 +126,12 @@ pub struct App<'a> {
     world_list: Rc<Vec<&'a str>>,
     ui_bundle: UiBundle<'a>,
     asset_loader: Rc<AssetLoader>,
+}
+
+fn read_config_from_file<P: AsRef<Path>>(path: P) -> Config {
+    let file = File::open(path).unwrap();
+    let reader = BufReader::new(file);
+    serde_json::from_reader(reader).unwrap()
 }
 
 impl<'a> App<'a> {
@@ -233,6 +247,10 @@ fn load_level(texture_manager: &mut TextureManager, sound_manager: &mut SoundMan
         is_selected: false,
     }));
 
+    let config_path: std::path::PathBuf = find_folder::Search::ParentsThenKids(3, 3).for_folder("config").unwrap();
+    let config = read_config_from_file(config_path.join("default.json"));
+    println!("{:#?}", config);
+
     let gun_axe_image: G2dTexture = asset_loader.load_texture("textures/GunaxeV1.png");
     let gun_axe_image_id = image_map.insert(gun_axe_image);
     let selected_gun_axe_image: G2dTexture = asset_loader.load_texture("textures/GunaxeV1_selected.png");
@@ -248,6 +266,8 @@ fn load_level(texture_manager: &mut TextureManager, sound_manager: &mut SoundMan
         bullet_sound: sound_manager.get("sounds\\boop.ogg"),
         gun_behavior: Box::new(GunAxeBehavior {
             should_delete: false,
+            has_gun_depth: true,
+            gun_depth: config.gunaxe_gun_config.gun_depth,
         }),
         shots_taken: 0,
         guns: Vec::new(),
