@@ -129,9 +129,16 @@ pub struct App<'a> {
 }
 
 fn read_config_from_file<P: AsRef<Path>>(path: P) -> Config {
-    let file = File::open(path).unwrap();
+    let path_ref = path.as_ref();
+    let path_str = path_ref.as_os_str().to_os_string().into_string().unwrap();
+
+    let file = File::open(path).unwrap_or_else(|_| {
+        panic!(format!("could not find config file at path {}", path_str))
+    });
     let reader = BufReader::new(file);
-    serde_json::from_reader(reader).unwrap()
+    serde_json::from_reader(reader).unwrap_or_else(|_| {
+        panic!(format!("failed to parse config file at path {}", path_str))
+    })
 }
 
 impl<'a> App<'a> {
