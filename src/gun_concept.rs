@@ -33,12 +33,13 @@ pub trait GunConcept {
     fn update(&mut self);
     fn can_shoot_bullet(&self) -> bool;
     fn can_shoot_gun(&self) -> bool;
-    fn shoot_gun(&mut self, player_pos: &Vector2, player_rot: f64, mouse_pos: &Vector2) -> Vec<WorldReq>;
+    fn gun_trigger_pressed(&mut self, player_pos: &Vector2, player_rot: f64, mouse_pos: &Vector2) -> Vec<WorldReq>;
+    fn gun_trigger_held(&mut self, player_pos: &Vector2, player_rot: f64, mouse_pos: &Vector2) -> Vec<WorldReq>;
     fn shoot_gun_from_player(&mut self, player_pos: &Vector2, player_rot: f64, mouse_pos: &Vector2) -> Vec<Rc<RefCell<Gun>>>;
     // TODO: DUPLICATES world_requests_for_bullet
     fn world_requests_for_guns(&self, guns: Vec<Rc<RefCell<Gun>>>) -> Vec<WorldReq>;
     fn world_requests_for_gun(&self, gun: Rc<RefCell<Gun>>, world_reqs: &mut Vec<WorldReq>);
-    fn shoot_bullets(&mut self) -> Vec<WorldReq>;
+    fn bullet_trigger_pressed(&mut self) -> Vec<WorldReq>;
     // TODO: DUPLICATES world_requests_for_gun
     fn world_requests_for_bullet(&self, bullet: Rc<RefCell<Bullet>>) -> Vec<WorldReq>;
 }

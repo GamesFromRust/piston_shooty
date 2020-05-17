@@ -19,7 +19,7 @@ use crate::vector2::Vector2;
 use crate::world::WorldReq;
 use crate::world::WorldRequestType;
 
-pub struct HandGunConcept {
+pub struct TommyGunConcept {
     pub gun_texture: Rc<G2dTexture>,
     pub gun_image_id: conrod_core::image::Id,
     pub selected_gun_texture: Rc<G2dTexture>,
@@ -35,7 +35,7 @@ pub struct HandGunConcept {
     pub is_selected: bool,
 }
 
-impl GunConcept for HandGunConcept {
+impl GunConcept for TommyGunConcept {
     fn gun_texture(&self) -> &Rc<G2dTexture> {
         &self.gun_texture
     }
@@ -132,7 +132,11 @@ impl GunConcept for HandGunConcept {
         true
     }
 
-    fn gun_trigger_pressed(&mut self, player_pos: &Vector2, player_rot: f64, mouse_pos: &Vector2) -> Vec<WorldReq> {
+    fn gun_trigger_pressed(&mut self, _player_pos: &Vector2, _player_rot: f64, _mouse_pos: &Vector2) -> Vec<WorldReq> {
+        Vec::new()
+    }
+
+    fn gun_trigger_held(&mut self, player_pos: &Vector2, player_rot: f64, mouse_pos: &Vector2) -> Vec<WorldReq> {
         if !self.can_shoot_gun() {
             return Vec::new();
         }
@@ -148,10 +152,6 @@ impl GunConcept for HandGunConcept {
         self.guns.append(&mut new_guns.clone());
         self.shots_taken += 1;
         self.world_requests_for_guns(new_guns)
-    }
-
-    fn gun_trigger_held(&mut self, _player_pos: &Vector2, _player_rot: f64, _mouse_pos: &Vector2) -> Vec<WorldReq> {
-        Vec::new()
     }
 
     fn shoot_gun_from_player(&mut self, player_pos: &Vector2, player_rot: f64, mouse_pos: &Vector2) -> Vec<Rc<RefCell<Gun>>> {

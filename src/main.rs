@@ -51,6 +51,8 @@ use crate::player::Player;
 use crate::renderable_object::RenderableObject;
 use crate::shot_gun_behavior::ShotGunBehavior;
 use crate::shot_gun_concept::ShotGunConcept;
+use crate::tommy_gun_concept::TommyGunConcept;
+use crate::tommy_gun_behavior::TommyGunBehavior;
 use crate::sound_manager::SoundManager;
 use crate::texture_manager::TextureManager;
 use crate::ui_bundle::UiBundle;
@@ -97,6 +99,8 @@ mod gun_concept;
 mod shot_gun_concept;
 mod hand_gun_concept;
 mod gun_axe_concept;
+mod tommy_gun_concept;
+mod tommy_gun_behavior;
 mod config;
 
 const WIDTH: u32 = 1280;
@@ -222,6 +226,8 @@ fn load_level(texture_manager: &mut TextureManager, sound_manager: &mut SoundMan
     let gun_axe_texture_selected = texture_manager.get("textures\\GunaxeV1_selected.png");
     let shot_gun_texture = texture_manager.get("textures\\shotgun.png");
     let shot_gun_texture_selected = texture_manager.get("textures\\shotgun_selected.png");
+    let tommy_gun_texture = texture_manager.get("textures\\shotgun.png");
+    let tommy_gun_texture_selected = texture_manager.get("textures\\shotgun_selected.png");
     let bullet = texture_manager.get("textures\\bullet.png");
     let wall = texture_manager.get("textures\\brick_square.png");
     let enemy = texture_manager.get("textures\\enemy.png");
@@ -282,11 +288,33 @@ fn load_level(texture_manager: &mut TextureManager, sound_manager: &mut SoundMan
         is_selected: false,
     }));
 
+    let tommy_gun_image: G2dTexture = asset_loader.load_texture("textures/shotgun.png");
+    let tommy_gun_image_id = image_map.insert(tommy_gun_image);
+    let selected_tommy_gun_image: G2dTexture = asset_loader.load_texture("textures/shotgun_selected.png");
+    let selected_tommy_gun_image_id = image_map.insert(selected_tommy_gun_image);
+    let tommy_gun_concept: Rc<RefCell<GunConcept>> = Rc::new(RefCell::new(TommyGunConcept {
+        gun_sound: gun_sound.clone(),
+        gun_texture: tommy_gun_texture.clone(),
+        gun_image_id: tommy_gun_image_id,
+        selected_gun_texture: tommy_gun_texture_selected.clone(),
+        selected_gun_image_id: selected_tommy_gun_image_id,
+        bullet_texture: bullet.clone(),
+        bullet_image_id,
+        bullet_sound: sound_manager.get("sounds\\boop.ogg"),
+        gun_behavior: Box::new(TommyGunBehavior {
+            should_delete: false,
+        }),
+        shots_taken: 0,
+        guns: Vec::new(),
+        has_shot_bullet: false,
+        is_selected: false,
+    }));
+
     let shot_gun_image: G2dTexture = asset_loader.load_texture("textures/shotgun.png");
     let shot_gun_image_id = image_map.insert(shot_gun_image);
     let selected_shot_gun_image: G2dTexture = asset_loader.load_texture("textures/shotgun_selected.png");
     let selected_shot_gun_image_id = image_map.insert(selected_shot_gun_image);
-    let shot_gun: Rc<RefCell<GunConcept>> = Rc::new(RefCell::new(ShotGunConcept {
+    let shot_gun_concept: Rc<RefCell<GunConcept>> = Rc::new(RefCell::new(ShotGunConcept {
         gun_sound: gun_sound.clone(),
         gun_texture: shot_gun_texture.clone(),
         gun_image_id: shot_gun_image_id,
@@ -304,7 +332,7 @@ fn load_level(texture_manager: &mut TextureManager, sound_manager: &mut SoundMan
         is_selected: false,
     }));
 
-    let gun_concepts: Vec<Rc<RefCell<GunConcept>>> = vec![hand_gun, gun_axe, shot_gun];
+    let gun_concepts: Vec<Rc<RefCell<GunConcept>>> = vec![hand_gun, gun_axe, tommy_gun_concept, shot_gun_concept];
 
     let player: Player = Player {
         position: Vector2 {

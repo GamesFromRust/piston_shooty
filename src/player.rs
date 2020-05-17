@@ -83,8 +83,8 @@ impl Player {
         self.gun_concepts[self.current_gun_concept_index].borrow_mut()
     }
 
-    fn shoot_bullets(&mut self) -> Vec<WorldReq> {
-        self.gun_concept_mut().shoot_bullets()
+    fn bullet_trigger_pressed(&mut self) -> Vec<WorldReq> {
+        self.gun_concept_mut().bullet_trigger_pressed()
     }
 
     pub fn can_shoot_bullet(&self) -> bool {
@@ -95,8 +95,12 @@ impl Player {
         self.gun_concepts.iter().any(|gun_concept| gun_concept.borrow().can_shoot_gun())
     }
 
-    fn shoot_gun(&mut self, mouse_pos: &Vector2) -> Vec<WorldReq> {
-        self.gun_concept_mut().shoot_gun(&self.position, self.rotation, mouse_pos)
+    fn gun_trigger_pressed(&mut self, mouse_pos: &Vector2) -> Vec<WorldReq> {
+        self.gun_concept_mut().gun_trigger_pressed(&self.position, self.rotation, mouse_pos)
+    }
+
+    fn gun_trigger_held(&mut self, mouse_pos: &Vector2) -> Vec<WorldReq> {
+        self.gun_concept_mut().gun_trigger_held(&self.position, self.rotation, mouse_pos)
     }
 
     #[allow(unused_variables)]
@@ -107,12 +111,15 @@ impl Player {
             match *button {
                 MouseButton::Left => {
                     if value.pressed {
-                        world_reqs.append(&mut self.shoot_gun(mouse_pos));
+                        world_reqs.append(&mut self.gun_trigger_pressed(mouse_pos));
+                    }
+                    if value.held {
+                        world_reqs.append(&mut self.gun_trigger_held(mouse_pos));
                     }
                 }
                 MouseButton::Right => {
                     if value.pressed {
-                        world_reqs.append(&mut self.shoot_bullets());
+                        world_reqs.append(&mut self.bullet_trigger_pressed());
                     }
                 }
                 _ => {}

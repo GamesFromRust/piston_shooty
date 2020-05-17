@@ -147,7 +147,7 @@ impl GunConcept for ShotGunConcept {
         true
     }
 
-    fn shoot_gun(&mut self, player_pos: &Vector2, player_rot: f64, mouse_pos: &Vector2) -> Vec<WorldReq> {
+    fn gun_trigger_pressed(&mut self, player_pos: &Vector2, player_rot: f64, mouse_pos: &Vector2) -> Vec<WorldReq> {
         if !self.can_shoot_gun() {
             return Vec::new();
         }
@@ -173,6 +173,10 @@ impl GunConcept for ShotGunConcept {
         self.guns.append(&mut new_guns.clone());
         self.shots_taken += 1;
         self.world_requests_for_guns(new_guns)
+    }
+
+    fn gun_trigger_held(&mut self, _player_pos: &Vector2, _player_rot: f64, _mouse_pos: &Vector2) -> Vec<WorldReq> {
+        Vec::new()
     }
 
     fn shoot_gun_from_player(&mut self, player_pos: &Vector2, player_rot: f64, mouse_pos: &Vector2) -> Vec<Rc<RefCell<Gun>>> {
@@ -237,7 +241,7 @@ impl GunConcept for ShotGunConcept {
         world_reqs.push(world_req);
     }
 
-    fn shoot_bullets(&mut self) -> Vec<WorldReq> {
+    fn bullet_trigger_pressed(&mut self) -> Vec<WorldReq> {
         if !self.can_shoot_bullet() {
             return Vec::new();
         }
